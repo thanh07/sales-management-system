@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sales_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: sales_admin
+      POSTGRES_PASSWORD: sales_password_2026
+      POSTGRES_DB: sales_management_db
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: sales_api
+    restart: always
+    ports:
+      - '5000:5000'
+    environment:
+      PORT: 5000
+      DATABASE_URL: 'postgresql://sales_admin:sales_password_2026@postgres:5432/sales_management_db?schema=public'
+      JWT_SECRET: 'antigravity-prod-secret-2026'
+      JWT_REFRESH_SECRET: 'antigravity-prod-refresh-2026'
+    depends_on:
+      - postgres
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    container_name: sales_web
+    restart: always
+    ports:
+      - '80:80'
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:

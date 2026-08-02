@@ -1,0 +1,15 @@
+{
+  "name": "sales-management-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Enterprise Grade Sales Management System (ERP/CRM/POS)",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:api": "npm --prefix apps/api run dev",
+    "dev:web": "npm --prefix apps/web run dev",
+    "build:api": "npm --prefix apps/api run build",
+    "build:web": "npm --prefix apps/web run build"
+  }
+}
