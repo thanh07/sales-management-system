@@ -1,14 +1,14 @@
 export interface ProductAttribute {
-  name: string; // e.g. "Màu sắc", "Kích thước", "Dung lượng"
-  values: string[]; // e.g. ["Đen", "Trắng", "Xanh"] or ["S", "M", "L"]
+  name: string; // e.g. "Hương vị", "Dung tích", "Trọng lượng", "Màu sắc"
+  values: string[];
 }
 
 export interface ProductVariant {
   id: string;
   sku: string;
   barcode: string;
-  variantName: string; // e.g. "iPhone 15 Pro Max - Đen - 256GB"
-  attributeValues: Record<string, string>; // e.g. { "Màu sắc": "Đen", "Dung lượng": "256GB" }
+  variantName: string;
+  attributeValues: Record<string, string>;
   costPrice: number;
   sellingPrice: number;
   stockQuantity: number;
@@ -22,15 +22,15 @@ export interface Product {
   name: string;
   category: string;
   brand: string;
-  unit: string; // Smallest unit (e.g. Lon, Chai, Cái, Bộ)
-  conversionUnit?: string; // Larger unit (e.g. Thùng, Lốc, Hộp)
-  conversionFactor?: number; // Conversion factor (e.g. 24)
+  unit: string; // Smallest unit (e.g. Lon, Chai, Gói, Bịch)
+  conversionUnit?: string; // Larger unit (e.g. Thùng, Lốc, Hộp, Két)
+  conversionFactor?: number; // e.g. 24
   conversionSellingPrice?: number;
-  costPrice: number; // Cost price per smallest unit
-  sellingPrice: number; // Retail selling price per smallest unit
+  costPrice: number;
+  sellingPrice: number;
   promoPrice?: number;
-  stockQuantity: number; // Total stock in smallest unit
-  minStock: number; // Min stock warning threshold
+  stockQuantity: number;
+  minStock: number;
   image: string;
   isActive: boolean;
   hasVariants?: boolean;
@@ -39,13 +39,13 @@ export interface Product {
 }
 
 let CATEGORIES_DB: string[] = [
-  'Thời Trang & May Mặc',
-  'Nước Giải Khát & Bia',
-  'Thực Phẩm & Bánh Kẹo',
-  'Điện Thoại & Máy Tính Bảng',
-  'Laptop & Phụ Kiện',
-  'Phụ Kiện Công Nghệ',
-  'Đồ Gia Dụng Thông Minh',
+  'Nước Giải Khát & Đồ Uống',
+  'Sữa & Sản Phẩm Từ Sữa',
+  'Mì, Phở & Thực Phẩm Khô',
+  'Gia Vị & Nước Chấm',
+  'Bánh Kẹo & Snack',
+  'Hóa Mỹ Phẩm & Chăm Sóc Cá Nhân',
+  'Đồ Dùng Gia Đình & Tạp Hóa',
 ];
 
 let UNITS_DB: string[] = [
@@ -53,156 +53,120 @@ let UNITS_DB: string[] = [
   'Chai',
   'Gói',
   'Bịch',
-  'Cái',
-  'Máy',
   'Hộp',
-  'Bộ',
-  'Chiếc',
+  'Hũ',
+  'Tuýp',
+  'Chai 1L',
+  'Cái',
   'Thùng',
   'Lốc',
   'Két',
   'Vỉ',
   'Bao',
   'Kg',
-  'Gram',
-  'Tập',
 ];
 
-function generateProductsWithAttributes(): Product[] {
-  const list: Product[] = [
-    // Product with Attributes & Variants (KiotViet 4.3 Feature)
-    {
-      id: 'prod-attr-01',
-      sku: 'SP-POLO-COOL',
-      barcode: '893500333001',
-      name: 'Áo Nam Polo Coolmax Cao Cấp',
-      category: 'Thời Trang & May Mặc',
-      brand: 'Coolmate',
-      unit: 'Cái',
-      costPrice: 150000,
-      sellingPrice: 250000,
-      stockQuantity: 120,
-      minStock: 10,
-      image: 'https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=400&q=80',
-      isActive: true,
-      hasVariants: true,
-      attributes: [
-        { name: 'Màu sắc', values: ['Đen', 'Trắng', 'Xanh Thẫm'] },
-        { name: 'Kích thước', values: ['M', 'L', 'XL'] },
-      ],
-      variants: [
-        { id: 'v-1', sku: 'POLO-DEN-M', barcode: '893500333011', variantName: 'Áo Polo Coolmax - Đen - Size M', attributeValues: { 'Màu sắc': 'Đen', 'Kích thước': 'M' }, costPrice: 150000, sellingPrice: 250000, stockQuantity: 20, minStock: 5 },
-        { id: 'v-2', sku: 'POLO-DEN-L', barcode: '893500333012', variantName: 'Áo Polo Coolmax - Đen - Size L', attributeValues: { 'Màu sắc': 'Đen', 'Kích thước': 'L' }, costPrice: 150000, sellingPrice: 250000, stockQuantity: 25, minStock: 5 },
-        { id: 'v-3', sku: 'POLO-DEN-XL', barcode: '893500333013', variantName: 'Áo Polo Coolmax - Đen - Size XL', attributeValues: { 'Màu sắc': 'Đen', 'Kích thước': 'XL' }, costPrice: 150000, sellingPrice: 250000, stockQuantity: 15, minStock: 5 },
-        { id: 'v-4', sku: 'POLO-TRANG-M', barcode: '893500333021', variantName: 'Áo Polo Coolmax - Trắng - Size M', attributeValues: { 'Màu sắc': 'Trắng', 'Kích thước': 'M' }, costPrice: 150000, sellingPrice: 250000, stockQuantity: 20, minStock: 5 },
-        { id: 'v-5', sku: 'POLO-TRANG-L', barcode: '893500333022', variantName: 'Áo Polo Coolmax - Trắng - Size L', attributeValues: { 'Màu sắc': 'Trắng', 'Kích thước': 'L' }, costPrice: 150000, sellingPrice: 250000, stockQuantity: 20, minStock: 5 },
-        { id: 'v-6', sku: 'POLO-XANH-M', barcode: '893500333031', variantName: 'Áo Polo Coolmax - Xanh Thẫm - Size M', attributeValues: { 'Màu sắc': 'Xanh Thẫm', 'Kích thước': 'M' }, costPrice: 150000, sellingPrice: 250000, stockQuantity: 20, minStock: 5 },
-      ],
-    },
-    {
-      id: 'prod-unit-01',
-      sku: 'SP-REDBULL-250',
-      barcode: '893500111001',
-      name: 'Nước Tăng Lực Red Bull Bò Cụtn 250ml',
-      category: 'Nước Giải Khát & Bia',
-      brand: 'Red Bull',
-      unit: 'Lon',
-      conversionUnit: 'Thùng',
-      conversionFactor: 24,
-      conversionSellingPrice: 340000,
-      costPrice: 11000,
-      sellingPrice: 15000,
-      stockQuantity: 240,
-      minStock: 48,
-      image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400&q=80',
-      isActive: true,
-    },
-    {
-      id: 'prod-unit-02',
-      sku: 'SP-HEINEKEN-330',
-      barcode: '893500111002',
-      name: 'Bia Heineken Silver Lon 330ml',
-      category: 'Nước Giải Khát & Bia',
-      brand: 'Heineken',
-      unit: 'Lon',
-      conversionUnit: 'Thùng',
-      conversionFactor: 24,
-      conversionSellingPrice: 420000,
-      costPrice: 15000,
-      sellingPrice: 19000,
-      stockQuantity: 480,
-      minStock: 96,
-      image: 'https://images.unsplash.com/photo-1608270586620-248524c67de9?w=400&q=80',
-      isActive: true,
-    },
-    {
-      id: 'prod-unit-03',
-      sku: 'SP-HAOHAO-TOM',
-      barcode: '893500111003',
-      name: 'Mì Tôm Chua Cay Hảo Hảo 75g',
-      category: 'Thực Phẩm & Bánh Kẹo',
-      brand: 'Acecook',
-      unit: 'Gói',
-      conversionUnit: 'Thùng',
-      conversionFactor: 30,
-      conversionSellingPrice: 135000,
-      costPrice: 3800,
-      sellingPrice: 4800,
-      stockQuantity: 600,
-      minStock: 60,
-      image: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&q=80',
-      isActive: true,
-    },
-    {
-      id: 'prod-unit-04',
-      sku: 'SP-VINAMILK-100',
-      barcode: '893500111004',
-      name: 'Sữa Tươi Tiệt Trùng Vinamilk 100% Có Đường 220ml',
-      category: 'Thực Phẩm & Bánh Kẹo',
-      brand: 'Vinamilk',
-      unit: 'Bịch',
-      conversionUnit: 'Thùng',
-      conversionFactor: 48,
-      conversionSellingPrice: 360000,
-      costPrice: 6500,
-      sellingPrice: 8000,
-      stockQuantity: 144,
-      minStock: 48,
-      image: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=400&q=80',
-      isActive: true,
-    },
+function generate300GroceryProducts(): Product[] {
+  const groceryTemplates = [
+    // 1. Nước Giải Khát & Đồ Uống
+    { cat: 'Nước Giải Khát & Đồ Uống', brand: 'Red Bull', baseName: 'Nước Tăng Lực Red Bull Bò Cụtn', unit: 'Lon', convUnit: 'Thùng', convFactor: 24, cost: 11000, sell: 15000, convSell: 340000, img: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400&q=80', attr: { name: 'Dung tích', values: ['250ml', '330ml'] } },
+    { cat: 'Nước Giải Khát & Đồ Uống', brand: 'Heineken', baseName: 'Bia Heineken Silver Lon', unit: 'Lon', convUnit: 'Thùng', convFactor: 24, cost: 15000, sell: 19000, convSell: 430000, img: 'https://images.unsplash.com/photo-1608270586620-248524c67de9?w=400&q=80' },
+    { cat: 'Nước Giải Khát & Đồ Uống', brand: 'Coca-Cola', baseName: 'Nước Ngọt Coca-Cola Vị Nguyên Bản', unit: 'Lon', convUnit: 'Thùng', convFactor: 24, cost: 8000, sell: 11000, convSell: 240000, img: 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400&q=80', attr: { name: 'Loại', values: ['Lon 320ml', 'Chai 1.5L', 'Chai 390ml'] } },
+    { cat: 'Nước Giải Khát & Đồ Uống', brand: 'Pepsi', baseName: 'Nước Ngọt Pepsi Không Calo', unit: 'Lon', convUnit: 'Thùng', convFactor: 24, cost: 7500, sell: 10500, convSell: 230000, img: 'https://images.unsplash.com/photo-1629203851122-3726ecdf080e?w=400&q=80' },
+    { cat: 'Nước Giải Khát & Đồ Uống', brand: 'Lavie', baseName: 'Nước Khoáng Thiên Nhiên Lavie', unit: 'Chai', convUnit: 'Thùng', convFactor: 24, cost: 4000, sell: 6000, convSell: 125000, img: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=400&q=80', attr: { name: 'Dung tích', values: ['500ml', '1.5L', '6L'] } },
+
+    // 2. Sữa & Sản Phẩm Từ Sữa
+    { cat: 'Sữa & Sản Phẩm Từ Sữa', brand: 'Vinamilk', baseName: 'Sữa Tươi Tiệt Trùng Vinamilk 100%', unit: 'Bịch', convUnit: 'Thùng', convFactor: 48, cost: 6500, sell: 8500, convSell: 380000, img: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=400&q=80', attr: { name: 'Hương vị', values: ['Có Đường', 'Ít Đường', 'Không Đường', 'Socola'] } },
+    { cat: 'Sữa & Sản Phẩm Từ Sữa', brand: 'TH True Milk', baseName: 'Sữa Tươi TH True Milk Tiệt Trùng', unit: 'Hộp', convUnit: 'Thùng', convFactor: 48, cost: 8000, sell: 10500, convSell: 480000, img: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?w=400&q=80', attr: { name: 'Hương vị', values: ['Nguyên Chất', 'Có Đường', 'Dâu'] } },
+    { cat: 'Sữa & Sản Phẩm Từ Sữa', brand: 'Vinamilk', baseName: 'Sữa Đặc Có Đường Ông Thọ Nhãn Xanh', unit: 'Hộp', convUnit: 'Thùng', convFactor: 24, cost: 18000, sell: 23000, convSell: 520000, img: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&q=80' },
+
+    // 3. Mì, Phở & Thực Phẩm Khô
+    { cat: 'Mì, Phở & Thực Phẩm Khô', brand: 'Acecook', baseName: 'Mì Tôm Chua Cay Hảo Hảo', unit: 'Gói', convUnit: 'Thùng', convFactor: 30, cost: 3800, sell: 4800, convSell: 135000, img: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&q=80', attr: { name: 'Hương vị', values: ['Tôm Chua Cay', 'Sa Bế Tôm', 'Sườn Heo'] } },
+    { cat: 'Mì, Phở & Thực Phẩm Khô', brand: 'Acecook', baseName: 'Phở Bò Đệ Nhất Acecook', unit: 'Gói', convUnit: 'Thùng', convFactor: 30, cost: 6500, sell: 8500, convSell: 240000, img: 'https://images.unsplash.com/photo-1591814468924-caf88d1232e1?w=400&q=80' },
+    { cat: 'Mì, Phở & Thực Phẩm Khô', brand: 'Masan', baseName: 'Mì Omachi Xốt Bò Hầm', unit: 'Gói', convUnit: 'Thùng', convFactor: 30, cost: 7000, sell: 9500, convSell: 270000, img: 'https://images.unsplash.com/photo-1612927601601-6638404737ce?w=400&q=80' },
+
+    // 4. Gia Vị & Nước Chấm
+    { cat: 'Gia Vị & Nước Chấm', brand: 'Nam Ngư', baseName: 'Nước Mắm Nam Ngư Đệ Nhị 900ml', unit: 'Chai', convUnit: 'Thùng', convFactor: 15, cost: 35000, sell: 45000, convSell: 640000, img: 'https://images.unsplash.com/photo-1472476443507-c7a5948772fc?w=400&q=80' },
+    { cat: 'Gia Vị & Nước Chấm', brand: 'Chinsu', baseName: 'Tương Ớt Chinsu Đậm Đặc', unit: 'Chai', convUnit: 'Thùng', convFactor: 24, cost: 11000, sell: 15000, convSell: 340000, img: 'https://images.unsplash.com/photo-1588615419954-e4e614d9b626?w=400&q=80', attr: { name: 'Dung tích', values: ['250g', '500g', '1kg'] } },
+    { cat: 'Gia Vị & Nước Chấm', brand: 'Simply', baseName: 'Dầu Ăn Đậu Nành Simply 1L', unit: 'Chai', convUnit: 'Thùng', convFactor: 12, cost: 48000, sell: 59000, convSell: 680000, img: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400&q=80' },
+
+    // 5. Bánh Kẹo & Snack
+    { cat: 'Bánh Kẹo & Snack', brand: 'Orion', baseName: 'Bánh ChocoPie Orion Hộp 12 Chiếc', unit: 'Hộp', convUnit: 'Thùng', convFactor: 12, cost: 45000, sell: 58000, convSell: 660000, img: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=400&q=80', attr: { name: 'Hương vị', values: ['Truyền Thống', 'Vị Cacao', 'Vị Matcha'] } },
+    { cat: 'Bánh Kẹo & Snack', brand: 'Lay\'s', baseName: 'Snack Khoai Tây Lay\'s Stax', unit: 'Lon', convUnit: 'Thùng', convFactor: 24, cost: 18000, sell: 24000, convSell: 540000, img: 'https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=400&q=80', attr: { name: 'Vị', values: ['Tự Nhiên', 'Tôm Mực', 'Sườn Nướng BBQ'] } },
+
+    // 6. Hóa Mỹ Phẩm & Chăm Sóc Cá Nhân
+    { cat: 'Hóa Mỹ Phẩm & Chăm Sóc Cá Nhân', brand: 'Sunlight', baseName: 'Nước Rửa Bát Sunlight Chanh Rửa Sạch Dầu Mỡ', unit: 'Chai', convUnit: 'Thùng', convFactor: 12, cost: 26000, sell: 34000, convSell: 390000, img: 'https://images.unsplash.com/photo-1585670149967-b4f4da88cc9f?w=400&q=80', attr: { name: 'Mùi hương', values: ['Chanh Tươi', 'Trà Xanh', 'Muối Khoe'] } },
+    { cat: 'Hóa Mỹ Phẩm & Chăm Sóc Cá Nhân', brand: 'Lifebuoy', baseName: 'Sữa Tắm Diệt Khuẩn Lifebuoy Bảo Vệ Vượt Trội', unit: 'Chai', convUnit: 'Thùng', convFactor: 12, cost: 85000, sell: 110000, convSell: 1250000, img: 'https://images.unsplash.com/photo-1608248597263-00079e964474?w=400&q=80' },
+    { cat: 'Hóa Mỹ Phẩm & Chăm Sóc Cá Nhân', brand: 'P/S', baseName: 'Kem Đánh Răng P/S Bảo Vệ 123 Ngừa Sâu Răng', unit: 'Tuýp', convUnit: 'Thùng', convFactor: 36, cost: 22000, sell: 29000, convSell: 990000, img: 'https://images.unsplash.com/photo-1559598467-f8b76c8155d0?w=400&q=80' },
+
+    // 7. Đồ Dùng Gia Đình & Tạp Hóa
+    { cat: 'Đồ Dùng Gia Đình & Tạp Hóa', brand: 'Pulppy', baseName: 'Giấy Vệ Sinh Pulppy 2 Lớp Lốc 10 Cuộn', unit: 'Lốc', convUnit: 'Thùng', convFactor: 10, cost: 42000, sell: 55000, convSell: 520000, img: 'https://images.unsplash.com/photo-1584556812952-905ffd0c611a?w=400&q=80' },
   ];
 
-  const electronics = [
-    { name: 'iPhone 15 Pro Max 256GB Titan', brand: 'Apple', category: 'Điện Thoại & Máy Tính Bảng', unit: 'Máy', cost: 28000000, sell: 32990000, stock: 18 },
-    { name: 'Samsung Galaxy S24 Ultra 512GB', brand: 'Samsung', category: 'Điện Thoại & Máy Tính Bảng', unit: 'Máy', cost: 26500000, sell: 31490000, stock: 4 },
-    { name: 'MacBook Air 15 inch M3 16GB', brand: 'Apple', category: 'Laptop & Phụ Kiện', unit: 'Máy', cost: 32000000, sell: 36990000, stock: 12 },
-    { name: 'Tai nghe Bluetooth Apple AirPods Pro 2', brand: 'Apple', category: 'Phụ Kiện Công Nghệ', unit: 'Cái', cost: 4800000, sell: 5990000, stock: 45 },
-    { name: 'Chuột không dây Logitech MX Master 3S', brand: 'Logitech', category: 'Phụ Kiện Công Nghệ', unit: 'Cái', cost: 1950000, sell: 2490000, stock: 28 },
-  ];
+  const products: Product[] = [];
+  let count = 1;
 
-  electronics.forEach((e, idx) => {
-    list.push({
-      id: `prod-elec-${idx + 1}`,
-      sku: `SP-ELEC-${idx + 1}`,
-      barcode: `89350022200${idx + 1}`,
-      name: e.name,
-      category: e.category,
-      brand: e.brand,
-      unit: e.unit,
-      costPrice: e.cost,
-      sellingPrice: e.sell,
-      stockQuantity: e.stock,
-      minStock: 5,
-      image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&q=80',
+  // Generate 300 rich grocery products loop
+  while (products.length < 300) {
+    const tpl = groceryTemplates[(count - 1) % groceryTemplates.length];
+    const itemNum = count.toString().padStart(3, '0');
+    const sku = `TAP-${tpl.brand.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4)}-${itemNum}`;
+    const barcode = `893800${(100000 + count).toString()}`;
+    const name = `${tpl.baseName} #${count}`;
+
+    let hasVariants = false;
+    let attributes: ProductAttribute[] | undefined;
+    let variants: ProductVariant[] | undefined;
+
+    if (tpl.attr && count % 3 === 0) {
+      hasVariants = true;
+      attributes = [{ name: tpl.attr.name, values: tpl.attr.values }];
+      variants = tpl.attr.values.map((v, idx) => ({
+        id: `var-${count}-${idx + 1}`,
+        sku: `${sku}-${v.toUpperCase().replace(/[^A-Z0-9]/g, '')}`,
+        barcode: `893800${(200000 + count * 10 + idx).toString()}`,
+        variantName: `${name} - ${tpl.attr!.name}: ${v}`,
+        attributeValues: { [tpl.attr!.name]: v },
+        costPrice: tpl.cost + idx * 1000,
+        sellingPrice: tpl.sell + idx * 1500,
+        stockQuantity: (count * 7 + idx * 5) % 80 + 10,
+        minStock: 10,
+      }));
+    }
+
+    const costPrice = tpl.cost + ((count * 500) % 5000);
+    const sellingPrice = tpl.sell + ((count * 800) % 8000);
+    const stockQuantity = (count * 13) % 150 + 15;
+
+    products.push({
+      id: `prod-taphoap-${itemNum}`,
+      sku,
+      barcode,
+      name,
+      category: tpl.cat,
+      brand: tpl.brand,
+      unit: tpl.unit,
+      conversionUnit: tpl.convUnit,
+      conversionFactor: tpl.convFactor,
+      conversionSellingPrice: tpl.convSell ? tpl.convSell + ((count * 2000) % 20000) : undefined,
+      costPrice,
+      sellingPrice,
+      stockQuantity: hasVariants ? variants!.reduce((s, v) => s + v.stockQuantity, 0) : stockQuantity,
+      minStock: 12,
+      image: tpl.img,
       isActive: true,
+      hasVariants,
+      attributes,
+      variants,
     });
-  });
 
-  return list;
+    count++;
+  }
+
+  return products;
 }
 
-const MOCK_PRODUCTS: Product[] = generateProductsWithAttributes();
+const MOCK_PRODUCTS: Product[] = generate300GroceryProducts();
 
 export class ProductService {
   static getAllProducts(query?: string, category?: string) {
@@ -231,7 +195,6 @@ export class ProductService {
     );
     if (p) return p;
 
-    // Search in variants barcodes
     for (const prod of MOCK_PRODUCTS) {
       if (prod.variants) {
         const v = prod.variants.find((variant) => variant.barcode === barcode || variant.sku === barcode);
@@ -263,7 +226,6 @@ export class ProductService {
       id: `prod-${Date.now()}`,
     };
 
-    // Calculate total stock from variants if present
     if (newProduct.variants && newProduct.variants.length > 0) {
       newProduct.hasVariants = true;
       newProduct.stockQuantity = newProduct.variants.reduce((sum, v) => sum + Number(v.stockQuantity), 0);
@@ -283,13 +245,13 @@ export class ProductService {
     let count = 0;
     items.forEach((item) => {
       if (item.name) {
-        const barcode = item.barcode || '893' + Math.floor(100000000 + Math.random() * 900000000);
+        const barcode = item.barcode || '893800' + Math.floor(100000 + Math.random() * 900000);
         const newProduct: Product = {
           id: `prod-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
           sku: item.sku || 'SKU-' + Math.floor(1000 + Math.random() * 9000),
           barcode,
           name: item.name,
-          category: item.category || 'Nước Giải Khát & Bia',
+          category: item.category || 'Nước Giải Khát & Đồ Uống',
           brand: item.brand || 'Khác',
           unit: item.unit || 'Lon',
           conversionUnit: item.conversionUnit || undefined,

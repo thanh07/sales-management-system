@@ -1,6 +1,90 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
-import { Tag, Plus, Search, Calendar, Users, Calculator, X, Edit3, Save, Trash2, Copy, ToggleLeft, ToggleRight, Edit2, Columns, Download, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Tag, Plus, Search, Calendar, Users, Calculator, X, Edit3, Save, Trash2, Copy, ToggleLeft, ToggleRight, Edit2, Columns, Download, ArrowUpRight, ArrowDownRight, ChevronUp, ChevronDown } from 'lucide-react';
+
+// Formatted Price Input with Thousands Separator (Khoảng trắng phần ngàn) & 500đ Step Increments
+const FormattedPriceInput: React.FC<{
+  value: number;
+  onChange: (val: number) => void;
+  colorClass?: string;
+}> = ({ value, onChange, colorClass = 'text-emerald-400 border-blue-500/60' }) => {
+  const [displayValue, setDisplayValue] = useState('');
+  const [isFocused, setIsFocused] = useState(false);
+
+  // Format number with spaces for thousands (e.g. 15500 -> "15 500")
+  const formatWithSpaces = (num: number) => {
+    if (isNaN(num)) return '0';
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  };
+
+  useEffect(() => {
+    if (!isFocused) {
+      setDisplayValue(formatWithSpaces(value));
+    }
+  }, [value, isFocused]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawVal = e.target.value.replace(/\s+/g, '');
+    const numVal = parseInt(rawVal, 10);
+
+    if (isNaN(numVal)) {
+      setDisplayValue('');
+      onChange(0);
+    } else {
+      setDisplayValue(e.target.value);
+      onChange(numVal);
+    }
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    setDisplayValue(formatWithSpaces(value));
+  };
+
+  const handleFocus = () => {
+    setIsFocused(true);
+    setDisplayValue(value ? value.toString() : '');
+  };
+
+  const handleStep = (delta: number) => {
+    const nextVal = Math.max(0, (value || 0) + delta);
+    onChange(nextVal);
+    setDisplayValue(formatWithSpaces(nextVal));
+  };
+
+  return (
+    <div className="relative flex items-center group/step">
+      <input
+        type="text"
+        value={displayValue}
+        onChange={handleChange}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        placeholder="0"
+        className={`w-32 pl-2 pr-7 py-1 rounded bg-slate-950 border font-bold text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono tracking-wide ${colorClass}`}
+      />
+      {/* 500 VND Stepper Buttons (1 lần click thay đổi 500đ) */}
+      <div className="absolute right-1 flex flex-col opacity-80 group-hover/step:opacity-100">
+        <button
+          type="button"
+          onClick={() => handleStep(500)}
+          className="p-0.5 hover:bg-slate-800 text-slate-400 hover:text-white rounded"
+          title="Tăng 500đ"
+        >
+          <ChevronUp className="w-3 h-3" />
+        </button>
+        <button
+          type="button"
+          onClick={() => handleStep(-500)}
+          className="p-0.5 hover:bg-slate-800 text-slate-400 hover:text-white rounded"
+          title="Giảm 500đ"
+        >
+          <ChevronDown className="w-3 h-3" />
+        </button>
+      </div>
+    </div>
+  );
+};
 
 export const PriceListsPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'CATALOG' | 'COMPARISON'>('CATALOG');
@@ -225,9 +309,9 @@ export const PriceListsPage: React.FC = () => {
         let newConversionPrice = item.customConversionPrice;
 
         if (bulkFormulaMethod === 'PERCENT_BASE') {
-          newCustomPrice = Math.round((item.basePrice * (1 - bulkFormulaValue / 100)) / 1000) * 1000;
+          newCustomPrice = Math.round((item.basePrice * (1 - bulkFormulaValue / 100)) / 500) * 500;
         } else if (bulkFormulaMethod === 'PERCENT_COST') {
-          newCustomPrice = Math.round((item.costPrice * (1 + bulkFormulaValue / 100)) / 1000) * 1000;
+          newCustomPrice = Math.round((item.costPrice * (1 + bulkFormulaValue / 100)) / 500) * 500;
         } else if (bulkFormulaMethod === 'FIXED_OFFSET') {
           newCustomPrice = Math.max(0, item.basePrice - bulkFormulaValue);
         }
@@ -322,7 +406,6 @@ export const PriceListsPage: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* View Mode Toggle Buttons */}
           <div className="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-800">
             <button
               onClick={() => setViewMode('CATALOG')}
@@ -534,7 +617,6 @@ export const PriceListsPage: React.FC = () => {
       {/* VIEW MODE 2: KIOTVIET MULTI-PRICE LIST COMPARISON MATRIX */}
       {viewMode === 'COMPARISON' && (
         <div className="space-y-4">
-          {/* Price Lists Column Selector Bar */}
           <div className="p-4 rounded-2xl glass-panel border border-slate-800 space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2 font-bold text-sm text-blue-400">
@@ -578,7 +660,6 @@ export const PriceListsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Comparison Matrix Table */}
           <div className="glass-panel rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs text-slate-300">
@@ -612,7 +693,6 @@ export const PriceListsPage: React.FC = () => {
                         <td className="p-4 text-slate-500 font-medium">{formatVND(prod.costPrice)}</td>
                         <td className="p-4 font-bold text-white bg-slate-950/20">{formatVND(prod.sellingPrice)}</td>
 
-                        {/* Price List Columns Side-by-side */}
                         {comparisonMatrix?.priceLists?.map((pl: any) => {
                           const priceData = r.prices[pl.id];
                           const price = priceData?.price || prod.sellingPrice;
@@ -654,7 +734,7 @@ export const PriceListsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal KiotViet Interactive Product Price List Matrix Editor */}
+      {/* Modal KiotViet Interactive Product Price List Matrix Editor with Formatted Thousand Separator Inputs & 500 VND Steppers */}
       {editingPriceList && (
         <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-4">
@@ -720,7 +800,7 @@ export const PriceListsPage: React.FC = () => {
                     <th className="p-3">Đơn Vị Tính</th>
                     <th className="p-3">Giá Nhập</th>
                     <th className="p-3">Giá Bán Niêm Yết</th>
-                    <th className="p-3">Giá Trong Bảng Giá (Tùy chỉnh trực tiếp)</th>
+                    <th className="p-3">GIÁ TRONG BẢNG GIÁ (TÙY CHỈNH TRỰC TIẾP)</th>
                     <th className="p-3">Trạng Thái</th>
                   </tr>
                 </thead>
@@ -742,31 +822,28 @@ export const PriceListsPage: React.FC = () => {
                       <td className="p-3 text-slate-500">{formatVND(item.costPrice)}</td>
                       <td className="p-3 text-slate-400 font-medium">{formatVND(item.basePrice)}</td>
 
+                      {/* Interactive Formatted Price Input Cell with 500 VND Step & Space Separators */}
                       <td className="p-3">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1.5">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2">
                             <span className="text-[11px] text-slate-400 w-12">{item.unit}:</span>
-                            <input
-                              type="number"
+                            <FormattedPriceInput
                               value={item.customPrice}
-                              onChange={(e) => handleItemPriceChange(item.productId, Number(e.target.value), false)}
-                              className="w-32 px-2.5 py-1 rounded bg-slate-950 border border-blue-500/60 font-bold text-emerald-400 text-xs focus:border-blue-500"
+                              onChange={(newPrice) => handleItemPriceChange(item.productId, newPrice, false)}
+                              colorClass="text-emerald-400 border-blue-500/60"
                             />
-                            <span className="text-[11px] text-slate-400">đ</span>
+                            <span className="text-[11px] text-slate-400 font-bold">đ</span>
                           </div>
 
                           {item.conversionUnit && (
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-2">
                               <span className="text-[11px] text-slate-400 w-12">{item.conversionUnit}:</span>
-                              <input
-                                type="number"
+                              <FormattedPriceInput
                                 value={item.customConversionPrice || 0}
-                                onChange={(e) =>
-                                  handleItemPriceChange(item.productId, Number(e.target.value), true)
-                                }
-                                className="w-32 px-2.5 py-1 rounded bg-slate-950 border border-purple-500/60 font-bold text-purple-400 text-xs focus:border-purple-500"
+                                onChange={(newPrice) => handleItemPriceChange(item.productId, newPrice, true)}
+                                colorClass="text-purple-400 border-purple-500/60"
                               />
-                              <span className="text-[11px] text-slate-400">đ</span>
+                              <span className="text-[11px] text-slate-400 font-bold">đ</span>
                             </div>
                           )}
                         </div>

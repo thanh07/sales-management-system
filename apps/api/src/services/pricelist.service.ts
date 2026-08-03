@@ -37,46 +37,46 @@ let PRICE_LISTS_DB: PriceList[] = [
   {
     id: 'pl-01',
     code: 'BG-BASE',
-    name: 'Bảng Giá Bán Lẻ Mặc Định (Giá Chung)',
+    name: 'Bảng Giá Bán Lẻ Niêm Yết (Giá Chung)',
     type: 'STANDARD',
     calculationMethod: 'FIXED',
     value: 0,
     appliedCustomerGroups: ['RETAIL', 'ALL'],
     appliedBranches: ['ALL'],
     isActive: true,
-    notes: 'Bảng giá bán lẻ niêm yết chuẩn tại quầy',
+    notes: 'Bảng giá bán lẻ niêm yết chuẩn tại quầy siêu thị / tạp hóa',
     createdAt: '2026-01-01T00:00:00Z',
   },
   {
     id: 'pl-02',
-    code: 'BG-SI-2026',
-    name: 'Bảng Giá Bán Sỉ / Đại Lý (Giảm 12% Giá Nhãn)',
+    code: 'BG-SI-TAPHOA',
+    name: 'Bảng Giá Bán Sỉ Tạp Hóa (Chiết Khấu 10% So Với Bán Lẻ)',
     type: 'WHOLESALE',
     calculationMethod: 'PERCENT_BASE',
-    value: 12,
+    value: 10, // Chiết khấu 10% so với bán lẻ
     appliedCustomerGroups: ['WHOLESALE'],
     appliedBranches: ['ALL'],
     isActive: true,
-    notes: 'Áp dụng tự động cho các đại lý bán sỉ',
+    notes: 'Tự động giảm 10% cho khách mua sỉ & đại lý',
     createdAt: '2026-02-10T08:30:00Z',
   },
   {
     id: 'pl-03',
     code: 'BG-VIP-MEMBER',
-    name: 'Bảng Giá Đặc Quyền Khách Hàng VIP (Giảm 8%)',
+    name: 'Bảng Giá Thân Thiết VIP (Chiết Khấu 5% Bán Lẻ)',
     type: 'CUSTOMER_GROUP',
     calculationMethod: 'PERCENT_BASE',
-    value: 8,
+    value: 5,
     appliedCustomerGroups: ['VIP'],
     appliedBranches: ['ALL'],
     isActive: true,
-    notes: 'Áp dụng tự động khi chọn Khách hàng VIP',
+    notes: 'Tự động giảm 5% cho thành viên VIP',
     createdAt: '2026-03-15T10:00:00Z',
   },
   {
     id: 'pl-04',
     code: 'BG-SUMMER-SALE',
-    name: 'Bảng Giá Khuyến Mãi Hè 2026 (Đồng Giá Lợi Nhuận + 15%)',
+    name: 'Bảng Giá Xả Hàng Khuyến Mãi (Lợi Nhuận Gộp + 15%)',
     type: 'PROMOTION',
     calculationMethod: 'PERCENT_COST',
     value: 15,
@@ -85,7 +85,7 @@ let PRICE_LISTS_DB: PriceList[] = [
     appliedCustomerGroups: ['ALL'],
     appliedBranches: ['ALL'],
     isActive: true,
-    notes: 'Chương trình xả hàng khuyến mãi hè',
+    notes: 'Chương trình xả kho giá gốc',
     createdAt: '2026-05-20T14:00:00Z',
   },
 ];
@@ -125,12 +125,12 @@ export class PriceListService {
         isOverridden = true;
       } else {
         if (pl.calculationMethod === 'PERCENT_BASE') {
-          customPrice = Math.round((prod.sellingPrice * (1 - pl.value / 100)) / 1000) * 1000;
+          customPrice = Math.round((prod.sellingPrice * (1 - pl.value / 100)) / 500) * 500;
           if (prod.conversionSellingPrice) {
             customConversionPrice = Math.round((prod.conversionSellingPrice * (1 - pl.value / 100)) / 1000) * 1000;
           }
         } else if (pl.calculationMethod === 'PERCENT_COST') {
-          customPrice = Math.round((prod.costPrice * (1 + pl.value / 100)) / 1000) * 1000;
+          customPrice = Math.round((prod.costPrice * (1 + pl.value / 100)) / 500) * 500;
           if (prod.conversionSellingPrice) {
             customConversionPrice = Math.round((prod.costPrice * (prod.conversionFactor || 1) * (1 + pl.value / 100)) / 1000) * 1000;
           }
@@ -158,7 +158,6 @@ export class PriceListService {
     return { ...pl, items };
   }
 
-  // Multi-Price List Comparison Matrix Generator (KiotViet 4.3 Feature #2)
   static getMultiPriceListComparisonMatrix(selectedPriceListIds?: string[]) {
     const targetLists = selectedPriceListIds && selectedPriceListIds.length > 0
       ? PRICE_LISTS_DB.filter((p) => selectedPriceListIds.includes(p.id))
