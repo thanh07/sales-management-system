@@ -1,5 +1,5 @@
 export interface ProductAttribute {
-  name: string; // e.g. "Hương vị", "Dung tích", "Trọng lượng", "Màu sắc"
+  name: string;
   values: string[];
 }
 
@@ -15,6 +15,14 @@ export interface ProductVariant {
   minStock: number;
 }
 
+export interface ProductUnitConversion {
+  id: string;
+  unitName: string; // e.g. "Lốc", "Thùng", "Két", "Vỉ"
+  conversionFactor: number; // e.g. 6, 24, 96
+  costPrice?: number;
+  sellingPrice: number; // e.g. 85000, 340000
+}
+
 export interface Product {
   id: string;
   sku: string;
@@ -22,10 +30,12 @@ export interface Product {
   name: string;
   category: string;
   brand: string;
-  unit: string; // Smallest unit (e.g. Lon, Chai, Gói, Bịch)
-  conversionUnit?: string; // Larger unit (e.g. Thùng, Lốc, Hộp, Két)
-  conversionFactor?: number; // e.g. 24
+  location?: string; // Vị trí lưu kho (e.g. "Kệ A1-Tầng 2", "Kho Lạnh 01", "Dãy B3")
+  unit: string; // Smallest unit
+  conversionUnit?: string; // Legacy single unit support
+  conversionFactor?: number;
   conversionSellingPrice?: number;
+  conversions?: ProductUnitConversion[]; // Multiple conversion levels (Lốc, Thùng, Két...)
   costPrice: number;
   sellingPrice: number;
   promoPrice?: number;
@@ -48,6 +58,38 @@ let CATEGORIES_DB: string[] = [
   'Đồ Dùng Gia Đình & Tạp Hóa',
 ];
 
+let BRANDS_DB: string[] = [
+  'Red Bull',
+  'Heineken',
+  'Coca-Cola',
+  'Pepsi',
+  'Lavie',
+  'Vinamilk',
+  'TH True Milk',
+  'Acecook',
+  'Masan',
+  'Nam Ngư',
+  'Chinsu',
+  'Simply',
+  'Orion',
+  'Lay\'s',
+  'Sunlight',
+  'Lifebuoy',
+  'P/S',
+  'Pulppy',
+];
+
+let LOCATIONS_DB: string[] = [
+  'Kệ Nước A1 - Dãy 1',
+  'Kệ Sữa B2 - Tầng 1',
+  'Kệ Mì C1 - Tầng 2',
+  'Kệ Gia Vị D3 - Dãy 2',
+  'Kệ Bánh Kẹo E1 - Tầng 1',
+  'Kệ Hóa Mỹ Phẩm F2 - Dãy 3',
+  'Kho Lạnh 01',
+  'Kho Tổng G05',
+];
+
 let UNITS_DB: string[] = [
   'Lon',
   'Chai',
@@ -58,8 +100,8 @@ let UNITS_DB: string[] = [
   'Tuýp',
   'Chai 1L',
   'Cái',
-  'Thùng',
   'Lốc',
+  'Thùng',
   'Két',
   'Vỉ',
   'Bao',
@@ -68,45 +110,124 @@ let UNITS_DB: string[] = [
 
 function generate300GroceryProducts(): Product[] {
   const groceryTemplates = [
-    // 1. Nước Giải Khát & Đồ Uống
-    { cat: 'Nước Giải Khát & Đồ Uống', brand: 'Red Bull', baseName: 'Nước Tăng Lực Red Bull Bò Cụtn', unit: 'Lon', convUnit: 'Thùng', convFactor: 24, cost: 11000, sell: 15000, convSell: 340000, img: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400&q=80', attr: { name: 'Dung tích', values: ['250ml', '330ml'] } },
-    { cat: 'Nước Giải Khát & Đồ Uống', brand: 'Heineken', baseName: 'Bia Heineken Silver Lon', unit: 'Lon', convUnit: 'Thùng', convFactor: 24, cost: 15000, sell: 19000, convSell: 430000, img: 'https://images.unsplash.com/photo-1608270586620-248524c67de9?w=400&q=80' },
-    { cat: 'Nước Giải Khát & Đồ Uống', brand: 'Coca-Cola', baseName: 'Nước Ngọt Coca-Cola Vị Nguyên Bản', unit: 'Lon', convUnit: 'Thùng', convFactor: 24, cost: 8000, sell: 11000, convSell: 240000, img: 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400&q=80', attr: { name: 'Loại', values: ['Lon 320ml', 'Chai 1.5L', 'Chai 390ml'] } },
-    { cat: 'Nước Giải Khát & Đồ Uống', brand: 'Pepsi', baseName: 'Nước Ngọt Pepsi Không Calo', unit: 'Lon', convUnit: 'Thùng', convFactor: 24, cost: 7500, sell: 10500, convSell: 230000, img: 'https://images.unsplash.com/photo-1629203851122-3726ecdf080e?w=400&q=80' },
-    { cat: 'Nước Giải Khát & Đồ Uống', brand: 'Lavie', baseName: 'Nước Khoáng Thiên Nhiên Lavie', unit: 'Chai', convUnit: 'Thùng', convFactor: 24, cost: 4000, sell: 6000, convSell: 125000, img: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=400&q=80', attr: { name: 'Dung tích', values: ['500ml', '1.5L', '6L'] } },
-
-    // 2. Sữa & Sản Phẩm Từ Sữa
-    { cat: 'Sữa & Sản Phẩm Từ Sữa', brand: 'Vinamilk', baseName: 'Sữa Tươi Tiệt Trùng Vinamilk 100%', unit: 'Bịch', convUnit: 'Thùng', convFactor: 48, cost: 6500, sell: 8500, convSell: 380000, img: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=400&q=80', attr: { name: 'Hương vị', values: ['Có Đường', 'Ít Đường', 'Không Đường', 'Socola'] } },
-    { cat: 'Sữa & Sản Phẩm Từ Sữa', brand: 'TH True Milk', baseName: 'Sữa Tươi TH True Milk Tiệt Trùng', unit: 'Hộp', convUnit: 'Thùng', convFactor: 48, cost: 8000, sell: 10500, convSell: 480000, img: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?w=400&q=80', attr: { name: 'Hương vị', values: ['Nguyên Chất', 'Có Đường', 'Dâu'] } },
-    { cat: 'Sữa & Sản Phẩm Từ Sữa', brand: 'Vinamilk', baseName: 'Sữa Đặc Có Đường Ông Thọ Nhãn Xanh', unit: 'Hộp', convUnit: 'Thùng', convFactor: 24, cost: 18000, sell: 23000, convSell: 520000, img: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&q=80' },
-
-    // 3. Mì, Phở & Thực Phẩm Khô
-    { cat: 'Mì, Phở & Thực Phẩm Khô', brand: 'Acecook', baseName: 'Mì Tôm Chua Cay Hảo Hảo', unit: 'Gói', convUnit: 'Thùng', convFactor: 30, cost: 3800, sell: 4800, convSell: 135000, img: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&q=80', attr: { name: 'Hương vị', values: ['Tôm Chua Cay', 'Sa Bế Tôm', 'Sườn Heo'] } },
-    { cat: 'Mì, Phở & Thực Phẩm Khô', brand: 'Acecook', baseName: 'Phở Bò Đệ Nhất Acecook', unit: 'Gói', convUnit: 'Thùng', convFactor: 30, cost: 6500, sell: 8500, convSell: 240000, img: 'https://images.unsplash.com/photo-1591814468924-caf88d1232e1?w=400&q=80' },
-    { cat: 'Mì, Phở & Thực Phẩm Khô', brand: 'Masan', baseName: 'Mì Omachi Xốt Bò Hầm', unit: 'Gói', convUnit: 'Thùng', convFactor: 30, cost: 7000, sell: 9500, convSell: 270000, img: 'https://images.unsplash.com/photo-1612927601601-6638404737ce?w=400&q=80' },
-
-    // 4. Gia Vị & Nước Chấm
-    { cat: 'Gia Vị & Nước Chấm', brand: 'Nam Ngư', baseName: 'Nước Mắm Nam Ngư Đệ Nhị 900ml', unit: 'Chai', convUnit: 'Thùng', convFactor: 15, cost: 35000, sell: 45000, convSell: 640000, img: 'https://images.unsplash.com/photo-1472476443507-c7a5948772fc?w=400&q=80' },
-    { cat: 'Gia Vị & Nước Chấm', brand: 'Chinsu', baseName: 'Tương Ớt Chinsu Đậm Đặc', unit: 'Chai', convUnit: 'Thùng', convFactor: 24, cost: 11000, sell: 15000, convSell: 340000, img: 'https://images.unsplash.com/photo-1588615419954-e4e614d9b626?w=400&q=80', attr: { name: 'Dung tích', values: ['250g', '500g', '1kg'] } },
-    { cat: 'Gia Vị & Nước Chấm', brand: 'Simply', baseName: 'Dầu Ăn Đậu Nành Simply 1L', unit: 'Chai', convUnit: 'Thùng', convFactor: 12, cost: 48000, sell: 59000, convSell: 680000, img: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400&q=80' },
-
-    // 5. Bánh Kẹo & Snack
-    { cat: 'Bánh Kẹo & Snack', brand: 'Orion', baseName: 'Bánh ChocoPie Orion Hộp 12 Chiếc', unit: 'Hộp', convUnit: 'Thùng', convFactor: 12, cost: 45000, sell: 58000, convSell: 660000, img: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=400&q=80', attr: { name: 'Hương vị', values: ['Truyền Thống', 'Vị Cacao', 'Vị Matcha'] } },
-    { cat: 'Bánh Kẹo & Snack', brand: 'Lay\'s', baseName: 'Snack Khoai Tây Lay\'s Stax', unit: 'Lon', convUnit: 'Thùng', convFactor: 24, cost: 18000, sell: 24000, convSell: 540000, img: 'https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=400&q=80', attr: { name: 'Vị', values: ['Tự Nhiên', 'Tôm Mực', 'Sườn Nướng BBQ'] } },
-
-    // 6. Hóa Mỹ Phẩm & Chăm Sóc Cá Nhân
-    { cat: 'Hóa Mỹ Phẩm & Chăm Sóc Cá Nhân', brand: 'Sunlight', baseName: 'Nước Rửa Bát Sunlight Chanh Rửa Sạch Dầu Mỡ', unit: 'Chai', convUnit: 'Thùng', convFactor: 12, cost: 26000, sell: 34000, convSell: 390000, img: 'https://images.unsplash.com/photo-1585670149967-b4f4da88cc9f?w=400&q=80', attr: { name: 'Mùi hương', values: ['Chanh Tươi', 'Trà Xanh', 'Muối Khoe'] } },
-    { cat: 'Hóa Mỹ Phẩm & Chăm Sóc Cá Nhân', brand: 'Lifebuoy', baseName: 'Sữa Tắm Diệt Khuẩn Lifebuoy Bảo Vệ Vượt Trội', unit: 'Chai', convUnit: 'Thùng', convFactor: 12, cost: 85000, sell: 110000, convSell: 1250000, img: 'https://images.unsplash.com/photo-1608248597263-00079e964474?w=400&q=80' },
-    { cat: 'Hóa Mỹ Phẩm & Chăm Sóc Cá Nhân', brand: 'P/S', baseName: 'Kem Đánh Răng P/S Bảo Vệ 123 Ngừa Sâu Răng', unit: 'Tuýp', convUnit: 'Thùng', convFactor: 36, cost: 22000, sell: 29000, convSell: 990000, img: 'https://images.unsplash.com/photo-1559598467-f8b76c8155d0?w=400&q=80' },
-
-    // 7. Đồ Dùng Gia Đình & Tạp Hóa
-    { cat: 'Đồ Dùng Gia Đình & Tạp Hóa', brand: 'Pulppy', baseName: 'Giấy Vệ Sinh Pulppy 2 Lớp Lốc 10 Cuộn', unit: 'Lốc', convUnit: 'Thùng', convFactor: 10, cost: 42000, sell: 55000, convSell: 520000, img: 'https://images.unsplash.com/photo-1584556812952-905ffd0c611a?w=400&q=80' },
+    {
+      cat: 'Nước Giải Khát & Đồ Uống',
+      brand: 'Red Bull',
+      loc: 'Kệ Nước A1 - Dãy 1',
+      baseName: 'Nước Tăng Lực Red Bull Bò Cụtn',
+      unit: 'Lon',
+      cost: 11000,
+      sell: 15000,
+      img: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400&q=80',
+      attr: { name: 'Dung tích', values: ['250ml', '330ml'] },
+      conversions: [
+        { id: 'c1', unitName: 'Lốc', conversionFactor: 6, sellingPrice: 85000 },
+        { id: 'c2', unitName: 'Thùng', conversionFactor: 24, sellingPrice: 340000 },
+      ],
+    },
+    {
+      cat: 'Nước Giải Khát & Đồ Uống',
+      brand: 'Heineken',
+      loc: 'Kệ Nước A1 - Dãy 1',
+      baseName: 'Bia Heineken Silver Lon',
+      unit: 'Lon',
+      cost: 15000,
+      sell: 19000,
+      img: 'https://images.unsplash.com/photo-1608270586620-248524c67de9?w=400&q=80',
+      conversions: [
+        { id: 'c1', unitName: 'Lốc', conversionFactor: 6, sellingPrice: 110000 },
+        { id: 'c2', unitName: 'Thùng', conversionFactor: 24, sellingPrice: 430000 },
+      ],
+    },
+    {
+      cat: 'Sữa & Sản Phẩm Từ Sữa',
+      brand: 'Vinamilk',
+      loc: 'Kệ Sữa B2 - Tầng 1',
+      baseName: 'Sữa Tươi Tiệt Trùng Vinamilk 100%',
+      unit: 'Bịch',
+      cost: 6500,
+      sell: 8500,
+      img: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=400&q=80',
+      attr: { name: 'Hương vị', values: ['Có Đường', 'Ít Đường', 'Không Đường', 'Socola'] },
+      conversions: [
+        { id: 'c1', unitName: 'Lốc', conversionFactor: 4, sellingPrice: 33000 },
+        { id: 'c2', unitName: 'Thùng', conversionFactor: 48, sellingPrice: 380000 },
+      ],
+    },
+    {
+      cat: 'Mì, Phở & Thực Phẩm Khô',
+      brand: 'Acecook',
+      loc: 'Kệ Mì C1 - Tầng 2',
+      baseName: 'Mì Tôm Chua Cay Hảo Hảo',
+      unit: 'Gói',
+      cost: 3800,
+      sell: 4800,
+      img: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&q=80',
+      attr: { name: 'Hương vị', values: ['Tôm Chua Cay', 'Sa Bế Tôm', 'Sườn Heo'] },
+      conversions: [
+        { id: 'c1', unitName: 'Thùng', conversionFactor: 30, sellingPrice: 135000 },
+      ],
+    },
+    {
+      cat: 'Gia Vị & Nước Chấm',
+      brand: 'Nam Ngư',
+      loc: 'Kệ Gia Vị D3 - Dãy 2',
+      baseName: 'Nước Mắm Nam Ngư Đệ Nhị 900ml',
+      unit: 'Chai',
+      cost: 35000,
+      sell: 45000,
+      img: 'https://images.unsplash.com/photo-1472476443507-c7a5948772fc?w=400&q=80',
+      conversions: [
+        { id: 'c1', unitName: 'Thùng', conversionFactor: 15, sellingPrice: 640000 },
+      ],
+    },
+    {
+      cat: 'Gia Vị & Nước Chấm',
+      brand: 'Chinsu',
+      loc: 'Kệ Gia Vị D3 - Dãy 2',
+      baseName: 'Tương Ớt Chinsu Đậm Đặc',
+      unit: 'Chai',
+      cost: 11000,
+      sell: 15000,
+      img: 'https://images.unsplash.com/photo-1588615419954-e4e614d9b626?w=400&q=80',
+      attr: { name: 'Dung tích', values: ['250g', '500g', '1kg'] },
+      conversions: [
+        { id: 'c1', unitName: 'Thùng', conversionFactor: 24, sellingPrice: 340000 },
+      ],
+    },
+    {
+      cat: 'Bánh Kẹo & Snack',
+      brand: 'Orion',
+      loc: 'Kệ Bánh Kẹo E1 - Tầng 1',
+      baseName: 'Bánh ChocoPie Orion Hộp 12 Chiếc',
+      unit: 'Hộp',
+      cost: 45000,
+      sell: 58000,
+      img: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=400&q=80',
+      attr: { name: 'Hương vị', values: ['Truyền Thống', 'Vị Cacao', 'Vị Matcha'] },
+      conversions: [
+        { id: 'c1', unitName: 'Thùng', conversionFactor: 12, sellingPrice: 660000 },
+      ],
+    },
+    {
+      cat: 'Hóa Mỹ Phẩm & Chăm Sóc Cá Nhân',
+      brand: 'Sunlight',
+      loc: 'Kệ Hóa Mỹ Phẩm F2 - Dãy 3',
+      baseName: 'Nước Rửa Bát Sunlight Chanh Rửa Sạch Dầu Mỡ',
+      unit: 'Chai',
+      cost: 26000,
+      sell: 34000,
+      img: 'https://images.unsplash.com/photo-1585670149967-b4f4da88cc9f?w=400&q=80',
+      attr: { name: 'Mùi hương', values: ['Chanh Tươi', 'Trà Xanh', 'Muối Khoe'] },
+      conversions: [
+        { id: 'c1', unitName: 'Thùng', conversionFactor: 12, sellingPrice: 390000 },
+      ],
+    },
   ];
 
   const products: Product[] = [];
   let count = 1;
 
-  // Generate 300 rich grocery products loop
   while (products.length < 300) {
     const tpl = groceryTemplates[(count - 1) % groceryTemplates.length];
     const itemNum = count.toString().padStart(3, '0');
@@ -138,6 +259,8 @@ function generate300GroceryProducts(): Product[] {
     const sellingPrice = tpl.sell + ((count * 800) % 8000);
     const stockQuantity = (count * 13) % 150 + 15;
 
+    const mainConv = tpl.conversions?.[0];
+
     products.push({
       id: `prod-taphoap-${itemNum}`,
       sku,
@@ -145,10 +268,14 @@ function generate300GroceryProducts(): Product[] {
       name,
       category: tpl.cat,
       brand: tpl.brand,
+      location: tpl.loc,
       unit: tpl.unit,
-      conversionUnit: tpl.convUnit,
-      conversionFactor: tpl.convFactor,
-      conversionSellingPrice: tpl.convSell ? tpl.convSell + ((count * 2000) % 20000) : undefined,
+      conversionUnit: mainConv?.unitName || 'Thùng',
+      conversionFactor: mainConv?.conversionFactor || 24,
+      conversionSellingPrice: mainConv?.sellingPrice || sellingPrice * 23,
+      conversions: tpl.conversions || [
+        { id: 'c1', unitName: 'Thùng', conversionFactor: 24, sellingPrice: sellingPrice * 23 }
+      ],
       costPrice,
       sellingPrice,
       stockQuantity: hasVariants ? variants!.reduce((s, v) => s + v.stockQuantity, 0) : stockQuantity,
@@ -166,14 +293,22 @@ function generate300GroceryProducts(): Product[] {
   return products;
 }
 
-const MOCK_PRODUCTS: Product[] = generate300GroceryProducts();
+let MOCK_PRODUCTS: Product[] = generate300GroceryProducts();
 
 export class ProductService {
-  static getAllProducts(query?: string, category?: string) {
+  static getAllProducts(query?: string, category?: string, brand?: string, location?: string) {
     let list = [...MOCK_PRODUCTS];
 
     if (category && category !== 'Tất cả') {
       list = list.filter((p) => p.category === category);
+    }
+
+    if (brand && brand !== 'Tất cả') {
+      list = list.filter((p) => p.brand === brand);
+    }
+
+    if (location && location !== 'Tất cả') {
+      list = list.filter((p) => p.location === location);
     }
 
     if (query) {
@@ -182,7 +317,9 @@ export class ProductService {
         (p) =>
           p.name.toLowerCase().includes(q) ||
           p.sku.toLowerCase().includes(q) ||
-          p.barcode.includes(q)
+          p.barcode.includes(q) ||
+          p.brand.toLowerCase().includes(q) ||
+          (p.location && p.location.toLowerCase().includes(q))
       );
     }
 
@@ -226,6 +363,12 @@ export class ProductService {
       id: `prod-${Date.now()}`,
     };
 
+    if (newProduct.conversions && newProduct.conversions.length > 0) {
+      newProduct.conversionUnit = newProduct.conversions[0].unitName;
+      newProduct.conversionFactor = newProduct.conversions[0].conversionFactor;
+      newProduct.conversionSellingPrice = newProduct.conversions[0].sellingPrice;
+    }
+
     if (newProduct.variants && newProduct.variants.length > 0) {
       newProduct.hasVariants = true;
       newProduct.stockQuantity = newProduct.variants.reduce((sum, v) => sum + Number(v.stockQuantity), 0);
@@ -235,10 +378,21 @@ export class ProductService {
     if (!CATEGORIES_DB.includes(data.category)) {
       CATEGORIES_DB.push(data.category);
     }
+    if (data.brand && !BRANDS_DB.includes(data.brand)) {
+      BRANDS_DB.push(data.brand);
+    }
+    if (data.location && !LOCATIONS_DB.includes(data.location)) {
+      LOCATIONS_DB.push(data.location);
+    }
     if (data.unit && !UNITS_DB.includes(data.unit)) {
       UNITS_DB.push(data.unit);
     }
     return newProduct;
+  }
+
+  static resetAndSeed300GroceryProducts() {
+    MOCK_PRODUCTS = generate300GroceryProducts();
+    return MOCK_PRODUCTS.length;
   }
 
   static importProductsFromExcel(items: any[]) {
@@ -253,6 +407,7 @@ export class ProductService {
           name: item.name,
           category: item.category || 'Nước Giải Khát & Đồ Uống',
           brand: item.brand || 'Khác',
+          location: item.location || 'Kho Lạnh 01',
           unit: item.unit || 'Lon',
           conversionUnit: item.conversionUnit || undefined,
           conversionFactor: item.conversionFactor ? Number(item.conversionFactor) : undefined,
@@ -265,9 +420,6 @@ export class ProductService {
           isActive: true,
         };
         MOCK_PRODUCTS.unshift(newProduct);
-        if (!CATEGORIES_DB.includes(newProduct.category)) {
-          CATEGORIES_DB.push(newProduct.category);
-        }
         count++;
       }
     });
@@ -275,12 +427,14 @@ export class ProductService {
   }
 
   static generateExcelExportCsv() {
-    const headers = ['SKU', 'Mã Barcode (Độc nhất)', 'Tên sản phẩm', 'Danh mục', 'Đơn vị nhỏ nhất', 'Đơn vị quy đổi', 'Hệ số quy đổi', 'Giá nhập (ĐV nhỏ)', 'Giá bán lẻ (ĐV nhỏ)', 'Giá bán đơn vị lớn', 'Tồn kho (ĐV nhỏ nhất)', 'Ngưỡng cảnh báo'];
+    const headers = ['SKU', 'Mã Barcode (Độc nhất)', 'Tên sản phẩm', 'Danh mục (Category)', 'Thương hiệu (Brand)', 'Vị trí kho (Location)', 'Đơn vị nhỏ nhất', 'Đơn vị quy đổi', 'Hệ số quy đổi', 'Giá nhập', 'Giá bán lẻ', 'Giá bán đơn vị lớn', 'Tồn kho', 'Ngưỡng cảnh báo'];
     const rows = MOCK_PRODUCTS.map((p) => [
       p.sku,
       p.barcode,
       `"${p.name.replace(/"/g, '""')}"`,
       `"${p.category}"`,
+      `"${p.brand}"`,
+      `"${p.location || ''}"`,
       p.unit,
       p.conversionUnit || '',
       p.conversionFactor || '',
@@ -301,34 +455,33 @@ export class ProductService {
     }
   }
 
-  static getCategories() {
-    return CATEGORIES_DB;
+  static getCategories() { return CATEGORIES_DB; }
+  static getBrands() { return BRANDS_DB; }
+  static getLocations() { return LOCATIONS_DB; }
+  static getUnits() { return UNITS_DB; }
+
+  static addBrand(brandName: string) {
+    if (!brandName.trim()) throw new Error('Tên thương hiệu không được trống');
+    if (BRANDS_DB.includes(brandName.trim())) throw new Error('Thương hiệu đã tồn tại');
+    BRANDS_DB.push(brandName.trim());
+    return BRANDS_DB;
   }
 
-  static addCategory(categoryName: string) {
-    if (!categoryName.trim()) throw new Error('Tên danh mục không được trống');
-    if (CATEGORIES_DB.includes(categoryName)) throw new Error('Danh mục đã tồn tại');
-    CATEGORIES_DB.push(categoryName);
-    return CATEGORIES_DB;
+  static deleteBrand(brandName: string) {
+    BRANDS_DB = BRANDS_DB.filter((b) => b !== brandName);
+    return BRANDS_DB;
   }
 
-  static updateCategory(oldName: string, newName: string) {
-    const index = CATEGORIES_DB.indexOf(oldName);
-    if (index === -1) throw new Error('Không tìm thấy danh mục');
-    CATEGORIES_DB[index] = newName;
-    MOCK_PRODUCTS.forEach((p) => {
-      if (p.category === oldName) p.category = newName;
-    });
-    return CATEGORIES_DB;
+  static addLocation(locName: string) {
+    if (!locName.trim()) throw new Error('Vị trí kho không được trống');
+    if (LOCATIONS_DB.includes(locName.trim())) throw new Error('Vị trí kho đã tồn tại');
+    LOCATIONS_DB.push(locName.trim());
+    return LOCATIONS_DB;
   }
 
-  static deleteCategory(categoryName: string) {
-    CATEGORIES_DB = CATEGORIES_DB.filter((c) => c !== categoryName);
-    return CATEGORIES_DB;
-  }
-
-  static getUnits() {
-    return UNITS_DB;
+  static deleteLocation(locName: string) {
+    LOCATIONS_DB = LOCATIONS_DB.filter((l) => l !== locName);
+    return LOCATIONS_DB;
   }
 
   static addUnit(unitName: string) {

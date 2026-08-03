@@ -4,21 +4,28 @@ import { authenticateToken } from '../middlewares/auth.middleware';
 
 const router = Router();
 
-router.get('/', authenticateToken, ProductController.getProducts);
-router.get('/export-excel', authenticateToken, ProductController.exportExcel);
-router.post('/import-excel', authenticateToken, ProductController.importExcel);
-router.get('/barcode/:barcode', authenticateToken, ProductController.getByBarcode);
-router.post('/', authenticateToken, ProductController.createProduct);
+router.use(authenticateToken);
 
-// Category Routes
-router.get('/categories', authenticateToken, ProductController.getCategories);
-router.post('/categories', authenticateToken, ProductController.addCategory);
-router.put('/categories', authenticateToken, ProductController.updateCategory);
-router.delete('/categories/:name', authenticateToken, ProductController.deleteCategory);
+router.get('/', ProductController.getProducts);
+router.post('/reset', ProductController.resetProducts);
+router.get('/barcode/:barcode', ProductController.getProductByBarcode);
+router.get('/export-excel', ProductController.exportExcel);
+router.post('/import-excel', ProductController.importExcel);
+router.post('/', ProductController.createProduct);
 
-// Units Routes
-router.get('/units', authenticateToken, ProductController.getUnits);
-router.post('/units', authenticateToken, ProductController.addUnit);
-router.delete('/units/:name', authenticateToken, ProductController.deleteUnit);
+// Brands endpoints
+router.get('/brands', ProductController.getBrands);
+router.post('/brands', ProductController.createBrand);
+router.delete('/brands/:name', ProductController.deleteBrand);
+
+// Locations endpoints
+router.get('/locations', ProductController.getLocations);
+router.post('/locations', ProductController.createLocation);
+router.delete('/locations/:name', ProductController.deleteLocation);
+
+// Custom Units endpoints
+router.get('/units', ProductController.getUnits);
+router.post('/units', ProductController.createUnit);
+router.delete('/units/:name', ProductController.deleteUnit);
 
 export default router;

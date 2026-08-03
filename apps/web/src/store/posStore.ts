@@ -1,114 +1,122 @@
 import { create } from 'zustand';
-import api from '../services/api';
 
 export interface CartItem {
-  productId: string;
-  sku: string;
-  barcode: string;
-  name: string;
-  unitPrice: number;
+  product: any;
   quantity: number;
-  discount: number;
-  totalPrice: number;
-  image: string;
-  unit: string; // Smallest unit (e.g. Lon, Gói, Cái)
-  conversionUnit?: string; // Larger unit (e.g. Thùng, Lốc)
-  conversionFactor?: number; // e.g. 24
-  conversionSellingPrice?: number;
-  selectedUnit: string; // Active chosen unit (e.g. Lon or Thùng)
+  selectedUnit: string;
+  selectedConversionFactor: number;
+  selectedPrice: number;
+  notes?: string;
 }
 
-export interface Customer {
+export interface ParkedOrder {
   id: string;
-  fullName: string;
-  phone: string;
-  group: string;
-  rewardPoints: number;
+  code: string;
+  customer: any;
+  items: CartItem[];
+  parkedAt: string;
 }
 
 interface PosState {
   cart: CartItem[];
-  selectedCategory: string;
+  customer: any | null;
+  parkedOrders: ParkedOrder[];
+  activePriceList: any | null;
   searchQuery: string;
-  selectedCustomer: Customer | null;
-  paymentMethod: 'CASH' | 'BANK_TRANSFER' | 'CREDIT_CARD' | 'E_WALLET';
-  paidAmount: number;
-  discountPercent: number;
-  isInvoiceModalOpen: boolean;
-  isParkedModalOpen: boolean;
-  isCustomerModalOpen: boolean;
-  lastOrder: any | null;
-  parkedOrdersCount: number;
+  selectedCategory: string;
 
-  // Actions
-  addToCart: (product: any) => void;
-  removeFromCart: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
-  updateItemUnit: (productId: string, chosenUnit: string) => void;
+  setCustomer: (customer: any | null) => void;
+  setActivePriceList: (priceList: any | null) => void;
   setSearchQuery: (query: string) => void;
   setSelectedCategory: (category: string) => void;
-  setCustomer: (customer: Customer | null) => void;
-  setPaymentMethod: (method: 'CASH' | 'BANK_TRANSFER' | 'CREDIT_CARD' | 'E_WALLET') => void;
-  setPaidAmount: (amount: number) => void;
-  setDiscountPercent: (percent: number) => void;
+
+  addToCart: (product: any, unitName?: string) => void;
+  removeFromCart: (productId: string) => void;
+  updateQuantity: (productId: string, quantity: number) => void;
+  updateItemUnit: (productId: string, unitName: string) => void;
   clearCart: () => void;
-  checkout: () => Promise<any>;
-  parkCurrentOrder: () => Promise<void>;
-  setInvoiceModalOpen: (open: boolean) => void;
-  setParkedModalOpen: (open: boolean) => void;
-  setCustomerModalOpen: (open: boolean) => void;
+
+  parkCurrentOrder: () => void;
+  restoreParkedOrder: (orderId: string) => void;
+  deleteParkedOrder: (orderId: string) => void;
+
+  calculateTotal: () => {
+    subtotal: number;
+    discount: number;
+    total: number;
+  };
 }
 
 export const usePosStore = create<PosState>((set, get) => ({
   cart: [],
-  selectedCategory: 'Tất cả',
+  customer: null,
+  parkedOrders: [],
+  activePriceList: null,
   searchQuery: '',
-  selectedCustomer: null,
-  paymentMethod: 'CASH',
-  paidAmount: 0,
-  discountPercent: 0,
-  isInvoiceModalOpen: false,
-  isParkedModalOpen: false,
-  isCustomerModalOpen: false,
-  lastOrder: null,
-  parkedOrdersCount: 0,
+  selectedCategory: 'Tất cả',
 
-  addToCart: (product) => {
-    const { cart } = get();
-    const existingIndex = cart.findIndex((item) => item.productId === product.id);
+  setCustomer: (customer) => set({ customer }),
+  setActivePriceList: (priceList) => set({ activePriceList: priceList }),
+  setSearchQuery: (searchQuery) => set({ searchQuery }),
+  setSelectedCategory: (selectedCategory) => set({ selectedCategory }),
+
+  addToCart: (product, unitName) => {
+    const { cart, activePriceList } = get();
+
+    // Available unit conversions list
+    const convList = product.conversions && product.conversions.length > 0
+      ? product.conversions
+      : (product.conversionUnit ? [{ id: 'c0', unitName: product.conversionUnit, conversionFactor: product.conversionFactor || 24, sellingPrice: product.conversionSellingPrice || product.sellingPrice * 24 }] : []);
+
+    const targetUnit = unitName || product.unit;
+
+    let targetFactor = 1;
+    let targetPrice = product.sellingPrice;
+
+    if (targetUnit !== product.unit) {
+      const conv = convList.find((c: any) => c.unitName === targetUnit);
+      if (conv) {
+        targetFactor = conv.conversionFactor;
+        targetPrice = conv.sellingPrice;
+      }
+    }
+
+    // Check if active price list applies discount
+    if (activePriceList && activePriceList.code !== 'BG-BASE') {
+      const priceListItem = activePriceList.items?.find((i: any) => i.productId === product.id);
+      if (priceListItem) {
+        if (targetUnit !== product.unit && priceListItem.customConversionPrice) {
+          targetPrice = priceListItem.customConversionPrice;
+        } else if (targetUnit === product.unit) {
+          targetPrice = priceListItem.customPrice;
+        }
+      }
+    }
+
+    const existingIndex = cart.findIndex((item) => item.product.id === product.id && item.selectedUnit === targetUnit);
 
     if (existingIndex > -1) {
       const updatedCart = [...cart];
-      const item = updatedCart[existingIndex];
-      item.quantity += 1;
-      item.totalPrice = item.quantity * item.unitPrice - item.discount;
+      updatedCart[existingIndex].quantity += 1;
       set({ cart: updatedCart });
     } else {
-      const defaultUnit = product.unit || 'Cái';
-      const defaultPrice = product.promoPrice || product.sellingPrice;
-
-      const newItem: CartItem = {
-        productId: product.id,
-        sku: product.sku,
-        barcode: product.barcode,
-        name: product.name,
-        unitPrice: defaultPrice,
-        quantity: 1,
-        discount: 0,
-        totalPrice: defaultPrice,
-        image: product.image,
-        unit: defaultUnit,
-        conversionUnit: product.conversionUnit,
-        conversionFactor: product.conversionFactor,
-        conversionSellingPrice: product.conversionSellingPrice,
-        selectedUnit: defaultUnit, // Default to smallest unit
-      };
-      set({ cart: [...cart, newItem] });
+      set({
+        cart: [
+          ...cart,
+          {
+            product,
+            quantity: 1,
+            selectedUnit: targetUnit,
+            selectedConversionFactor: targetFactor,
+            selectedPrice: targetPrice,
+          },
+        ],
+      });
     }
   },
 
   removeFromCart: (productId) => {
-    set({ cart: get().cart.filter((item) => item.productId !== productId) });
+    set({ cart: get().cart.filter((item) => item.product.id !== productId) });
   },
 
   updateQuantity: (productId, quantity) => {
@@ -116,106 +124,102 @@ export const usePosStore = create<PosState>((set, get) => ({
       get().removeFromCart(productId);
       return;
     }
-    const updatedCart = get().cart.map((item) => {
-      if (item.productId === productId) {
-        return {
-          ...item,
-          quantity,
-          totalPrice: quantity * item.unitPrice - item.discount,
-        };
-      }
-      return item;
+    set({
+      cart: get().cart.map((item) =>
+        item.product.id === productId ? { ...item, quantity } : item
+      ),
     });
-    set({ cart: updatedCart });
   },
 
-  updateItemUnit: (productId, chosenUnit) => {
-    const updatedCart = get().cart.map((item) => {
-      if (item.productId === productId) {
-        let newUnitPrice = item.unitPrice;
+  updateItemUnit: (productId, unitName) => {
+    const { cart, activePriceList } = get();
+    set({
+      cart: cart.map((item) => {
+        if (item.product.id === productId) {
+          const product = item.product;
+          const convList = product.conversions && product.conversions.length > 0
+            ? product.conversions
+            : (product.conversionUnit ? [{ id: 'c0', unitName: product.conversionUnit, conversionFactor: product.conversionFactor || 24, sellingPrice: product.conversionSellingPrice || product.sellingPrice * 24 }] : []);
 
-        if (chosenUnit === item.conversionUnit && item.conversionUnit) {
-          // Switch to larger unit (e.g. Thùng)
-          newUnitPrice = item.conversionSellingPrice || item.unitPrice * (item.conversionFactor || 1);
-        } else {
-          // Switch back to smallest unit (e.g. Lon)
-          newUnitPrice = item.unitPrice; // Base retail price per smallest unit
+          let factor = 1;
+          let price = product.sellingPrice;
+
+          if (unitName !== product.unit) {
+            const conv = convList.find((c: any) => c.unitName === unitName);
+            if (conv) {
+              factor = conv.conversionFactor;
+              price = conv.sellingPrice;
+            }
+          }
+
+          if (activePriceList && activePriceList.code !== 'BG-BASE') {
+            const priceListItem = activePriceList.items?.find((i: any) => i.productId === product.id);
+            if (priceListItem) {
+              if (unitName !== product.unit && priceListItem.customConversionPrice) {
+                price = priceListItem.customConversionPrice;
+              } else if (unitName === product.unit) {
+                price = priceListItem.customPrice;
+              }
+            }
+          }
+
+          return {
+            ...item,
+            selectedUnit: unitName,
+            selectedConversionFactor: factor,
+            selectedPrice: price,
+          };
         }
-
-        return {
-          ...item,
-          selectedUnit: chosenUnit,
-          unitPrice: newUnitPrice,
-          totalPrice: item.quantity * newUnitPrice - item.discount,
-        };
-      }
-      return item;
+        return item;
+      }),
     });
-    set({ cart: updatedCart });
   },
 
-  setSearchQuery: (query) => set({ searchQuery: query }),
-  setSelectedCategory: (category) => set({ selectedCategory: category }),
-  setCustomer: (customer) => set({ selectedCustomer: customer }),
-  setPaymentMethod: (method) => set({ paymentMethod: method }),
-  setPaidAmount: (amount) => set({ paidAmount: amount }),
-  setDiscountPercent: (percent) => set({ discountPercent: percent }),
+  clearCart: () => set({ cart: [] }),
 
-  clearCart: () =>
-    set({
-      cart: [],
-      selectedCustomer: null,
-      paidAmount: 0,
-      discountPercent: 0,
-    }),
-
-  checkout: async () => {
-    const { cart, selectedCustomer, paymentMethod, paidAmount, discountPercent } = get();
-    if (cart.length === 0) throw new Error('Giỏ hàng đang trống!');
-
-    const subTotal = cart.reduce((sum, item) => sum + item.totalPrice, 0);
-    const discount = (subTotal * discountPercent) / 100;
-    const totalAmount = subTotal - discount;
-    const actualPaid = paidAmount > 0 ? paidAmount : totalAmount;
-
-    const payload = {
-      customerId: selectedCustomer?.id,
-      items: cart.map((i) => ({
-        productId: i.productId,
-        name: i.name,
-        quantity: i.quantity,
-        selectedUnit: i.selectedUnit,
-        conversionFactor: i.selectedUnit === i.conversionUnit ? (i.conversionFactor || 1) : 1,
-        unitPrice: i.unitPrice,
-        discount: i.discount,
-      })),
-      subTotal,
-      discount,
-      tax: 0,
-      totalAmount,
-      paidAmount: actualPaid,
-      paymentMethod,
-    };
-
-    const res: any = await api.post('/pos/checkout', payload);
-    set({
-      lastOrder: res.data,
-      isInvoiceModalOpen: true,
-    });
-    get().clearCart();
-    return res.data;
-  },
-
-  parkCurrentOrder: async () => {
-    const { cart, selectedCustomer } = get();
+  parkCurrentOrder: () => {
+    const { cart, customer, parkedOrders } = get();
     if (cart.length === 0) return;
 
-    await api.post('/pos/parked-orders', { cart, customer: selectedCustomer });
-    set((state) => ({ parkedOrdersCount: state.parkedOrdersCount + 1 }));
-    get().clearCart();
+    const newOrder: ParkedOrder = {
+      id: `parked-${Date.now()}`,
+      code: `HD-TAM-${Math.floor(1000 + Math.random() * 9000)}`,
+      customer,
+      items: [...cart],
+      parkedAt: new Date().toISOString(),
+    };
+
+    set({
+      parkedOrders: [newOrder, ...parkedOrders],
+      cart: [],
+    });
   },
 
-  setInvoiceModalOpen: (open) => set({ isInvoiceModalOpen: open }),
-  setParkedModalOpen: (open) => set({ isParkedModalOpen: open }),
-  setCustomerModalOpen: (open) => set({ isCustomerModalOpen: open }),
+  restoreParkedOrder: (orderId) => {
+    const { parkedOrders } = get();
+    const order = parkedOrders.find((o) => o.id === orderId);
+    if (order) {
+      set({
+        cart: order.items,
+        customer: order.customer,
+        parkedOrders: parkedOrders.filter((o) => o.id !== orderId),
+      });
+    }
+  },
+
+  deleteParkedOrder: (orderId) => {
+    set({
+      parkedOrders: get().parkedOrders.filter((o) => o.id !== orderId),
+    });
+  },
+
+  calculateTotal: () => {
+    const { cart } = get();
+    const subtotal = cart.reduce((sum, item) => sum + item.selectedPrice * item.quantity, 0);
+    return {
+      subtotal,
+      discount: 0,
+      total: subtotal,
+    };
+  },
 }));

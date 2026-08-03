@@ -3,134 +3,162 @@ import { ProductService } from '../services/product.service';
 import { sendSuccess, sendError } from '../utils/response';
 
 export class ProductController {
-  static getProducts(req: Request, res: Response) {
+  static getProducts = async (req: Request, res: Response) => {
     try {
-      const { query, category } = req.query;
+      const { query, category, brand, location } = req.query;
       const products = ProductService.getAllProducts(
         query as string,
-        category as string
+        category as string,
+        brand as string,
+        location as string
       );
       const categories = ProductService.getCategories();
+      const brands = ProductService.getBrands();
+      const locations = ProductService.getLocations();
       const units = ProductService.getUnits();
-      return sendSuccess(res, { products, categories, units }, 'Lấy danh sách sản phẩm thành công');
-    } catch (error: any) {
-      return sendError(res, error.message, error, 500);
+      return sendSuccess(res, { products, categories, brands, locations, units });
+    } catch (err: any) {
+      return sendError(res, err.message);
     }
-  }
+  };
 
-  static getByBarcode(req: Request, res: Response) {
+  static resetProducts = async (req: Request, res: Response) => {
+    try {
+      const count = ProductService.resetAndSeed300GroceryProducts();
+      return sendSuccess(res, { count }, `Đã xóa hết dữ liệu cũ và khởi tạo thành công ${count} sản phẩm hàng tạp hóa mới!`);
+    } catch (err: any) {
+      return sendError(res, err.message);
+    }
+  };
+
+  static getProductByBarcode = async (req: Request, res: Response) => {
     try {
       const { barcode } = req.params;
       const product = ProductService.getProductByBarcode(barcode);
-      return sendSuccess(res, product, 'Tìm sản phẩm thành công');
-    } catch (error: any) {
-      return sendError(res, error.message, null, 404);
+      return sendSuccess(res, product);
+    } catch (err: any) {
+      return sendError(res, err.message, 404);
     }
-  }
+  };
 
-  static createProduct(req: Request, res: Response) {
+  static createProduct = async (req: Request, res: Response) => {
     try {
       const product = ProductService.addProduct(req.body);
-      return sendSuccess(res, product, 'Thêm sản phẩm thành công', 201);
-    } catch (error: any) {
-      return sendError(res, error.message || 'Lỗi thêm sản phẩm', error, 400);
+      return sendSuccess(res, product, 'Tạo sản phẩm mới thành công', 201);
+    } catch (err: any) {
+      return sendError(res, err.message, 400);
     }
-  }
+  };
 
-  static exportExcel(req: Request, res: Response) {
-    try {
-      const csvData = ProductService.generateExcelExportCsv();
-      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-      res.setHeader(
-        'Content-Disposition',
-        'attachment; filename="danh_sach_san_pham.csv"'
-      );
-      return res.send('\uFEFF' + csvData);
-    } catch (error: any) {
-      return sendError(res, error.message, error, 500);
-    }
-  }
-
-  static importExcel(req: Request, res: Response) {
+  static importExcel = async (req: Request, res: Response) => {
     try {
       const { items } = req.body;
-      if (!Array.isArray(items)) {
-        return sendError(res, 'Dữ liệu import không hợp lệ', null, 400);
-      }
+      if (!Array.isArray(items)) throw new Error('Dữ liệu danh sách không hợp lệ');
       const count = ProductService.importProductsFromExcel(items);
-      return sendSuccess(res, { count }, `Đã nhập thành công ${count} sản phẩm từ file Excel`);
-    } catch (error: any) {
-      return sendError(res, error.message, error, 400);
+      return sendSuccess(res, { count }, `Đã nhập thành công ${count} sản phẩm từ file Excel!`);
+    } catch (err: any) {
+      return sendError(res, err.message, 400);
     }
-  }
+  };
 
-  // Category Controllers
-  static getCategories(req: Request, res: Response) {
+  static exportExcel = async (req: Request, res: Response) => {
     try {
-      const categories = ProductService.getCategories();
-      return sendSuccess(res, categories, 'Lấy danh sách danh mục thành công');
-    } catch (error: any) {
-      return sendError(res, error.message, error, 500);
+      const csv = ProductService.generateExcelExportCsv();
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename=danh_sach_san_pham.csv');
+      return res.status(200).send('\uFEFF' + csv);
+    } catch (err: any) {
+      return sendError(res, err.message);
     }
-  }
+  };
 
-  static addCategory(req: Request, res: Response) {
+  // Brand Management
+  static getBrands = async (req: Request, res: Response) => {
+    try {
+      const brands = ProductService.getBrands();
+      return sendSuccess(res, brands);
+    } catch (err: any) {
+      return sendError(res, err.message);
+    }
+  };
+
+  static createBrand = async (req: Request, res: Response) => {
     try {
       const { name } = req.body;
-      const categories = ProductService.addCategory(name);
-      return sendSuccess(res, categories, 'Thêm danh mục mới thành công', 201);
-    } catch (error: any) {
-      return sendError(res, error.message, error, 400);
+      const brands = ProductService.addBrand(name);
+      return sendSuccess(res, brands, 'Thêm thương hiệu mới thành công');
+    } catch (err: any) {
+      return sendError(res, err.message, 400);
     }
-  }
+  };
 
-  static updateCategory(req: Request, res: Response) {
-    try {
-      const { oldName, newName } = req.body;
-      const categories = ProductService.updateCategory(oldName, newName);
-      return sendSuccess(res, categories, 'Cập nhật danh mục thành công');
-    } catch (error: any) {
-      return sendError(res, error.message, error, 400);
-    }
-  }
-
-  static deleteCategory(req: Request, res: Response) {
+  static deleteBrand = async (req: Request, res: Response) => {
     try {
       const { name } = req.params;
-      const categories = ProductService.deleteCategory(name);
-      return sendSuccess(res, categories, 'Xóa danh mục thành công');
-    } catch (error: any) {
-      return sendError(res, error.message, error, 400);
+      const brands = ProductService.deleteBrand(name);
+      return sendSuccess(res, brands, 'Xóa thương hiệu thành công');
+    } catch (err: any) {
+      return sendError(res, err.message, 400);
     }
-  }
+  };
 
-  // Units Controllers
-  static getUnits(req: Request, res: Response) {
+  // Location Management
+  static getLocations = async (req: Request, res: Response) => {
+    try {
+      const locations = ProductService.getLocations();
+      return sendSuccess(res, locations);
+    } catch (err: any) {
+      return sendError(res, err.message);
+    }
+  };
+
+  static createLocation = async (req: Request, res: Response) => {
+    try {
+      const { name } = req.body;
+      const locations = ProductService.addLocation(name);
+      return sendSuccess(res, locations, 'Thêm vị trí lưu kho mới thành công');
+    } catch (err: any) {
+      return sendError(res, err.message, 400);
+    }
+  };
+
+  static deleteLocation = async (req: Request, res: Response) => {
+    try {
+      const { name } = req.params;
+      const locations = ProductService.deleteLocation(name);
+      return sendSuccess(res, locations, 'Xóa vị trí kho thành công');
+    } catch (err: any) {
+      return sendError(res, err.message, 400);
+    }
+  };
+
+  // Custom Units Management
+  static getUnits = async (req: Request, res: Response) => {
     try {
       const units = ProductService.getUnits();
-      return sendSuccess(res, units, 'Lấy danh sách đơn vị tính thành công');
-    } catch (error: any) {
-      return sendError(res, error.message, error, 500);
+      return sendSuccess(res, units);
+    } catch (err: any) {
+      return sendError(res, err.message);
     }
-  }
+  };
 
-  static addUnit(req: Request, res: Response) {
+  static createUnit = async (req: Request, res: Response) => {
     try {
       const { name } = req.body;
       const units = ProductService.addUnit(name);
-      return sendSuccess(res, units, 'Thêm đơn vị tính mới thành công', 201);
-    } catch (error: any) {
-      return sendError(res, error.message, error, 400);
+      return sendSuccess(res, units, 'Thêm đơn vị tính mới thành công');
+    } catch (err: any) {
+      return sendError(res, err.message, 400);
     }
-  }
+  };
 
-  static deleteUnit(req: Request, res: Response) {
+  static deleteUnit = async (req: Request, res: Response) => {
     try {
       const { name } = req.params;
       const units = ProductService.deleteUnit(name);
       return sendSuccess(res, units, 'Xóa đơn vị tính thành công');
-    } catch (error: any) {
-      return sendError(res, error.message, error, 400);
+    } catch (err: any) {
+      return sendError(res, err.message, 400);
     }
-  }
+  };
 }
