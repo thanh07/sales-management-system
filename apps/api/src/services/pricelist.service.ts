@@ -53,7 +53,7 @@ let PRICE_LISTS_DB: PriceList[] = [
     name: 'Bảng Giá Bán Sỉ Tạp Hóa (Chiết Khấu 10% So Với Bán Lẻ)',
     type: 'WHOLESALE',
     calculationMethod: 'PERCENT_BASE',
-    value: 10, // Chiết khấu 10% so với bán lẻ
+    value: 10,
     appliedCustomerGroups: ['WHOLESALE'],
     appliedBranches: ['ALL'],
     isActive: true,
@@ -230,6 +230,8 @@ export class PriceListService {
       id: `pl-${Date.now()}`,
       code: `BG-${Math.floor(1000 + Math.random() * 9000)}`,
       name: `${source.name} (Bản sao)`,
+      // Cloned price list derived from BG-BASE should be editable/deletable custom price list
+      type: source.code === 'BG-BASE' ? 'WHOLESALE' : source.type,
       customOverrides: source.customOverrides ? JSON.parse(JSON.stringify(source.customOverrides)) : {},
       createdAt: new Date().toISOString(),
     };
@@ -258,7 +260,8 @@ export class PriceListService {
     const pl = PRICE_LISTS_DB.find((p) => p.id === id);
     if (!pl) throw new Error('Không tìm thấy bảng giá để xóa');
 
-    if (pl.code === 'BG-BASE' || pl.type === 'STANDARD') {
+    // ONLY the root system base retail price list (BG-BASE) is protected from deletion
+    if (pl.code === 'BG-BASE') {
       throw new Error('Không thể xóa Bảng Giá Bán Lẻ Mặc Định (Giá Chung) của hệ thống!');
     }
 

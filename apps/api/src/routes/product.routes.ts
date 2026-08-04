@@ -12,6 +12,8 @@ router.get('/barcode/:barcode', ProductController.getProductByBarcode);
 router.get('/export-excel', ProductController.exportExcel);
 router.post('/import-excel', ProductController.importExcel);
 router.post('/', ProductController.createProduct);
+router.put('/:id', ProductController.updateProduct);
+router.delete('/:id', ProductController.deleteProduct);
 
 // Brands endpoints
 router.get('/brands', ProductController.getBrands);

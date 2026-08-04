@@ -250,7 +250,7 @@ export const PriceListsPage: React.FC = () => {
   };
 
   const handleDeletePriceList = async (pl: any) => {
-    if (pl.code === 'BG-BASE' || pl.type === 'STANDARD') {
+    if (pl.code === 'BG-BASE') {
       alert('Không thể xóa Bảng Giá Bán Lẻ Mặc Định (Giá Chung) của hệ thống!');
       return;
     }
@@ -597,9 +597,9 @@ export const PriceListsPage: React.FC = () => {
 
                           <button
                             onClick={() => handleDeletePriceList(pl)}
-                            disabled={pl.code === 'BG-BASE' || pl.type === 'STANDARD'}
+                            disabled={pl.code === 'BG-BASE'}
                             className="p-1.5 rounded-lg bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 border border-slate-700/80 disabled:opacity-30 disabled:pointer-events-none"
-                            title="Xóa bảng giá"
+                            title={pl.code === 'BG-BASE' ? 'Bảng giá bán lẻ mặc định hệ thống không thể xóa' : 'Xóa bảng giá'}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>

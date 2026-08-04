@@ -77,7 +77,12 @@ export const usePosStore = create<PosState>((set, get) => ({
       const conv = convList.find((c: any) => c.unitName === targetUnit);
       if (conv) {
         targetFactor = conv.conversionFactor;
-        targetPrice = conv.sellingPrice;
+        // Check if variant has custom conversion price override, else auto-calculate using conversion factor
+        if (product.variantConversions && product.variantConversions[targetUnit]) {
+          targetPrice = product.variantConversions[targetUnit];
+        } else {
+          targetPrice = product.sellingPrice * targetFactor;
+        }
       }
     }
 
@@ -148,7 +153,11 @@ export const usePosStore = create<PosState>((set, get) => ({
             const conv = convList.find((c: any) => c.unitName === unitName);
             if (conv) {
               factor = conv.conversionFactor;
-              price = conv.sellingPrice;
+              if (product.variantConversions && product.variantConversions[unitName]) {
+                price = product.variantConversions[unitName];
+              } else {
+                price = product.sellingPrice * factor;
+              }
             }
           }
 

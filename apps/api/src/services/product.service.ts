@@ -10,7 +10,8 @@ export interface ProductVariant {
   variantName: string;
   attributeValues: Record<string, string>;
   costPrice: number;
-  sellingPrice: number;
+  sellingPrice: number; // Base unit price
+  variantConversions?: Record<string, number>; // Custom unit conversion prices for this variant e.g. { "Lốc": 45000, "Thùng": 500000 }
   stockQuantity: number;
   minStock: number;
 }
@@ -242,17 +243,29 @@ function generate300GroceryProducts(): Product[] {
     if (tpl.attr && count % 3 === 0) {
       hasVariants = true;
       attributes = [{ name: tpl.attr.name, values: tpl.attr.values }];
-      variants = tpl.attr.values.map((v, idx) => ({
-        id: `var-${count}-${idx + 1}`,
-        sku: `${sku}-${v.toUpperCase().replace(/[^A-Z0-9]/g, '')}`,
-        barcode: `893800${(200000 + count * 10 + idx).toString()}`,
-        variantName: `${name} - ${tpl.attr!.name}: ${v}`,
-        attributeValues: { [tpl.attr!.name]: v },
-        costPrice: tpl.cost + idx * 1000,
-        sellingPrice: tpl.sell + idx * 1500,
-        stockQuantity: (count * 7 + idx * 5) % 80 + 10,
-        minStock: 10,
-      }));
+      variants = tpl.attr.values.map((v, idx) => {
+        const vSellPrice = tpl.sell + idx * 1500;
+        // Auto calculate variant conversion prices based on parent conversion factors
+        const variantConversions: Record<string, number> = {};
+        if (tpl.conversions) {
+          tpl.conversions.forEach((c) => {
+            variantConversions[c.unitName] = vSellPrice * c.conversionFactor;
+          });
+        }
+
+        return {
+          id: `var-${count}-${idx + 1}`,
+          sku: `${sku}-${v.toUpperCase().replace(/[^A-Z0-9]/g, '')}`,
+          barcode: `893800${(200000 + count * 10 + idx).toString()}`,
+          variantName: `${name} - ${tpl.attr!.name}: ${v}`,
+          attributeValues: { [tpl.attr!.name]: v },
+          costPrice: tpl.cost + idx * 1000,
+          sellingPrice: vSellPrice,
+          variantConversions,
+          stockQuantity: (count * 7 + idx * 5) % 80 + 10,
+          minStock: 10,
+        };
+      });
     }
 
     const costPrice = tpl.cost + ((count * 500) % 5000);
@@ -326,6 +339,12 @@ export class ProductService {
     return list;
   }
 
+  static getProductById(id: string) {
+    const p = MOCK_PRODUCTS.find((item) => item.id === id);
+    if (!p) throw new Error(`Không tìm thấy sản phẩm với ID: ${id}`);
+    return p;
+  }
+
   static getProductByBarcode(barcode: string) {
     const p = MOCK_PRODUCTS.find(
       (item) => item.barcode === barcode || item.sku === barcode
@@ -344,6 +363,7 @@ export class ProductService {
             costPrice: v.costPrice,
             sellingPrice: v.sellingPrice,
             stockQuantity: v.stockQuantity,
+            variantConversions: v.variantConversions,
           };
         }
       }
@@ -388,6 +408,39 @@ export class ProductService {
       UNITS_DB.push(data.unit);
     }
     return newProduct;
+  }
+
+  static updateProduct(id: string, data: Partial<Product>) {
+    const index = MOCK_PRODUCTS.findIndex((p) => p.id === id);
+    if (index === -1) throw new Error(`Không tìm thấy sản phẩm với ID: ${id}`);
+
+    if (data.barcode && data.barcode !== MOCK_PRODUCTS[index].barcode) {
+      const existingBarcode = MOCK_PRODUCTS.find((p) => p.barcode === data.barcode && p.id !== id);
+      if (existingBarcode) {
+        throw new Error(`Mã vạch Barcode "${data.barcode}" đã trùng với sản phẩm "${existingBarcode.name}".`);
+      }
+    }
+
+    const updatedProduct = {
+      ...MOCK_PRODUCTS[index],
+      ...data,
+    };
+
+    if (updatedProduct.conversions && updatedProduct.conversions.length > 0) {
+      updatedProduct.conversionUnit = updatedProduct.conversions[0].unitName;
+      updatedProduct.conversionFactor = updatedProduct.conversions[0].conversionFactor;
+      updatedProduct.conversionSellingPrice = updatedProduct.conversions[0].sellingPrice;
+    }
+
+    MOCK_PRODUCTS[index] = updatedProduct;
+    return updatedProduct;
+  }
+
+  static deleteProduct(id: string) {
+    const index = MOCK_PRODUCTS.findIndex((p) => p.id === id);
+    if (index === -1) throw new Error(`Không tìm thấy sản phẩm với ID: ${id}`);
+    MOCK_PRODUCTS.splice(index, 1);
+    return true;
   }
 
   static resetAndSeed300GroceryProducts() {

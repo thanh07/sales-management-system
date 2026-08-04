@@ -50,6 +50,26 @@ export class ProductController {
     }
   };
 
+  static updateProduct = async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const product = ProductService.updateProduct(id, req.body);
+      return sendSuccess(res, product, 'Cập nhật thông tin sản phẩm thành công');
+    } catch (err: any) {
+      return sendError(res, err.message, 400);
+    }
+  };
+
+  static deleteProduct = async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      ProductService.deleteProduct(id);
+      return sendSuccess(res, null, 'Xóa sản phẩm thành công');
+    } catch (err: any) {
+      return sendError(res, err.message, 400);
+    }
+  };
+
   static importExcel = async (req: Request, res: Response) => {
     try {
       const { items } = req.body;
