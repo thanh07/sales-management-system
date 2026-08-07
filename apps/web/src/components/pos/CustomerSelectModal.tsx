@@ -4,12 +4,17 @@ import api from '../../services/api';
 import { Search, UserCheck, X, Award, Phone, UserPlus, Check } from 'lucide-react';
 
 interface CustomerSelectModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
+  onSelectCustomer?: (customer: any) => void;
 }
 
-export const CustomerSelectModal: React.FC<CustomerSelectModalProps> = ({ isOpen, onClose }) => {
-  const { selectedCustomer, setCustomer } = usePosStore();
+export const CustomerSelectModal: React.FC<CustomerSelectModalProps> = ({
+  isOpen,
+  onClose,
+  onSelectCustomer,
+}) => {
+  const { selectedCustomer, setCustomer, setActivePriceList } = usePosStore();
   const [customers, setCustomers] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -42,14 +47,32 @@ export const CustomerSelectModal: React.FC<CustomerSelectModalProps> = ({ isOpen
 
   if (!isOpen) return null;
 
-  const handleSelect = (cust: any) => {
-    setCustomer(cust);
-    onClose();
+  const resolvePriceListForCustomer = async (custGroup?: string) => {
+    try {
+      const res: any = await api.get('/pricelists/resolve', {
+        params: { group: custGroup || 'RETAIL' },
+      });
+      if (res.data) {
+        // Fetch full items details for price list
+        const detailsRes: any = await api.get(`/pricelists/${res.data.id}`);
+        setActivePriceList(detailsRes.data || res.data);
+      }
+    } catch (err) {
+      console.error('Error resolving price list:', err);
+    }
   };
 
-  const handleClearSelection = () => {
+  const handleSelect = async (cust: any) => {
+    setCustomer(cust);
+    await resolvePriceListForCustomer(cust.group);
+    if (onSelectCustomer) onSelectCustomer(cust);
+    if (onClose) onClose();
+  };
+
+  const handleClearSelection = async () => {
     setCustomer(null);
-    onClose();
+    await resolvePriceListForCustomer('RETAIL');
+    if (onClose) onClose();
   };
 
   const handleCreateCustomer = async (e: React.FormEvent) => {
@@ -62,7 +85,7 @@ export const CustomerSelectModal: React.FC<CustomerSelectModalProps> = ({ isOpen
       });
       setCustomer(res.data);
       setIsAddingNew(false);
-      onClose();
+      if (onClose) onClose();
     } catch (err: any) {
       alert(err.message || 'Lỗi thêm khách hàng mới');
     }

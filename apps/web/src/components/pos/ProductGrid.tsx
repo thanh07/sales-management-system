@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { usePosStore } from '../../store/posStore';
+import { usePosStore, calculateProductPrice } from '../../store/posStore';
 import api from '../../services/api';
 import { Search, Tag, Barcode, Layers, Package } from 'lucide-react';
 import { VariantSelectModal } from './VariantSelectModal';
@@ -7,7 +7,7 @@ import { VariantSelectModal } from './VariantSelectModal';
 export const ProductGrid: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
-  const { addToCart, selectedCategory, setSelectedCategory, searchQuery, setSearchQuery } = usePosStore();
+  const { addToCart, selectedCategory, setSelectedCategory, searchQuery, setSearchQuery, activePriceList } = usePosStore();
 
   const [activeVariantProduct, setActiveVariantProduct] = useState<any | null>(null);
 
@@ -128,7 +128,18 @@ export const ProductGrid: React.FC = () => {
                 </div>
 
                 <div className="mt-2 pt-2 border-t border-slate-800/60 flex items-center justify-between">
-                  <span className="font-bold text-blue-400 text-xs">{formatVND(p.sellingPrice)}</span>
+                  {(() => {
+                    const { price: displayPrice } = calculateProductPrice(p, p.unit, activePriceList);
+                    const isPriceDiscounted = displayPrice !== p.sellingPrice;
+                    return (
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-blue-400 text-xs">{formatVND(displayPrice)}</span>
+                        {isPriceDiscounted && (
+                          <span className="text-[10px] text-slate-500 line-through">{formatVND(p.sellingPrice)}</span>
+                        )}
+                      </div>
+                    );
+                  })()}
                   <span className="text-[10px] text-slate-500 font-mono">{p.sku}</span>
                 </div>
               </div>

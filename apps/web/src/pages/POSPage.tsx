@@ -14,12 +14,16 @@ export const POSPage: React.FC = () => {
     setInvoiceModalOpen,
     isCustomerModalOpen,
     setCustomerModalOpen,
+    setPriceListModalOpen,
   } = usePosStore();
 
-  // Listen to Keyboard Shortcuts (F1, F4, F8, F9, F10, F12)
+  // Listen to Keyboard Shortcuts (F1, F3, F4, F8, F9, F10, F12)
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
-      if (e.key === 'F4') {
+      if (e.key === 'F3') {
+        e.preventDefault();
+        setPriceListModalOpen(true);
+      } else if (e.key === 'F4') {
         e.preventDefault();
         setCustomerModalOpen(true);
       } else if (e.key === 'F8') {
@@ -43,7 +47,7 @@ export const POSPage: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [checkout, parkCurrentOrder, clearCart, setInvoiceModalOpen, setCustomerModalOpen]);
+  }, [checkout, parkCurrentOrder, clearCart, setInvoiceModalOpen, setCustomerModalOpen, setPriceListModalOpen]);
 
   return (
     <div className="h-[calc(100vh-4rem)] flex overflow-hidden bg-slate-950">

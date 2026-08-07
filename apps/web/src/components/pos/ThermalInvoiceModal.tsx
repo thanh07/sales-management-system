@@ -2,10 +2,28 @@ import React from 'react';
 import { usePosStore } from '../../store/posStore';
 import { Printer, CheckCircle, X } from 'lucide-react';
 
-export const ThermalInvoiceModal: React.FC = () => {
+interface ThermalInvoiceModalProps {
+  order?: any;
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export const ThermalInvoiceModal: React.FC<ThermalInvoiceModalProps> = ({
+  order: propOrder,
+  isOpen: propIsOpen,
+  onClose,
+}) => {
   const { isInvoiceModalOpen, setInvoiceModalOpen, lastOrder } = usePosStore();
 
-  if (!isInvoiceModalOpen || !lastOrder) return null;
+  const isModalOpen = propIsOpen !== undefined ? propIsOpen : isInvoiceModalOpen;
+  const currentOrder = propOrder || lastOrder;
+
+  const handleClose = () => {
+    if (onClose) onClose();
+    else setInvoiceModalOpen(false);
+  };
+
+  if (!isModalOpen || !currentOrder) return null;
 
   const formatVND = (amount: number) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
@@ -25,7 +43,7 @@ export const ThermalInvoiceModal: React.FC = () => {
             <h3 className="font-bold text-lg text-white">Thanh toán Thành công!</h3>
           </div>
           <button
-            onClick={() => setInvoiceModalOpen(false)}
+            onClick={handleClose}
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
           >
             <X className="w-5 h-5" />
@@ -39,8 +57,8 @@ export const ThermalInvoiceModal: React.FC = () => {
             <p className="text-xs text-slate-600">Đ/c: 123 Lê Lợi, P. Bến Thành, Q.1, TP.HCM</p>
             <p className="text-xs text-slate-600">Hotline: 1900 6868</p>
             <h3 className="font-bold text-sm uppercase mt-2">HÓA ĐƠN BÁN HÀNG</h3>
-            <p className="text-[11px] text-slate-500">Mã HD: {lastOrder.orderNumber}</p>
-            <p className="text-[11px] text-slate-500">Ngày: {new Date(lastOrder.createdAt).toLocaleString('vi-VN')}</p>
+            <p className="text-[11px] text-slate-500">Mã HD: {currentOrder.orderNumber}</p>
+            <p className="text-[11px] text-slate-500">Ngày: {new Date(currentOrder.createdAt).toLocaleString('vi-VN')}</p>
           </div>
 
           {/* Items Table */}
@@ -50,7 +68,7 @@ export const ThermalInvoiceModal: React.FC = () => {
               <div className="col-span-2 text-center">SL / ĐV</div>
               <div className="col-span-4 text-right">Thành tiền</div>
             </div>
-            {lastOrder.items.map((item: any, idx: number) => (
+            {currentOrder.items.map((item: any, idx: number) => (
               <div key={idx} className="grid grid-cols-12 py-0.5">
                 <div className="col-span-6 font-sans font-medium line-clamp-1">
                   {item.name || item.productId}
@@ -67,25 +85,25 @@ export const ThermalInvoiceModal: React.FC = () => {
           <div className="space-y-1 text-xs pt-1">
             <div className="flex justify-between">
               <span>Tạm tính:</span>
-              <span>{formatVND(lastOrder.subTotal)}</span>
+              <span>{formatVND(currentOrder.subTotal)}</span>
             </div>
-            {lastOrder.discount > 0 && (
+            {currentOrder.discount > 0 && (
               <div className="flex justify-between text-red-600">
                 <span>Chiết khấu:</span>
-                <span>-{formatVND(lastOrder.discount)}</span>
+                <span>-{formatVND(currentOrder.discount)}</span>
               </div>
             )}
             <div className="flex justify-between font-bold text-sm text-slate-900 pt-1 border-t border-slate-300">
               <span>TỔNG CỘNG:</span>
-              <span className="text-blue-600">{formatVND(lastOrder.totalAmount)}</span>
+              <span className="text-blue-600">{formatVND(currentOrder.totalAmount)}</span>
             </div>
             <div className="flex justify-between text-slate-600 pt-1">
-              <span>Khách đưa ({lastOrder.paymentMethod}):</span>
-              <span>{formatVND(lastOrder.paidAmount)}</span>
+              <span>Khách đưa ({currentOrder.paymentMethod}):</span>
+              <span>{formatVND(currentOrder.paidAmount)}</span>
             </div>
             <div className="flex justify-between text-emerald-600 font-bold">
               <span>Tiền thừa trả khách:</span>
-              <span>{formatVND(lastOrder.changeAmount)}</span>
+              <span>{formatVND(currentOrder.changeAmount)}</span>
             </div>
           </div>
 
@@ -105,7 +123,7 @@ export const ThermalInvoiceModal: React.FC = () => {
             <span>In Hóa Đơn (F12)</span>
           </button>
           <button
-            onClick={() => setInvoiceModalOpen(false)}
+            onClick={handleClose}
             className="px-5 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-xl"
           >
             Đóng

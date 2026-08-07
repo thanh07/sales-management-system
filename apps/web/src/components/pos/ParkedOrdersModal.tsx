@@ -3,9 +3,20 @@ import { usePosStore } from '../../store/posStore';
 import api from '../../services/api';
 import { Clock, Play, Trash2, X } from 'lucide-react';
 
-export const ParkedOrdersModal: React.FC = () => {
-  const { isParkedModalOpen, setParkedModalOpen, addToCart, clearCart } = usePosStore();
+interface ParkedOrdersModalProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export const ParkedOrdersModal: React.FC<ParkedOrdersModalProps> = ({ isOpen, onClose }) => {
+  const { isParkedModalOpen: storeOpen, setParkedModalOpen, addToCart, clearCart } = usePosStore();
   const [parkedOrders, setParkedOrders] = useState<any[]>([]);
+
+  const isModalOpen = isOpen !== undefined ? isOpen : storeOpen;
+  const handleClose = () => {
+    if (onClose) onClose();
+    else setParkedModalOpen(false);
+  };
 
   const fetchParked = async () => {
     try {
@@ -17,12 +28,12 @@ export const ParkedOrdersModal: React.FC = () => {
   };
 
   useEffect(() => {
-    if (isParkedModalOpen) {
+    if (isModalOpen) {
       fetchParked();
     }
-  }, [isParkedModalOpen]);
+  }, [isModalOpen]);
 
-  if (!isParkedModalOpen) return null;
+  if (!isModalOpen) return null;
 
   const handleRestore = async (order: any) => {
     clearCart();
@@ -54,7 +65,7 @@ export const ParkedOrdersModal: React.FC = () => {
             <h3 className="font-bold text-lg text-white">Danh sách Giỏ Hàng Tạm Giữ</h3>
           </div>
           <button
-            onClick={() => setParkedModalOpen(false)}
+            onClick={handleClose}
             className="p-1 rounded-lg text-slate-400 hover:text-white"
           >
             <X className="w-5 h-5" />

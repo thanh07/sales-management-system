@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { usePosStore } from '../../store/posStore';
 import api from '../../services/api';
-import { Trash2, Plus, Minus, CreditCard, User, Layers, Tag, Printer, Sparkles, Scale } from 'lucide-react';
+import { Trash2, Plus, Minus, CreditCard, User, Layers, Tag, Printer, Sparkles, Scale, ChevronDown } from 'lucide-react';
 import { CustomerSelectModal } from './CustomerSelectModal';
 import { ParkedOrdersModal } from './ParkedOrdersModal';
 import { ThermalInvoiceModal } from './ThermalInvoiceModal';
+import { PriceListSelectModal } from './PriceListSelectModal';
 
 export const CartDrawer: React.FC = () => {
   const {
@@ -19,6 +20,8 @@ export const CartDrawer: React.FC = () => {
     calculateTotal,
     parkCurrentOrder,
     parkedOrders,
+    isPriceListModalOpen,
+    setPriceListModalOpen,
   } = usePosStore();
 
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
@@ -66,7 +69,7 @@ export const CartDrawer: React.FC = () => {
             className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/80 text-xs font-semibold transition-all"
           >
             <User className="w-4 h-4 text-blue-400" />
-            <span className="truncate max-w-[150px]">{customer ? customer.name : 'Chọn Khách (F4)'}</span>
+            <span className="truncate max-w-[150px]">{customer ? (customer.fullName || customer.name) : 'Chọn Khách (F4)'}</span>
           </button>
 
           {parkedOrders.length > 0 && (
@@ -79,14 +82,20 @@ export const CartDrawer: React.FC = () => {
           )}
         </div>
 
-        {/* Active Price List Badge */}
-        {activePriceList && (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-[11px]">
-            <Tag className="w-3.5 h-3.5 text-blue-400" />
+        {/* Active Price List Selector Badge */}
+        <button
+          onClick={() => setPriceListModalOpen(true)}
+          className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-[11px] transition-all cursor-pointer group"
+        >
+          <div className="flex items-center gap-1.5 truncate">
+            <Tag className="w-3.5 h-3.5 text-blue-400 shrink-0" />
             <span className="text-slate-400">Bảng giá:</span>
-            <span className="font-bold text-blue-400 truncate">{activePriceList.name}</span>
+            <span className="font-bold text-blue-400 truncate">
+              {activePriceList ? activePriceList.name : 'Bảng Giá Bán Lẻ Niêm Yết'}
+            </span>
           </div>
-        )}
+          <ChevronDown className="w-3.5 h-3.5 text-blue-400 shrink-0 group-hover:translate-y-0.5 transition-transform" />
+        </button>
       </div>
 
       {/* Cart Items List */}
@@ -99,7 +108,6 @@ export const CartDrawer: React.FC = () => {
         ) : (
           cart.map((item) => {
             const prod = item.product;
-            // Build all available units for this product (Smallest unit + All conversion units)
             const convList = prod.conversions && prod.conversions.length > 0
               ? prod.conversions
               : (prod.conversionUnit ? [{ id: 'c0', unitName: prod.conversionUnit, conversionFactor: prod.conversionFactor || 24, sellingPrice: prod.conversionSellingPrice || prod.sellingPrice * 24 }] : []);
@@ -223,6 +231,13 @@ export const CartDrawer: React.FC = () => {
         <ParkedOrdersModal
           isOpen={isParkedModalOpen}
           onClose={() => setIsParkedModalOpen(false)}
+        />
+      )}
+
+      {isPriceListModalOpen && (
+        <PriceListSelectModal
+          isOpen={isPriceListModalOpen}
+          onClose={() => setPriceListModalOpen(false)}
         />
       )}
 
