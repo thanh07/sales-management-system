@@ -1,17 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { usePosStore } from '../../store/posStore';
-import api from '../../services/api';
-import { Trash2, Plus, Minus, CreditCard, User, Layers, Tag, Printer, Sparkles, Scale, ChevronDown } from 'lucide-react';
-import { CustomerSelectModal } from './CustomerSelectModal';
-import { ParkedOrdersModal } from './ParkedOrdersModal';
-import { ThermalInvoiceModal } from './ThermalInvoiceModal';
-import { PriceListSelectModal } from './PriceListSelectModal';
+import { Trash2, Plus, Minus, CreditCard, User, Layers, Tag, Printer, Scale, ChevronDown, Percent } from 'lucide-react';
 
 export const CartDrawer: React.FC = () => {
   const {
     cart,
     customer,
-    setCustomer,
     activePriceList,
     updateQuantity,
     updateItemUnit,
@@ -20,43 +14,39 @@ export const CartDrawer: React.FC = () => {
     calculateTotal,
     parkCurrentOrder,
     parkedOrders,
-    isPriceListModalOpen,
+    setCustomerModalOpen,
+    setParkedModalOpen,
     setPriceListModalOpen,
+    setCheckoutModalOpen,
+    tabs,
+    activeTabId,
+    setDiscount,
   } = usePosStore();
 
-  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
-  const [isParkedModalOpen, setIsParkedModalOpen] = useState(false);
-  const [completedOrder, setCompletedOrder] = useState<any | null>(null);
-
-  const { subtotal, total } = calculateTotal();
-
-  const handleCheckout = async () => {
-    if (cart.length === 0) return;
-
-    try {
-      const payload = {
-        customerId: customer?.id || null,
-        items: cart.map((item) => ({
-          productId: item.product.id,
-          productName: item.product.name,
-          quantity: item.quantity,
-          selectedUnit: item.selectedUnit,
-          conversionFactor: item.selectedConversionFactor,
-          unitPrice: item.selectedPrice,
-        })),
-        paymentMethod: 'CASH',
-      };
-
-      const res: any = await api.post('/pos/checkout', payload);
-      setCompletedOrder(res.data.order);
-      clearCart();
-    } catch (err: any) {
-      alert(err.message || 'Lỗi thanh toán đơn hàng');
-    }
-  };
+  const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
+  const currentCart = activeTab?.cart || [];
+  const { subtotal, discount, total } = calculateTotal();
 
   const formatVND = (num: number) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num);
+  };
+
+  const handleOpenDiscountPrompt = () => {
+    const input = prompt('Nhập số tiền giảm giá (VD: 20000) hoặc phần trăm (VD: 10%):', activeTab?.discount ? String(activeTab.discount) : '');
+    if (input !== null) {
+      const trimmed = input.trim();
+      if (trimmed.endsWith('%')) {
+        const pct = parseFloat(trimmed.replace('%', ''));
+        if (!isNaN(pct) && pct >= 0 && pct <= 100) {
+          setDiscount(pct, 'PERCENT');
+        }
+      } else {
+        const amt = parseFloat(trimmed);
+        if (!isNaN(amt) && amt >= 0) {
+          setDiscount(amt, 'AMOUNT');
+        }
+      }
+    }
   };
 
   return (
@@ -65,7 +55,7 @@ export const CartDrawer: React.FC = () => {
       <div className="p-4 border-b border-slate-800 space-y-2 bg-slate-950/60">
         <div className="flex items-center justify-between">
           <button
-            onClick={() => setIsCustomerModalOpen(true)}
+            onClick={() => setCustomerModalOpen(true)}
             className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/80 text-xs font-semibold transition-all"
           >
             <User className="w-4 h-4 text-blue-400" />
@@ -74,7 +64,7 @@ export const CartDrawer: React.FC = () => {
 
           {parkedOrders.length > 0 && (
             <button
-              onClick={() => setIsParkedModalOpen(true)}
+              onClick={() => setParkedModalOpen(true)}
               className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-400 font-bold text-[11px] border border-amber-500/30 hover:bg-amber-500/30 flex items-center gap-1"
             >
               <span>Tạm giữ ({parkedOrders.length})</span>
@@ -100,13 +90,13 @@ export const CartDrawer: React.FC = () => {
 
       {/* Cart Items List */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {cart.length === 0 ? (
+        {currentCart.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-slate-500 space-y-2">
             <Layers className="w-12 h-12 stroke-[1.5]" />
-            <p className="text-xs font-medium">Giỏ hàng trống. Click chọn sản phẩm bên trái!</p>
+            <p className="text-xs font-medium">Hóa đơn đang trống. Click chọn sản phẩm bên trái!</p>
           </div>
         ) : (
-          cart.map((item) => {
+          currentCart.map((item) => {
             const prod = item.product;
             const convList = prod.conversions && prod.conversions.length > 0
               ? prod.conversions
@@ -190,6 +180,18 @@ export const CartDrawer: React.FC = () => {
             <span>Tạm tính:</span>
             <span className="font-semibold text-slate-200">{formatVND(subtotal)}</span>
           </div>
+
+          <div className="flex justify-between items-center text-slate-400">
+            <button
+              onClick={handleOpenDiscountPrompt}
+              className="flex items-center gap-1 text-amber-400 hover:underline font-semibold"
+            >
+              <Percent className="w-3.5 h-3.5" />
+              <span>{discount > 0 ? `Chiết khấu (${activeTab?.discountType === 'PERCENT' ? `${activeTab.discount}%` : 'VNĐ'}):` : '+ Giảm giá / Chiết khấu'}</span>
+            </button>
+            <span className="font-bold text-amber-400">{discount > 0 ? `-${formatVND(discount)}` : '0đ'}</span>
+          </div>
+
           <div className="flex justify-between text-white font-bold text-base pt-1 border-t border-slate-800">
             <span>TỔNG THÀNH TIỀN:</span>
             <span className="text-emerald-400">{formatVND(total)}</span>
@@ -205,7 +207,7 @@ export const CartDrawer: React.FC = () => {
             <span>Tạm Giữ Đơn (F8)</span>
           </button>
           <button
-            onClick={handleCheckout}
+            onClick={() => setCheckoutModalOpen(true)}
             disabled={cart.length === 0}
             className="py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-blue-600/30 disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center justify-center gap-1"
           >
@@ -214,40 +216,6 @@ export const CartDrawer: React.FC = () => {
           </button>
         </div>
       </div>
-
-      {/* Modals */}
-      {isCustomerModalOpen && (
-        <CustomerSelectModal
-          isOpen={isCustomerModalOpen}
-          onClose={() => setIsCustomerModalOpen(false)}
-          onSelectCustomer={(c) => {
-            setCustomer(c);
-            setIsCustomerModalOpen(false);
-          }}
-        />
-      )}
-
-      {isParkedModalOpen && (
-        <ParkedOrdersModal
-          isOpen={isParkedModalOpen}
-          onClose={() => setIsParkedModalOpen(false)}
-        />
-      )}
-
-      {isPriceListModalOpen && (
-        <PriceListSelectModal
-          isOpen={isPriceListModalOpen}
-          onClose={() => setPriceListModalOpen(false)}
-        />
-      )}
-
-      {completedOrder && (
-        <ThermalInvoiceModal
-          order={completedOrder}
-          isOpen={!!completedOrder}
-          onClose={() => setCompletedOrder(null)}
-        />
-      )}
     </div>
   );
 };

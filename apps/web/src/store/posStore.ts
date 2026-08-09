@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import api from '../services/api';
 
 export interface CartItem {
   product: any;
@@ -6,7 +7,20 @@ export interface CartItem {
   selectedUnit: string;
   selectedConversionFactor: number;
   selectedPrice: number;
+  discount?: number;
   notes?: string;
+}
+
+export interface OrderTab {
+  id: string;
+  name: string;
+  cart: CartItem[];
+  customer: any | null;
+  activePriceList: any | null;
+  discount: number;
+  discountType: 'AMOUNT' | 'PERCENT';
+  notes: string;
+  createdAt: string;
 }
 
 export interface ParkedOrder {
@@ -64,12 +78,30 @@ export const calculateProductPrice = (product: any, unitName?: string, activePri
   return { price: targetPrice, factor: targetFactor, unit: targetUnit };
 };
 
+const createInitialTab = (index: number = 1): OrderTab => ({
+  id: `tab-${Date.now()}-${index}`,
+  name: `Hóa đơn ${index}`,
+  cart: [],
+  customer: null,
+  activePriceList: null,
+  discount: 0,
+  discountType: 'AMOUNT',
+  notes: '',
+  createdAt: new Date().toISOString(),
+});
+
 interface PosState {
+  // Multi-tab Management
+  tabs: OrderTab[];
+  activeTabId: string;
+
+  // Direct Reactive Mirror Properties for Active Tab
   cart: CartItem[];
   customer: any | null;
   selectedCustomer: any | null;
-  parkedOrders: ParkedOrder[];
   activePriceList: any | null;
+
+  parkedOrders: ParkedOrder[];
   searchQuery: string;
   selectedCategory: string;
 
@@ -77,10 +109,18 @@ interface PosState {
   isParkedModalOpen: boolean;
   isInvoiceModalOpen: boolean;
   isPriceListModalOpen: boolean;
+  isCheckoutModalOpen: boolean;
   lastOrder: any | null;
+
+  // Tab Actions
+  addTab: () => void;
+  closeTab: (tabId: string) => void;
+  switchTab: (tabId: string) => void;
+  renameTab: (tabId: string, name: string) => void;
 
   setCustomer: (customer: any | null) => void;
   setActivePriceList: (priceList: any | null) => void;
+  setDiscount: (discount: number, discountType?: 'AMOUNT' | 'PERCENT') => void;
   setSearchQuery: (query: string) => void;
   setSelectedCategory: (category: string) => void;
 
@@ -88,6 +128,7 @@ interface PosState {
   setParkedModalOpen: (open: boolean) => void;
   setInvoiceModalOpen: (open: boolean) => void;
   setPriceListModalOpen: (open: boolean) => void;
+  setCheckoutModalOpen: (open: boolean) => void;
   setLastOrder: (order: any | null) => void;
 
   addToCart: (product: any, unitName?: string) => void;
@@ -99,7 +140,13 @@ interface PosState {
   parkCurrentOrder: () => Promise<void>;
   restoreParkedOrder: (orderId: string) => void;
   deleteParkedOrder: (orderId: string) => void;
-  checkout: () => Promise<any>;
+  checkout: (paymentData?: {
+    method?: 'CASH' | 'BANK_TRANSFER' | 'CREDIT_CARD' | 'E_WALLET' | 'SPLIT';
+    paidAmount?: number;
+    cashAmount?: number;
+    bankAmount?: number;
+    notes?: string;
+  }) => Promise<any>;
 
   calculateTotal: () => {
     subtotal: number;
@@ -108,12 +155,17 @@ interface PosState {
   };
 }
 
+const initialTab = createInitialTab(1);
+
 export const usePosStore = create<PosState>((set, get) => ({
+  tabs: [initialTab],
+  activeTabId: initialTab.id,
   cart: [],
   customer: null,
-  get selectedCustomer() { return get().customer; },
-  parkedOrders: [],
+  selectedCustomer: null,
   activePriceList: null,
+
+  parkedOrders: [],
   searchQuery: '',
   selectedCategory: 'Tất cả',
 
@@ -121,18 +173,111 @@ export const usePosStore = create<PosState>((set, get) => ({
   isParkedModalOpen: false,
   isInvoiceModalOpen: false,
   isPriceListModalOpen: false,
+  isCheckoutModalOpen: false,
   lastOrder: null,
 
-  setCustomer: (customer) => set({ customer }),
-  setActivePriceList: (priceList) => {
-    const { cart } = get();
-    // Recalculate prices for all line items in the cart when switching price lists
-    const updatedCart = cart.map((item) => {
-      const { price } = calculateProductPrice(item.product, item.selectedUnit, priceList);
-      return { ...item, selectedPrice: price };
+  // Tab Management
+  addTab: () => {
+    const { tabs } = get();
+    if (tabs.length >= 10) {
+      alert('Tối đa có thể mở cùng lúc 10 tab hóa đơn');
+      return;
+    }
+    const newTab = createInitialTab(tabs.length + 1);
+    const newTabs = [...tabs, newTab];
+    set({
+      tabs: newTabs,
+      activeTabId: newTab.id,
+      cart: newTab.cart,
+      customer: newTab.customer,
+      selectedCustomer: newTab.customer,
+      activePriceList: newTab.activePriceList,
     });
-    set({ activePriceList: priceList, cart: updatedCart });
   },
+
+  closeTab: (tabId: string) => {
+    const { tabs, activeTabId } = get();
+    if (tabs.length === 1) {
+      get().clearCart();
+      return;
+    }
+
+    const newTabs = tabs.filter((t) => t.id !== tabId);
+    let nextActiveId = activeTabId;
+    if (activeTabId === tabId) {
+      const closedIndex = tabs.findIndex((t) => t.id === tabId);
+      const nextTab = newTabs[Math.max(0, closedIndex - 1)];
+      nextActiveId = nextTab.id;
+    }
+
+    const activeTab = newTabs.find((t) => t.id === nextActiveId) || newTabs[0];
+    set({
+      tabs: newTabs,
+      activeTabId: nextActiveId,
+      cart: activeTab ? activeTab.cart : [],
+      customer: activeTab ? activeTab.customer : null,
+      selectedCustomer: activeTab ? activeTab.customer : null,
+      activePriceList: activeTab ? activeTab.activePriceList : null,
+    });
+  },
+
+  switchTab: (tabId: string) => {
+    const { tabs } = get();
+    const activeTab = tabs.find((t) => t.id === tabId) || tabs[0];
+    set({
+      activeTabId: tabId,
+      cart: activeTab ? activeTab.cart : [],
+      customer: activeTab ? activeTab.customer : null,
+      selectedCustomer: activeTab ? activeTab.customer : null,
+      activePriceList: activeTab ? activeTab.activePriceList : null,
+    });
+  },
+
+  renameTab: (tabId: string, name: string) => {
+    const { tabs } = get();
+    set({
+      tabs: tabs.map((t) => (t.id === tabId ? { ...t, name } : t)),
+    });
+  },
+
+  setCustomer: (customer) => {
+    const { tabs, activeTabId } = get();
+    const newTabs = tabs.map((t) => (t.id === activeTabId ? { ...t, customer } : t));
+    set({
+      tabs: newTabs,
+      customer,
+      selectedCustomer: customer,
+    });
+  },
+
+  setActivePriceList: (priceList) => {
+    const { tabs, activeTabId } = get();
+    let updatedActiveCart: CartItem[] = [];
+
+    const newTabs = tabs.map((t) => {
+      if (t.id !== activeTabId) return t;
+      const updatedCart = t.cart.map((item) => {
+        const { price } = calculateProductPrice(item.product, item.selectedUnit, priceList);
+        return { ...item, selectedPrice: price };
+      });
+      updatedActiveCart = updatedCart;
+      return { ...t, activePriceList: priceList, cart: updatedCart };
+    });
+
+    set({
+      tabs: newTabs,
+      activePriceList: priceList,
+      cart: updatedActiveCart,
+    });
+  },
+
+  setDiscount: (discount, discountType = 'AMOUNT') => {
+    const { tabs, activeTabId } = get();
+    set({
+      tabs: tabs.map((t) => (t.id === activeTabId ? { ...t, discount, discountType } : t)),
+    });
+  },
+
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   setSelectedCategory: (selectedCategory) => set({ selectedCategory }),
 
@@ -140,37 +285,49 @@ export const usePosStore = create<PosState>((set, get) => ({
   setParkedModalOpen: (isParkedModalOpen) => set({ isParkedModalOpen }),
   setInvoiceModalOpen: (isInvoiceModalOpen) => set({ isInvoiceModalOpen }),
   setPriceListModalOpen: (isPriceListModalOpen) => set({ isPriceListModalOpen }),
+  setCheckoutModalOpen: (isCheckoutModalOpen) => set({ isCheckoutModalOpen }),
   setLastOrder: (lastOrder) => set({ lastOrder }),
 
   addToCart: (product, unitName) => {
-    const { cart, activePriceList } = get();
-    const { price: targetPrice, factor: targetFactor, unit: targetUnit } = calculateProductPrice(product, unitName, activePriceList);
+    const { tabs, activeTabId } = get();
+    const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
+    const { price: targetPrice, factor: targetFactor, unit: targetUnit } = calculateProductPrice(product, unitName, activeTab.activePriceList);
 
-    const existingIndex = cart.findIndex((item) => item.product.id === product.id && item.selectedUnit === targetUnit);
+    const existingIndex = activeTab.cart.findIndex((item) => item.product.id === product.id && item.selectedUnit === targetUnit);
 
+    let updatedCart = [...activeTab.cart];
     if (existingIndex > -1) {
-      const updatedCart = [...cart];
-      updatedCart[existingIndex].quantity += 1;
-      updatedCart[existingIndex].selectedPrice = targetPrice;
-      set({ cart: updatedCart });
+      updatedCart[existingIndex] = {
+        ...updatedCart[existingIndex],
+        quantity: updatedCart[existingIndex].quantity + 1,
+        selectedPrice: targetPrice,
+      };
     } else {
-      set({
-        cart: [
-          ...cart,
-          {
-            product,
-            quantity: 1,
-            selectedUnit: targetUnit,
-            selectedConversionFactor: targetFactor,
-            selectedPrice: targetPrice,
-          },
-        ],
+      updatedCart.push({
+        product,
+        quantity: 1,
+        selectedUnit: targetUnit,
+        selectedConversionFactor: targetFactor,
+        selectedPrice: targetPrice,
       });
     }
+
+    const newTabs = tabs.map((t) => (t.id === activeTabId ? { ...t, cart: updatedCart } : t));
+    set({
+      tabs: newTabs,
+      cart: updatedCart,
+    });
   },
 
   removeFromCart: (productId) => {
-    set({ cart: get().cart.filter((item) => item.product.id !== productId) });
+    const { tabs, activeTabId } = get();
+    const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
+    const updatedCart = activeTab.cart.filter((item) => item.product.id !== productId);
+    const newTabs = tabs.map((t) => (t.id === activeTabId ? { ...t, cart: updatedCart } : t));
+    set({
+      tabs: newTabs,
+      cart: updatedCart,
+    });
   },
 
   updateQuantity: (productId, quantity) => {
@@ -178,58 +335,82 @@ export const usePosStore = create<PosState>((set, get) => ({
       get().removeFromCart(productId);
       return;
     }
+    const { tabs, activeTabId } = get();
+    const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
+    const updatedCart = activeTab.cart.map((item) => (item.product.id === productId ? { ...item, quantity } : item));
+    const newTabs = tabs.map((t) => (t.id === activeTabId ? { ...t, cart: updatedCart } : t));
     set({
-      cart: get().cart.map((item) =>
-        item.product.id === productId ? { ...item, quantity } : item
-      ),
+      tabs: newTabs,
+      cart: updatedCart,
     });
   },
 
   updateItemUnit: (productId, unitName) => {
-    const { cart, activePriceList } = get();
+    const { tabs, activeTabId } = get();
+    const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
+    const updatedCart = activeTab.cart.map((item) => {
+      if (item.product.id === productId) {
+        const { price, factor } = calculateProductPrice(item.product, unitName, activeTab.activePriceList);
+        return {
+          ...item,
+          selectedUnit: unitName,
+          selectedConversionFactor: factor,
+          selectedPrice: price,
+        };
+      }
+      return item;
+    });
+
+    const newTabs = tabs.map((t) => (t.id === activeTabId ? { ...t, cart: updatedCart } : t));
     set({
-      cart: cart.map((item) => {
-        if (item.product.id === productId) {
-          const { price, factor } = calculateProductPrice(item.product, unitName, activePriceList);
-          return {
-            ...item,
-            selectedUnit: unitName,
-            selectedConversionFactor: factor,
-            selectedPrice: price,
-          };
-        }
-        return item;
-      }),
+      tabs: newTabs,
+      cart: updatedCart,
     });
   },
 
-  clearCart: () => set({ cart: [] }),
+  clearCart: () => {
+    const { tabs, activeTabId } = get();
+    const newTabs = tabs.map((t) => (t.id === activeTabId ? { ...t, cart: [], customer: null, discount: 0 } : t));
+    set({
+      tabs: newTabs,
+      cart: [],
+      customer: null,
+      selectedCustomer: null,
+    });
+  },
 
   parkCurrentOrder: async () => {
-    const { cart, customer, parkedOrders } = get();
-    if (cart.length === 0) return;
+    const { tabs, activeTabId, parkedOrders } = get();
+    const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
+    const itemsToPark = activeTab?.cart || [];
+    if (itemsToPark.length === 0) return;
 
     const newOrder: ParkedOrder = {
       id: `parked-${Date.now()}`,
       code: `HD-TAM-${Math.floor(1000 + Math.random() * 9000)}`,
-      customer,
-      items: [...cart],
+      customer: activeTab?.customer || null,
+      items: [...itemsToPark],
       parkedAt: new Date().toISOString(),
     };
 
     set({
       parkedOrders: [newOrder, ...parkedOrders],
-      cart: [],
     });
+    get().clearCart();
   },
 
   restoreParkedOrder: (orderId) => {
-    const { parkedOrders } = get();
+    const { parkedOrders, tabs, activeTabId } = get();
     const order = parkedOrders.find((o) => o.id === orderId);
     if (order) {
+      const newTabs = tabs.map((t) =>
+        t.id === activeTabId ? { ...t, cart: order.items, customer: order.customer } : t
+      );
       set({
+        tabs: newTabs,
         cart: order.items,
         customer: order.customer,
+        selectedCustomer: order.customer,
         parkedOrders: parkedOrders.filter((o) => o.id !== orderId),
       });
     }
@@ -241,43 +422,88 @@ export const usePosStore = create<PosState>((set, get) => ({
     });
   },
 
-  checkout: async () => {
-    const { cart, customer, clearCart, setLastOrder, setInvoiceModalOpen } = get();
-    if (cart.length === 0) throw new Error('Giỏ hàng đang trống');
+  checkout: async (paymentData) => {
+    const { tabs, activeTabId, calculateTotal, setLastOrder, setInvoiceModalOpen } = get();
+    const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
+    if (activeTab.cart.length === 0) throw new Error('Giỏ hàng đang trống');
 
-    const subTotal = cart.reduce((sum, item) => sum + item.selectedPrice * item.quantity, 0);
-    const orderData = {
-      orderNumber: `HD-${Math.floor(100000 + Math.random() * 900000)}`,
-      createdAt: new Date().toISOString(),
-      customer,
-      items: cart.map((item) => ({
+    const { subtotal, discount, total } = calculateTotal();
+    const method = paymentData?.method || 'CASH';
+    const paidAmount = paymentData?.paidAmount ?? total;
+
+    const checkoutPayload = {
+      customerId: activeTab.customer?.id,
+      items: activeTab.cart.map((item) => ({
         productId: item.product.id,
         name: item.product.name,
-        quantity: item.quantity,
         selectedUnit: item.selectedUnit,
+        conversionFactor: item.selectedConversionFactor,
+        quantity: item.quantity,
         unitPrice: item.selectedPrice,
+        discount: 0,
       })),
-      subTotal,
-      discount: 0,
-      totalAmount: subTotal,
-      paidAmount: subTotal,
-      changeAmount: 0,
-      paymentMethod: 'Tiền mặt',
+      subTotal: subtotal,
+      discount,
+      tax: 0,
+      totalAmount: total,
+      paidAmount,
+      paymentMethod: method,
+      notes: paymentData?.notes || activeTab.notes,
+    };
+
+    let serverOrder: any = null;
+    try {
+      const res: any = await api.post('/pos/checkout', checkoutPayload);
+      serverOrder = res.data;
+    } catch (err) {
+      console.warn('Fallback offline order creation:', err);
+    }
+
+    const orderData = serverOrder || {
+      orderNumber: `HD${new Date().toISOString().slice(0, 10).replace(/-/g, '')}${Math.floor(1000 + Math.random() * 9000)}`,
+      createdAt: new Date().toISOString(),
+      customer: activeTab.customer,
+      items: checkoutPayload.items,
+      subTotal: subtotal,
+      discount,
+      totalAmount: total,
+      paidAmount,
+      changeAmount: Math.max(0, paidAmount - total),
+      paymentMethod: method === 'CASH' ? 'Tiền mặt' : method === 'BANK_TRANSFER' ? 'Chuyển khoản (VietQR)' : method === 'CREDIT_CARD' ? 'Thẻ POS' : 'Tách tiền mặt/CK',
     };
 
     setLastOrder(orderData);
     setInvoiceModalOpen(true);
-    clearCart();
+
+    // If more than 1 tab, close current tab, otherwise clear it
+    if (tabs.length > 1) {
+      get().closeTab(activeTabId);
+    } else {
+      get().clearCart();
+    }
+
     return orderData;
   },
 
   calculateTotal: () => {
-    const { cart } = get();
-    const subtotal = cart.reduce((sum, item) => sum + item.selectedPrice * item.quantity, 0);
+    const { tabs, activeTabId } = get();
+    const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
+    const subtotal = (activeTab?.cart || []).reduce((sum, item) => sum + item.selectedPrice * item.quantity, 0);
+
+    let discount = 0;
+    if (activeTab?.discount > 0) {
+      if (activeTab.discountType === 'PERCENT') {
+        discount = Math.round((subtotal * activeTab.discount) / 100);
+      } else {
+        discount = activeTab.discount;
+      }
+    }
+
+    const total = Math.max(0, subtotal - discount);
     return {
       subtotal,
-      discount: 0,
-      total: subtotal,
+      discount,
+      total,
     };
   },
 }));

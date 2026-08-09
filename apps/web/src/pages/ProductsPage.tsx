@@ -768,75 +768,75 @@ export const ProductsPage: React.FC = () => {
   );
 
   return (
-    <div className="p-6 h-[calc(100vh-4rem)] overflow-y-auto space-y-6">
+    <div className="p-3 sm:p-6 h-[calc(100vh-4rem)] overflow-y-auto space-y-4 sm:space-y-6 w-full max-w-full overflow-x-hidden">
       <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv,.xlsx" className="hidden" />
 
       {/* Header & Main Actions */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Quản Lý Hàng Hóa ({products.length} Sản Phẩm)</h1>
-          <p className="text-slate-400 text-xs mt-1">Hệ thống quản lý sản phẩm hỗ trợ tạo & chỉnh sửa biến thể, vị trí kho & đơn vị quy đổi</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Quản Lý Hàng Hóa ({products.length} Sản Phẩm)</h1>
+          <p className="text-slate-400 text-xs mt-0.5">Quản lý sản phẩm, tồn kho, vị trí kho & bảng giá quy đổi đơn vị</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 self-start lg:self-auto">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <button
-            onClick={handleResetData}
-            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-red-400 border border-slate-700/80 text-xs font-medium flex items-center gap-1.5 transition-all shadow-md"
-            title="Xóa hết dữ liệu cũ và khởi tạo lại 300 sản phẩm mới"
+            onClick={handleOpenAddModal}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-lg shadow-blue-600/30 transition-all shrink-0"
           >
-            <RotateCcw className="w-4 h-4" />
-            <span>Tạo Lại 300 SP</span>
-          </button>
-
-          <button
-            onClick={handleExportExcel}
-            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700/80 text-xs font-medium flex items-center gap-1.5 transition-all shadow-md"
-          >
-            <Download className="w-4 h-4" />
-            <span>Xuất Excel</span>
+            <PackagePlus className="w-4 h-4" />
+            <span>Thêm Sản Phẩm Mới</span>
           </button>
 
           <button
             onClick={() => setIsLocationModalOpen(true)}
-            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700/80 text-xs font-medium flex items-center gap-1.5 transition-all shadow-md"
+            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700/80 text-xs font-medium flex items-center gap-1.5 transition-all shadow-md shrink-0"
           >
-            <MapPin className="w-4 h-4" />
+            <MapPin className="w-3.5 h-3.5" />
             <span>Vị Trí Kho ({locations.length})</span>
           </button>
 
           <button
             onClick={() => setIsBrandModalOpen(true)}
-            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-purple-400 border border-slate-700/80 text-xs font-medium flex items-center gap-1.5 transition-all shadow-md"
+            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-purple-400 border border-slate-700/80 text-xs font-medium flex items-center gap-1.5 transition-all shadow-md shrink-0"
           >
-            <Award className="w-4 h-4" />
+            <Award className="w-3.5 h-3.5" />
             <span>Thương Hiệu ({brands.length})</span>
           </button>
 
           <button
             onClick={() => setIsUnitModalOpen(true)}
-            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700/80 text-xs font-medium flex items-center gap-1.5 transition-all shadow-md"
+            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700/80 text-xs font-medium flex items-center gap-1.5 transition-all shadow-md shrink-0"
           >
-            <Scale className="w-4 h-4" />
-            <span>⚖️ Quản Lý ĐVT ({units.length})</span>
+            <Scale className="w-3.5 h-3.5" />
+            <span>ĐVT ({units.length})</span>
           </button>
 
           <button
-            onClick={handleOpenAddModal}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-lg shadow-blue-600/30 transition-all"
+            onClick={handleExportExcel}
+            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700/80 text-xs font-medium flex items-center gap-1.5 transition-all shadow-md shrink-0"
           >
-            <PackagePlus className="w-4 h-4" />
-            <span>Thêm Sản Phẩm Mới</span>
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Xuất Excel</span>
+          </button>
+
+          <button
+            onClick={handleResetData}
+            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-red-400 border border-slate-700/80 text-xs font-medium flex items-center gap-1.5 transition-all shadow-md shrink-0"
+            title="Tạo lại 300 sản phẩm mẫu"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Tạo Lại 300 SP</span>
           </button>
         </div>
       </div>
 
       {/* Advanced Filter Toolbar */}
-      <div className="p-4 rounded-2xl glass-panel border border-slate-800 space-y-3">
+      <div className="p-3.5 sm:p-4 rounded-2xl glass-panel border border-slate-800 space-y-2.5">
         <div className="flex items-center gap-2 text-xs font-bold text-blue-400">
           <Filter className="w-4 h-4" />
-          <span>Bộ Lọc Tìm Kiếm & Phân Loại Kiểm Kê Kho:</span>
+          <span>Bộ Lọc Tìm Kiếm & Kiểm Kê:</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
@@ -844,7 +844,7 @@ export const ProductsPage: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Tìm theo tên, SKU, Barcode..."
-              className="w-full pl-9 pr-3 py-2.5 rounded-xl glass-input text-xs"
+              className="w-full pl-9 pr-3 py-2 rounded-xl glass-input text-xs"
             />
           </div>
 
@@ -852,7 +852,7 @@ export const ProductsPage: React.FC = () => {
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl glass-input bg-slate-900 font-semibold text-slate-200"
+              className="w-full px-3 py-2 rounded-xl glass-input bg-slate-900 font-semibold text-slate-200"
             >
               <option value="Tất cả">📁 Tất cả Nhóm Hàng ({categories.length})</option>
               {categories.map((c) => (
@@ -865,7 +865,7 @@ export const ProductsPage: React.FC = () => {
             <select
               value={selectedBrand}
               onChange={(e) => setSelectedBrand(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl glass-input bg-slate-900 font-semibold text-purple-300"
+              className="w-full px-3 py-2 rounded-xl glass-input bg-slate-900 font-semibold text-purple-300"
             >
               <option value="Tất cả">🏷️ Tất cả Thương Hiệu ({brands.length})</option>
               {brands.map((b) => (
@@ -878,7 +878,7 @@ export const ProductsPage: React.FC = () => {
             <select
               value={selectedLocation}
               onChange={(e) => setSelectedLocation(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl glass-input bg-slate-900 font-semibold text-amber-400"
+              className="w-full px-3 py-2 rounded-xl glass-input bg-slate-900 font-semibold text-amber-400"
             >
               <option value="Tất cả">📍 Tất cả Vị Trí Kho ({locations.length})</option>
               {locations.map((l) => (
@@ -889,10 +889,142 @@ export const ProductsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Products Table with Variant Editing Controls */}
-      <div className="glass-panel rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
+      {/* 1. MOBILE RESPONSIVE PRODUCT CARD LIST (Visible on < md screens) */}
+      <div className="block md:hidden space-y-3">
+        {products.length === 0 ? (
+          <div className="text-center py-12 text-slate-500 text-xs">Không tìm thấy sản phẩm phù hợp.</div>
+        ) : (
+          products.map((p) => {
+            const isExpanded = expandedProductIds.includes(p.id);
+            const hasChildren = p.hasVariants && p.variants && p.variants.length > 0;
+            const convList = p.conversions && p.conversions.length > 0
+              ? p.conversions
+              : (p.conversionUnit ? [{ id: 'c0', unitName: p.conversionUnit, conversionFactor: p.conversionFactor || 24, sellingPrice: p.conversionSellingPrice || p.sellingPrice * 24 }] : []);
+            const isLowStock = p.stockQuantity <= p.minStock;
+
+            return (
+              <div
+                key={p.id}
+                className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2.5 shadow-md"
+              >
+                {/* Header Row: Thumbnail + Title + Actions */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <img src={p.image} alt={p.name} className="w-12 h-12 rounded-xl object-cover bg-slate-950 shrink-0 border border-slate-800" />
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-white text-xs line-clamp-1 flex items-center gap-1">
+                        <span>{p.name}</span>
+                      </h3>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="font-mono font-bold text-blue-400 text-[11px]">{p.sku}</span>
+                        {p.barcode && <span className="font-mono text-slate-500 text-[10px]">| {p.barcode}</span>}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => handleOpenEditModal(p)}
+                      className="p-1.5 rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white border border-blue-500/30"
+                      title="Sửa sản phẩm"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={(e) => handleDeleteProduct(p, e)}
+                      className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-red-400 border border-slate-700/80"
+                      title="Xóa sản phẩm"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Badges: Category, Brand, Location */}
+                <div className="flex flex-wrap gap-1.5 text-[10px]">
+                  <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700/60 font-medium">
+                    📁 {p.category}
+                  </span>
+                  {p.brand && (
+                    <span className="px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-300 border border-purple-500/20 font-medium">
+                      🏷️ {p.brand}
+                    </span>
+                  )}
+                  {p.location && (
+                    <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-medium flex items-center gap-1">
+                      <MapPin className="w-2.5 h-2.5 text-amber-400" />
+                      <span>{p.location}</span>
+                    </span>
+                  )}
+                </div>
+
+                {/* Stock & Pricing Breakdown Grid */}
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/80 text-xs">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-medium">Tồn kho thực tế:</span>
+                    <div className={`font-bold ${isLowStock ? 'text-red-400' : 'text-emerald-400'}`}>
+                      {p.stockQuantity} {p.unit}
+                    </div>
+                    {convList.length > 0 && (
+                      <div className="text-[10px] text-slate-500 font-mono">
+                        (= {Math.floor(p.stockQuantity / convList[0].conversionFactor)} {convList[0].unitName})
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-medium">Giá bán lẻ:</span>
+                    <div className="font-bold text-blue-400">{formatVND(p.sellingPrice)} / {p.unit}</div>
+                    {convList.map((c: any) => (
+                      <div key={c.id || c.unitName} className="text-[10px] text-purple-300 font-medium">
+                        {formatVND(c.sellingPrice)} / {c.unitName} (x{c.conversionFactor})
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Variants Dropdown for Mobile */}
+                {hasChildren && (
+                  <div className="pt-2 border-t border-slate-800/80">
+                    <button
+                      onClick={() => toggleExpandProduct(p.id)}
+                      className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl bg-slate-950/60 border border-slate-800 text-[11px] font-bold text-blue-300"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <Layers className="w-3.5 h-3.5 text-blue-400" />
+                        <span>Danh sách {p.variants.length} biến thể</span>
+                      </div>
+                      {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                    </button>
+
+                    {isExpanded && (
+                      <div className="mt-2 space-y-2 pl-2 border-l-2 border-blue-500">
+                        {p.variants.map((variant: any) => (
+                          <div key={variant.id} className="p-2 rounded-lg bg-slate-950 border border-slate-800/80 text-[11px] space-y-1">
+                            <div className="font-bold text-white flex justify-between">
+                              <span>{variant.variantName}</span>
+                              <span className="text-emerald-400">{variant.stockQuantity} {p.unit}</span>
+                            </div>
+                            <div className="flex justify-between text-slate-400 text-[10px]">
+                              <span className="font-mono text-blue-300">{variant.sku}</span>
+                              <span className="font-bold text-blue-400">{formatVND(variant.sellingPrice)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* 2. DESKTOP PRODUCTS TABLE (Visible on >= md screens) */}
+      <div className="hidden md:block glass-panel rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
+          <table className="w-full min-w-[950px] text-left text-xs text-slate-300">
             <thead className="bg-slate-900/80 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
               <tr>
                 <th className="p-4 w-10"></th>

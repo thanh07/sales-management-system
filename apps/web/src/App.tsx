@@ -13,6 +13,7 @@ import { LogOut, Store, LayoutDashboard, ShoppingCart, Package, Users, BarChart3
 export const App: React.FC = () => {
   const { isAuthenticated, user, logout, initAuth } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'POS' | 'DASHBOARD' | 'PRODUCTS' | 'CRM' | 'REPORTS' | 'USERS' | 'PRICELISTS'>('POS');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     initAuth();
@@ -24,16 +25,23 @@ export const App: React.FC = () => {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-slate-950 flex flex-col text-slate-100">
-        {/* Top Navbar */}
-        <header className="h-16 border-b border-slate-800 bg-slate-900/90 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-30">
+      <div className="min-h-screen bg-slate-950 flex flex-col text-slate-100 overflow-x-hidden">
+        {/* Top Navbar - Hidden on Mobile when in POS mode for full-screen mobile POS experience */}
+        <header className={`${activeTab === 'POS' ? 'hidden md:flex' : 'flex'} h-16 border-b border-slate-800 bg-slate-900/90 backdrop-blur-md px-4 md:px-6 items-center justify-between sticky top-0 z-30`}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-blue-600/30">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white"
+            >
+              <Store className="w-5 h-5 text-blue-400" />
+            </button>
+
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 hidden sm:flex items-center justify-center text-white shadow-lg shadow-blue-600/30">
               <Store className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="font-bold text-white tracking-wide text-base leading-none">Sales Manager Pro</h1>
-              <span className="text-xs text-blue-400 font-medium">Chi nhánh Chợ Bến Thành (CN-01)</span>
+              <h1 className="font-bold text-white tracking-wide text-sm sm:text-base leading-none">Sales Manager Pro</h1>
+              <span className="text-[11px] sm:text-xs text-blue-400 font-medium">Chi nhánh Chợ Bến Thành (CN-01)</span>
             </div>
           </div>
 
@@ -48,9 +56,9 @@ export const App: React.FC = () => {
           </div>
 
           {/* User Profile */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <div className="text-right">
-              <div className="text-sm font-semibold text-white">{user?.fullName}</div>
+              <div className="text-xs sm:text-sm font-semibold text-white">{user?.fullName}</div>
               <span className="inline-block px-2 py-0.5 text-[10px] font-bold tracking-wider rounded-md bg-blue-500/20 text-blue-300 border border-blue-500/30 uppercase">
                 {user?.role}
               </span>
@@ -60,15 +68,15 @@ export const App: React.FC = () => {
               className="p-2 rounded-xl bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 border border-slate-700 hover:border-red-500/30 transition-all"
               title="Đăng xuất"
             >
-              <LogOut className="w-5 h-5" />
+              <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
         </header>
 
         {/* Main Application Workspace */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Left Sidebar Nav */}
-          <aside className="w-56 border-r border-slate-800 bg-slate-900/50 p-3 flex flex-col gap-1 shrink-0">
+        <div className="flex-1 flex overflow-hidden w-full relative">
+          {/* Left Sidebar Nav (Desktop only: hidden md:flex) */}
+          <aside className="hidden md:flex w-56 border-r border-slate-800 bg-slate-900/50 p-3 flex-col gap-1 shrink-0">
             <button
               onClick={() => setActiveTab('POS')}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs transition-all ${
@@ -148,9 +156,9 @@ export const App: React.FC = () => {
             </button>
           </aside>
 
-          {/* Main View */}
-          <main className="flex-1 overflow-hidden">
-            {activeTab === 'POS' && <POSPage />}
+          {/* Main View (Full width on mobile) */}
+          <main className="flex-1 overflow-hidden w-full">
+            {activeTab === 'POS' && <POSPage onOpenMobileMenu={() => setIsMobileMenuOpen(true)} />}
             {activeTab === 'CRM' && <CustomersPage />}
             {activeTab === 'PRODUCTS' && <ProductsPage />}
             {activeTab === 'PRICELISTS' && <PriceListsPage />}
@@ -158,6 +166,71 @@ export const App: React.FC = () => {
             {(activeTab === 'DASHBOARD' || activeTab === 'REPORTS') && <DashboardPage />}
           </main>
         </div>
+
+        {/* Mobile Navigation Drawer Overlay */}
+        {isMobileMenuOpen && (
+          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex md:hidden">
+            <div className="w-72 bg-slate-900 border-r border-slate-800 p-5 flex flex-col justify-between h-full animate-in slide-in-from-left duration-200">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2 text-white font-bold text-sm">
+                    <Store className="w-5 h-5 text-blue-400" />
+                    <span>Sales Manager Pro</span>
+                  </div>
+                  <button onClick={() => setIsMobileMenuOpen(false)} className="p-1 rounded-lg text-slate-400 hover:text-white">
+                    ✕
+                  </button>
+                </div>
+
+                <div className="space-y-1">
+                  {[
+                    { id: 'POS', label: 'Bán quầy (POS)', icon: ShoppingCart },
+                    { id: 'DASHBOARD', label: 'Tổng quan', icon: LayoutDashboard },
+                    { id: 'PRODUCTS', label: 'Sản phẩm & Kho', icon: Package },
+                    { id: 'PRICELISTS', label: 'Thiết lập Bảng giá', icon: Tag },
+                    { id: 'CRM', label: 'Khách hàng (CRM)', icon: Users },
+                    { id: 'USERS', label: 'Quản lý Nhân viên', icon: ShieldCheck },
+                    { id: 'REPORTS', label: 'Báo cáo doanh thu', icon: BarChart3 },
+                  ].map((tab) => {
+                    const Icon = tab.icon;
+                    const isSelected = activeTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => {
+                          setActiveTab(tab.id as any);
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs transition-all ${
+                          isSelected
+                            ? 'bg-blue-600 text-white font-bold shadow-lg shadow-blue-600/30'
+                            : 'text-slate-300 hover:bg-slate-800'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        <span>{tab.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="border-t border-slate-800 pt-4 flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-white">{user?.fullName}</div>
+                  <div className="text-[10px] text-slate-400">{user?.role}</div>
+                </div>
+                <button
+                  onClick={logout}
+                  className="p-2 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 font-bold text-xs"
+                >
+                  Đăng xuất
+                </button>
+              </div>
+            </div>
+            <div className="flex-1" onClick={() => setIsMobileMenuOpen(false)}></div>
+          </div>
+        )}
       </div>
     </ProtectedRoute>
   );

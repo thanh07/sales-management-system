@@ -3,6 +3,7 @@ import { usePosStore, calculateProductPrice } from '../../store/posStore';
 import api from '../../services/api';
 import { Search, Tag, Barcode, Layers, Package } from 'lucide-react';
 import { VariantSelectModal } from './VariantSelectModal';
+import { OrderTabBar } from './OrderTabBar';
 
 export const ProductGrid: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
@@ -40,9 +41,13 @@ export const ProductGrid: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-950 p-6 overflow-hidden space-y-4">
-      {/* Search & Barcode Scan Input */}
-      <div className="flex items-center gap-3">
+    <div className="flex-1 flex flex-col h-full bg-slate-950 overflow-hidden">
+      {/* Multi-Tab Order Bar */}
+      <OrderTabBar />
+
+      <div className="flex-1 flex flex-col p-5 overflow-hidden space-y-3">
+        {/* Search & Barcode Scan Input */}
+        <div className="flex items-center gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
@@ -148,14 +153,15 @@ export const ProductGrid: React.FC = () => {
         </div>
       </div>
 
-      {/* Variant Selection Modal */}
-      {activeVariantProduct && (
-        <VariantSelectModal
-          product={activeVariantProduct}
-          isOpen={!!activeVariantProduct}
-          onClose={() => setActiveVariantProduct(null)}
-        />
-      )}
+        {/* Variant Selection Modal */}
+        {activeVariantProduct && (
+          <VariantSelectModal
+            product={activeVariantProduct}
+            isOpen={!!activeVariantProduct}
+            onClose={() => setActiveVariantProduct(null)}
+          />
+        )}
+      </div>
     </div>
   );
 };
