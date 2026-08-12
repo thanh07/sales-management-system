@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import api from '../services/api';
-import { PackagePlus, Search, Tag, Barcode, Layers, Edit2, Trash2, Plus, X, Download, Upload, ArrowRightLeft, ShieldAlert, Scale, ChevronDown, ChevronRight, MapPin, Award, Filter, RefreshCw, DollarSign, RotateCcw, Edit3, Save, Check, Sparkles } from 'lucide-react';
+import { PackagePlus, Search, Tag, Barcode, Layers, Edit2, Trash2, Plus, X, Download, Upload, ArrowRightLeft, ShieldAlert, Scale, ChevronDown, ChevronRight, MapPin, Award, Filter, RefreshCw, DollarSign, RotateCcw, Edit3, Save, Check, Sparkles, FileSpreadsheet } from 'lucide-react';
+import { ImportExcelModal } from '../components/products/ImportExcelModal';
 
 export const ProductsPage: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
@@ -18,6 +19,7 @@ export const ProductsPage: React.FC = () => {
   // Modals States
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isImportExcelModalOpen, setIsImportExcelModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any | null>(null);
 
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -489,8 +491,24 @@ export const ProductsPage: React.FC = () => {
     }
   };
 
+  const handleDownloadTemplate = async () => {
+    try {
+      const res = await api.get('/products/template-excel', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'mau_nhap_hang_hoa_chuan.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(err.message || 'Lỗi tải file mẫu');
+    }
+  };
+
   const handleImportExcelClick = () => {
-    fileInputRef.current?.click();
+    setIsImportExcelModalOpen(true);
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -824,9 +842,28 @@ export const ProductsPage: React.FC = () => {
           <button
             onClick={handleExportExcel}
             className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700/80 text-xs font-medium flex items-center gap-1.5 transition-all shadow-md shrink-0"
+            title="Xuất danh sách sản phẩm hiện tại ra file Excel CSV"
           >
             <Download className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Xuất Excel</span>
+          </button>
+
+          <button
+            onClick={() => setIsImportExcelModalOpen(true)}
+            className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500/80 text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-emerald-600/20 shrink-0"
+            title="Nhập hàng hóa từ file Excel / CSV có xem trước dữ liệu"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            <span>Nhập Excel</span>
+          </button>
+
+          <button
+            onClick={handleDownloadTemplate}
+            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700/80 text-xs font-medium flex items-center gap-1.5 transition-all shadow-md shrink-0"
+            title="Tải file mẫu Excel chuẩn có sẵn cột bắt buộc và dữ liệu mẫu"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Tải File Mẫu</span>
           </button>
 
           <button
@@ -2030,6 +2067,13 @@ export const ProductsPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Import Excel / CSV Modal with Data Preview & Validation */}
+      <ImportExcelModal
+        isOpen={isImportExcelModalOpen}
+        onClose={() => setIsImportExcelModalOpen(false)}
+        onSuccess={fetchProducts}
+      />
     </div>
   );
 };

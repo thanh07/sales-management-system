@@ -101,6 +101,17 @@ export class ProductController {
     }
   };
 
+  static downloadTemplateExcel = async (req: Request, res: Response) => {
+    try {
+      const csv = ProductService.generateExcelTemplateCsv();
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename=mau_nhap_hang_hoa_chuan.csv');
+      return res.status(200).send('\uFEFF' + csv);
+    } catch (err: any) {
+      return sendError(res, err.message);
+    }
+  };
+
   // Brand Management
   static getBrands = async (req: Request, res: Response) => {
     try {

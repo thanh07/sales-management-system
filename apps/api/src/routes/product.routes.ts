@@ -11,6 +11,7 @@ router.post('/reset', ProductController.resetProducts);
 router.post('/clear-all', ProductController.clearAllProducts);
 router.get('/barcode/:barcode', ProductController.getProductByBarcode);
 router.get('/export-excel', ProductController.exportExcel);
+router.get('/template-excel', ProductController.downloadTemplateExcel);
 router.post('/import-excel', ProductController.importExcel);
 router.post('/', ProductController.createProduct);
 router.put('/:id', ProductController.updateProduct);

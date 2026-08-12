@@ -455,33 +455,132 @@ export class ProductService {
 
   static importProductsFromExcel(items: any[]) {
     let count = 0;
-    items.forEach((item) => {
-      if (item.name) {
-        const barcode = item.barcode || '893800' + Math.floor(100000 + Math.random() * 900000);
+    items.forEach((item, idx) => {
+      const name = item.name || item['Tên sản phẩm (*)'] || item['Tên sản phẩm'] || item['Ten san pham'];
+      if (name && name.trim()) {
+        const barcode = item.barcode || item['Mã Barcode / Mã vạch'] || item['Mã Barcode (Độc nhất)'] || item['Barcode'] || ('893800' + Math.floor(100000 + Math.random() * 900000));
+        const sku = item.sku || item['Mã SKU'] || item['SKU'] || ('SKU-' + Math.floor(1000 + Math.random() * 9000));
+        const category = item.category || item['Nhóm hàng / Danh mục'] || item['Danh mục (Category)'] || 'Đồ Dùng Gia Đình & Tạp Hóa';
+        const brand = item.brand || item['Thương hiệu'] || item['Thương hiệu (Brand)'] || 'Khác';
+        const location = item.location || item['Vị trí lưu kho'] || item['Vị trí kho (Location)'] || 'Kho Tổng G05';
+        const unit = item.unit || item['Đơn vị cơ bản (*)'] || item['Đơn vị nhỏ nhất'] || item['Đơn vị tính'] || 'Cái';
+
+        const costPrice = Number(item.costPrice || item['Giá nhập (Giá vốn)'] || item['Giá nhập']) || 0;
+        const sellingPrice = Number(item.sellingPrice || item['Giá bán lẻ (*)'] || item['Giá bán lẻ'] || item['Giá bán']) || 0;
+        const stockQuantity = Number(item.stockQuantity || item['Tồn kho ban đầu'] || item['Tồn kho']) || 0;
+        const minStock = Number(item.minStock || item['Ngưỡng báo sắp hết'] || item['Ngưỡng cảnh báo']) || 10;
+
+        const conversionUnit = item.conversionUnit || item['Đơn vị quy đổi lớn'] || item['Đơn vị quy đổi'] || '';
+        const conversionFactor = Number(item.conversionFactor || item['Hệ số quy đổi']) || (conversionUnit ? 24 : undefined);
+        const conversionSellingPrice = Number(item.conversionSellingPrice || item['Giá bán đơn vị lớn']) || (conversionUnit && conversionFactor ? sellingPrice * conversionFactor : undefined);
+
+        const conversions = conversionUnit && conversionFactor
+          ? [{ id: `c-${Date.now()}-${idx}`, unitName: conversionUnit, conversionFactor, sellingPrice: conversionSellingPrice || sellingPrice * conversionFactor }]
+          : [];
+
+        const existingIdx = MOCK_PRODUCTS.findIndex((p) => p.barcode === barcode || p.sku === sku);
         const newProduct: Product = {
-          id: `prod-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-          sku: item.sku || 'SKU-' + Math.floor(1000 + Math.random() * 9000),
+          id: existingIdx > -1 ? MOCK_PRODUCTS[existingIdx].id : `prod-${Date.now()}-${idx}`,
+          sku,
           barcode,
-          name: item.name,
-          category: item.category || 'Nước Giải Khát & Đồ Uống',
-          brand: item.brand || 'Khác',
-          location: item.location || 'Kho Lạnh 01',
-          unit: item.unit || 'Lon',
-          conversionUnit: item.conversionUnit || undefined,
-          conversionFactor: item.conversionFactor ? Number(item.conversionFactor) : undefined,
-          conversionSellingPrice: item.conversionSellingPrice ? Number(item.conversionSellingPrice) : undefined,
-          costPrice: Number(item.costPrice) || 10000,
-          sellingPrice: Number(item.sellingPrice) || 15000,
-          stockQuantity: Number(item.stockQuantity) || 100,
-          minStock: Number(item.minStock) || 10,
-          image: item.image || 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400&q=80',
+          name: name.trim(),
+          category,
+          brand,
+          location,
+          unit,
+          conversionUnit: conversionUnit || undefined,
+          conversionFactor,
+          conversionSellingPrice,
+          conversions,
+          costPrice,
+          sellingPrice,
+          stockQuantity,
+          minStock,
+          image: item.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80',
           isActive: true,
         };
-        MOCK_PRODUCTS.unshift(newProduct);
+
+        if (existingIdx > -1) {
+          MOCK_PRODUCTS[existingIdx] = newProduct;
+        } else {
+          MOCK_PRODUCTS.push(newProduct);
+        }
         count++;
       }
     });
     return count;
+  }
+
+  static generateExcelTemplateCsv() {
+    const headers = [
+      'Tên sản phẩm (*)',
+      'Mã SKU',
+      'Mã Barcode / Mã vạch',
+      'Nhóm hàng / Danh mục',
+      'Thương hiệu',
+      'Vị trí lưu kho',
+      'Đơn vị cơ bản (*)',
+      'Giá nhập (Giá vốn)',
+      'Giá bán lẻ (*)',
+      'Tồn kho ban đầu',
+      'Ngưỡng báo sắp hết',
+      'Đơn vị quy đổi lớn',
+      'Hệ số quy đổi',
+      'Giá bán đơn vị lớn',
+    ];
+
+    const sampleRows = [
+      [
+        '"Nước Tăng Lực Red Bull 250ml"',
+        'TAP-REDB-001',
+        '893800100001',
+        '"Nước Giải Khát & Đồ Uống"',
+        '"Red Bull"',
+        '"Kệ A1 - Dãy 1"',
+        'Lon',
+        '11000',
+        '15800',
+        '120',
+        '12',
+        'Thùng',
+        '24',
+        '360000',
+      ],
+      [
+        '"Bia Heineken Silver Lon 330ml"',
+        'TAP-HEIN-002',
+        '893800100002',
+        '"Nước Giải Khát & Đồ Uống"',
+        '"Heineken"',
+        '"Kệ A1 - Dãy 2"',
+        'Lon',
+        '16500',
+        '20600',
+        '96',
+        '24',
+        'Thùng',
+        '24',
+        '480000',
+      ],
+      [
+        '"Mì Tôm Chua Cay Hảo Hảo 75g"',
+        'TAP-ACEC-004',
+        '893800100004',
+        '"Mì, Phở & Thực Phẩm Khô"',
+        '"Acecook"',
+        '"Kệ C1 - Tầng 2"',
+        'Gói',
+        '3500',
+        '4500',
+        '300',
+        '30',
+        'Thùng',
+        '30',
+        '130000',
+      ],
+    ];
+
+    return [headers.join(','), ...sampleRows.map((r) => r.join(','))].join('\n');
   }
 
   static generateExcelExportCsv() {
