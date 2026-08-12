@@ -5,8 +5,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'antigravity-secret-key-2026';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'antigravity-refresh-key-2026';
 
 export const generateTokens = (payload: UserPayload) => {
-  const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' });
-  const refreshToken = jwt.sign({ userId: payload.userId }, JWT_REFRESH_SECRET, { expiresIn: '7d' });
+  const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: '30d' });
+  const refreshToken = jwt.sign({ userId: payload.userId }, JWT_REFRESH_SECRET, { expiresIn: '90d' });
   return { accessToken, refreshToken };
 };
 

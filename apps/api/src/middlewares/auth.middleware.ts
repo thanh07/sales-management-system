@@ -21,7 +21,7 @@ export const authenticateToken = (req: AuthenticatedRequest, res: Response, next
     req.user = user;
     next();
   } catch (error) {
-    return sendError(res, 'Token không hợp lệ hoặc đã hết hạn', error, 403);
+    return sendError(res, 'Token không hợp lệ hoặc đã hết hạn', error, 401);
   }
 };
 
