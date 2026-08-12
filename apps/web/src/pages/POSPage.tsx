@@ -7,6 +7,7 @@ import { ParkedOrdersModal } from '../components/pos/ParkedOrdersModal';
 import { CustomerSelectModal } from '../components/pos/CustomerSelectModal';
 import { PriceListSelectModal } from '../components/pos/PriceListSelectModal';
 import { CheckoutModal } from '../components/pos/CheckoutModal';
+import { OrderHistoryModal } from '../components/pos/OrderHistoryModal';
 import { usePosStore } from '../store/posStore';
 
 interface POSPageProps {
@@ -24,13 +25,15 @@ export const POSPage: React.FC<POSPageProps> = ({ onOpenMobileMenu }) => {
     setPriceListModalOpen,
     isCheckoutModalOpen,
     setCheckoutModalOpen,
+    isOrderHistoryModalOpen,
+    setOrderHistoryModalOpen,
     addTab,
     closeTab,
     activeTabId,
     tabs,
   } = usePosStore();
 
-  // Listen to Keyboard Shortcuts (F1, F3, F4, F8, F9, F10, F12, Ctrl+T, Ctrl+W)
+  // Listen to Keyboard Shortcuts (F1, F3, F4, F7, F8, F9, F10, F12, Ctrl+T, Ctrl+W)
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
       if (e.key === 'F3') {
@@ -39,6 +42,9 @@ export const POSPage: React.FC<POSPageProps> = ({ onOpenMobileMenu }) => {
       } else if (e.key === 'F4') {
         e.preventDefault();
         setCustomerModalOpen(true);
+      } else if (e.key === 'F7') {
+        e.preventDefault();
+        setOrderHistoryModalOpen(true);
       } else if (e.key === 'F8') {
         e.preventDefault();
         await parkCurrentOrder();
@@ -62,7 +68,7 @@ export const POSPage: React.FC<POSPageProps> = ({ onOpenMobileMenu }) => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [parkCurrentOrder, clearCart, setInvoiceModalOpen, setCustomerModalOpen, setPriceListModalOpen, setCheckoutModalOpen, addTab, closeTab, activeTabId, tabs]);
+  }, [parkCurrentOrder, clearCart, setInvoiceModalOpen, setCustomerModalOpen, setPriceListModalOpen, setCheckoutModalOpen, setOrderHistoryModalOpen, addTab, closeTab, activeTabId, tabs]);
 
   return (
     <div className="h-[calc(100vh-4rem)] flex overflow-hidden bg-slate-950 w-full relative">
@@ -83,6 +89,7 @@ export const POSPage: React.FC<POSPageProps> = ({ onOpenMobileMenu }) => {
       <CustomerSelectModal isOpen={isCustomerModalOpen} onClose={() => setCustomerModalOpen(false)} />
       <PriceListSelectModal isOpen={isPriceListModalOpen} onClose={() => setPriceListModalOpen(false)} />
       <CheckoutModal isOpen={isCheckoutModalOpen} onClose={() => setCheckoutModalOpen(false)} />
+      <OrderHistoryModal isOpen={isOrderHistoryModalOpen} onClose={() => setOrderHistoryModalOpen(false)} />
     </div>
   );
 };

@@ -306,7 +306,7 @@ function generate300GroceryProducts(): Product[] {
   return products;
 }
 
-let MOCK_PRODUCTS: Product[] = generate300GroceryProducts();
+let MOCK_PRODUCTS: Product[] = [];
 
 export class ProductService {
   static getAllProducts(query?: string, category?: string, brand?: string, location?: string) {
@@ -441,6 +441,11 @@ export class ProductService {
     if (index === -1) throw new Error(`Không tìm thấy sản phẩm với ID: ${id}`);
     MOCK_PRODUCTS.splice(index, 1);
     return true;
+  }
+
+  static deleteAllProducts() {
+    MOCK_PRODUCTS = [];
+    return 0;
   }
 
   static resetAndSeed300GroceryProducts() {

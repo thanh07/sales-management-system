@@ -8,6 +8,7 @@ router.use(authenticateToken);
 
 router.get('/', ProductController.getProducts);
 router.post('/reset', ProductController.resetProducts);
+router.post('/clear-all', ProductController.clearAllProducts);
 router.get('/barcode/:barcode', ProductController.getProductByBarcode);
 router.get('/export-excel', ProductController.exportExcel);
 router.post('/import-excel', ProductController.importExcel);

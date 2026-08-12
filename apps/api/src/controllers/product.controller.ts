@@ -31,6 +31,15 @@ export class ProductController {
     }
   };
 
+  static clearAllProducts = async (req: Request, res: Response) => {
+    try {
+      ProductService.deleteAllProducts();
+      return sendSuccess(res, null, 'Đã xóa toàn bộ dữ liệu sản phẩm thành công!');
+    } catch (err: any) {
+      return sendError(res, err.message);
+    }
+  };
+
   static getProductByBarcode = async (req: Request, res: Response) => {
     try {
       const { barcode } = req.params;

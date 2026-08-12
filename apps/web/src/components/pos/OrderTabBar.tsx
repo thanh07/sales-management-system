@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { usePosStore } from '../../store/posStore';
-import { Plus, X, Receipt, Edit2, Check } from 'lucide-react';
+import { Plus, X, Receipt, Edit2, Check, History } from 'lucide-react';
 
 export const OrderTabBar: React.FC = () => {
   const { tabs, activeTabId, addTab, closeTab, switchTab, renameTab } = usePosStore();
@@ -120,15 +120,26 @@ export const OrderTabBar: React.FC = () => {
         })}
       </div>
 
-      {/* Add New Tab Button */}
-      <button
-        onClick={addTab}
-        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-bold shrink-0 transition-all"
-        title="Thêm hóa đơn mới (Ctrl+T)"
-      >
-        <Plus className="w-3.5 h-3.5 text-blue-400" />
-        <span className="hidden sm:inline">Hóa đơn mới</span>
-      </button>
+      {/* Action Buttons: Add Tab & Order History */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        <button
+          onClick={() => usePosStore.getState().setOrderHistoryModalOpen(true)}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-bold shrink-0 transition-all shadow-sm"
+          title="Xem lịch sử hóa đơn trong ngày (F7)"
+        >
+          <History className="w-3.5 h-3.5 text-purple-400" />
+          <span className="hidden sm:inline">Lịch sử (F7)</span>
+        </button>
+
+        <button
+          onClick={addTab}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-bold shrink-0 transition-all"
+          title="Thêm hóa đơn mới (Ctrl+T)"
+        >
+          <Plus className="w-3.5 h-3.5 text-blue-400" />
+          <span className="hidden sm:inline">Hóa đơn mới</span>
+        </button>
+      </div>
     </div>
   );
 };

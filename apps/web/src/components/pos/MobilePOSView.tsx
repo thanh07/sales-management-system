@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { usePosStore, calculateProductPrice } from '../../store/posStore';
 import api from '../../services/api';
-import { Search, Plus, QrCode, User, Tag, SlidersHorizontal, Store, FileText, ShoppingCart, Minus, Check, X, ChevronRight, Layers, Menu } from 'lucide-react';
+import { Search, Plus, QrCode, User, Tag, SlidersHorizontal, Store, FileText, ShoppingCart, Minus, Check, X, ChevronRight, Layers, Menu, History } from 'lucide-react';
 import { VariantSelectModal } from './VariantSelectModal';
 import { CategorySelectDrawer } from './CategorySelectDrawer';
 import { OrderTabBar } from './OrderTabBar';
@@ -26,6 +26,7 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
     setParkedModalOpen,
     setInvoiceModalOpen,
     setCheckoutModalOpen,
+    setOrderHistoryModalOpen,
     checkout,
     searchQuery,
     setSearchQuery,
@@ -91,7 +92,16 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
           <h1 className="text-xl font-bold text-white tracking-tight">Bán hàng</h1>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {/* Order History Button (F7) */}
+          <button
+            onClick={() => setOrderHistoryModalOpen(true)}
+            className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white"
+            title="Lịch sử đơn & Đổi trả hàng (F7)"
+          >
+            <History className="w-5 h-5 text-purple-400" />
+          </button>
+
           {/* Parked Orders Icon */}
           <button
             onClick={() => setParkedModalOpen(true)}

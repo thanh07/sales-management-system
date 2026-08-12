@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { usePosStore, calculateProductPrice } from '../../store/posStore';
 import api from '../../services/api';
-import { Search, Tag, Barcode, Layers, Package } from 'lucide-react';
+import { Search, Tag, Barcode, Layers, Package, History } from 'lucide-react';
 import { VariantSelectModal } from './VariantSelectModal';
 import { OrderTabBar } from './OrderTabBar';
 
@@ -48,31 +48,41 @@ export const ProductGrid: React.FC = () => {
       <div className="flex-1 flex flex-col p-5 overflow-hidden space-y-3">
         {/* Search & Barcode Scan Input */}
         <div className="flex items-center gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Tìm theo tên sản phẩm, mã SKU, mã Barcode... (Bấm F1 để tìm nhanh)"
-            className="w-full pl-10 pr-4 py-3 rounded-xl glass-input text-xs"
-          />
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Tìm theo tên sản phẩm, mã SKU, mã Barcode... (Bấm F1 để tìm nhanh)"
+              className="w-full pl-10 pr-4 py-3 rounded-xl glass-input text-xs"
+            />
+          </div>
+
+          <button
+            onClick={() => {
+              const barcode = prompt('Quét hoặc nhập mã Barcode độc nhất:');
+              if (barcode) {
+                api.get(`/products/barcode/${barcode}`)
+                  .then((res: any) => handleProductClick(res.data))
+                  .catch((err) => alert(err.message || 'Không tìm thấy sản phẩm'));
+              }
+            }}
+            className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-blue-400 font-semibold rounded-xl border border-slate-700 text-xs flex items-center gap-2 shrink-0 transition-all shadow-sm"
+          >
+            <Barcode className="w-4 h-4" />
+            <span>Quét Barcode</span>
+          </button>
+
+          <button
+            onClick={() => usePosStore.getState().setOrderHistoryModalOpen(true)}
+            className="px-4 py-3 bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white font-bold rounded-xl border border-purple-500/40 text-xs flex items-center gap-2 shrink-0 transition-all shadow-md shadow-purple-600/10"
+            title="Tra cứu lịch sử đơn hàng & Phiếu đổi trả hàng (F7)"
+          >
+            <History className="w-4 h-4 text-purple-400 group-hover:text-white" />
+            <span>Lịch sử đơn (F7)</span>
+          </button>
         </div>
-        <button
-          onClick={() => {
-            const barcode = prompt('Quét hoặc nhập mã Barcode độc nhất:');
-            if (barcode) {
-              api.get(`/products/barcode/${barcode}`)
-                .then((res: any) => handleProductClick(res.data))
-                .catch((err) => alert(err.message || 'Không tìm thấy sản phẩm'));
-            }
-          }}
-          className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-blue-400 font-semibold rounded-xl border border-slate-700 text-xs flex items-center gap-2 shrink-0 transition-all"
-        >
-          <Barcode className="w-4 h-4" />
-          <span>Quét Barcode</span>
-        </button>
-      </div>
 
       {/* Category Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 shrink-0">

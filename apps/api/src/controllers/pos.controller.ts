@@ -23,10 +23,36 @@ export class PosController {
 
   static getOrders(req: AuthenticatedRequest, res: Response) {
     try {
-      const orders = PosService.getOrders();
+      const { date, query, status } = req.query as { date?: string; query?: string; status?: string };
+      const orders = PosService.getOrders({ date, query, status });
       return sendSuccess(res, orders, 'Lấy danh sách hóa đơn thành công');
     } catch (error: any) {
       return sendError(res, 'Lỗi lấy hóa đơn', error, 500);
+    }
+  }
+
+  static getOrderById(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { id } = req.params;
+      const order = PosService.getOrderById(id);
+      return sendSuccess(res, order, 'Lấy chi tiết hóa đơn thành công');
+    } catch (error: any) {
+      return sendError(res, error.message || 'Lỗi lấy chi tiết hóa đơn', error, 404);
+    }
+  }
+
+  static returnOrder(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { id } = req.params;
+      const cashierId = req.user?.userId || 'usr-cashier-01';
+      const result = PosService.returnOrder(id, {
+        ...req.body,
+        cashierId,
+      });
+
+      return sendSuccess(res, result, 'Tạo phiếu trả hàng và hoàn tồn kho thành công', 200);
+    } catch (error: any) {
+      return sendError(res, error.message || 'Lỗi xử lý trả hàng', error, 400);
     }
   }
 

@@ -46,9 +46,10 @@ export const App: React.FC = () => {
           </div>
 
           {/* Quick Keyboard Shortcuts Legend */}
-          <div className="hidden lg:flex items-center gap-2 text-[11px] text-slate-400 bg-slate-950/80 px-3 py-1.5 rounded-xl border border-slate-800">
+          <div className="hidden xl:flex items-center gap-2 text-[11px] text-slate-400 bg-slate-950/80 px-3 py-1.5 rounded-xl border border-slate-800">
             <span className="px-1.5 py-0.5 rounded bg-slate-800 text-blue-400 font-mono font-bold">F1</span> Tìm kiếm
             <span className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-400 font-mono font-bold ml-2">F4</span> Chọn khách
+            <span className="px-1.5 py-0.5 rounded bg-slate-800 text-purple-400 font-mono font-bold ml-2">F7</span> Lịch sử / Đổi trả
             <span className="px-1.5 py-0.5 rounded bg-slate-800 text-blue-400 font-mono font-bold ml-2">F8</span> Giữ đơn
             <span className="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-400 font-mono font-bold ml-2">F9</span> Thanh toán
             <span className="px-1.5 py-0.5 rounded bg-slate-800 text-red-400 font-mono font-bold ml-2">F10</span> Xóa giỏ

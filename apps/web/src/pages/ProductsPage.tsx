@@ -179,6 +179,17 @@ export const ProductsPage: React.FC = () => {
     }
   };
 
+  const handleClearAllData = async () => {
+    if (!confirm('CẢNH BÁO: Bạn có chắc chắn muốn xóa TOÀN BỘ dữ liệu sản phẩm hàng hóa không?')) return;
+    try {
+      const res: any = await api.post('/products/clear-all');
+      alert(res.message || 'Đã xóa toàn bộ sản phẩm');
+      fetchProducts();
+    } catch (err: any) {
+      alert(err.message || 'Lỗi xóa dữ liệu');
+    }
+  };
+
   const handleOpenAddModal = () => {
     handleGenerateBarcode();
     setName('');
@@ -820,11 +831,20 @@ export const ProductsPage: React.FC = () => {
 
           <button
             onClick={handleResetData}
-            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-red-400 border border-slate-700/80 text-xs font-medium flex items-center gap-1.5 transition-all shadow-md shrink-0"
+            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700/80 text-xs font-medium flex items-center gap-1.5 transition-all shadow-md shrink-0"
             title="Tạo lại 300 sản phẩm mẫu"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Tạo Lại 300 SP</span>
+          </button>
+
+          <button
+            onClick={handleClearAllData}
+            className="px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-medium flex items-center gap-1.5 transition-all shadow-md shrink-0"
+            title="Xóa sạch toàn bộ sản phẩm hàng hóa"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Xóa Hết SP</span>
           </button>
         </div>
       </div>

@@ -110,6 +110,7 @@ interface PosState {
   isInvoiceModalOpen: boolean;
   isPriceListModalOpen: boolean;
   isCheckoutModalOpen: boolean;
+  isOrderHistoryModalOpen: boolean;
   lastOrder: any | null;
 
   // Tab Actions
@@ -129,6 +130,7 @@ interface PosState {
   setInvoiceModalOpen: (open: boolean) => void;
   setPriceListModalOpen: (open: boolean) => void;
   setCheckoutModalOpen: (open: boolean) => void;
+  setOrderHistoryModalOpen: (open: boolean) => void;
   setLastOrder: (order: any | null) => void;
 
   addToCart: (product: any, unitName?: string) => void;
@@ -174,6 +176,7 @@ export const usePosStore = create<PosState>((set, get) => ({
   isInvoiceModalOpen: false,
   isPriceListModalOpen: false,
   isCheckoutModalOpen: false,
+  isOrderHistoryModalOpen: false,
   lastOrder: null,
 
   // Tab Management
@@ -286,6 +289,7 @@ export const usePosStore = create<PosState>((set, get) => ({
   setInvoiceModalOpen: (isInvoiceModalOpen) => set({ isInvoiceModalOpen }),
   setPriceListModalOpen: (isPriceListModalOpen) => set({ isPriceListModalOpen }),
   setCheckoutModalOpen: (isCheckoutModalOpen) => set({ isCheckoutModalOpen }),
+  setOrderHistoryModalOpen: (isOrderHistoryModalOpen) => set({ isOrderHistoryModalOpen }),
   setLastOrder: (lastOrder) => set({ lastOrder }),
 
   addToCart: (product, unitName) => {
@@ -433,9 +437,13 @@ export const usePosStore = create<PosState>((set, get) => ({
 
     const checkoutPayload = {
       customerId: activeTab.customer?.id,
+      customerName: activeTab.customer ? (activeTab.customer.fullName || activeTab.customer.name) : 'Khách lẻ',
+      customerPhone: activeTab.customer?.phone || '',
       items: activeTab.cart.map((item) => ({
         productId: item.product.id,
         name: item.product.name,
+        sku: item.product.sku,
+        barcode: item.product.barcode,
         selectedUnit: item.selectedUnit,
         conversionFactor: item.selectedConversionFactor,
         quantity: item.quantity,
