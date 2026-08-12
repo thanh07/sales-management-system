@@ -1,14 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react';
 import api from '../services/api';
-import { PackagePlus, Search, Tag, Barcode, Layers, Edit2, Trash2, Plus, X, Download, Upload, ArrowRightLeft, ShieldAlert, Scale, ChevronDown, ChevronRight, MapPin, Award, Filter, RefreshCw, DollarSign, RotateCcw, Edit3, Save, Check, Sparkles, FileSpreadsheet } from 'lucide-react';
+import { PackagePlus, Search, Tag, Barcode, Layers, Edit2, Trash2, Plus, X, Download, Upload, ArrowRightLeft, ShieldAlert, Scale, ChevronDown, ChevronRight, MapPin, Award, Filter, RefreshCw, DollarSign, RotateCcw, Edit3, Save, Check, Sparkles, FileSpreadsheet, FolderTree } from 'lucide-react';
 import { ImportExcelModal, downloadProductExcelTemplate } from '../components/products/ImportExcelModal';
 
 export const ProductsPage: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [brands, setBrands] = useState<string[]>([]);
-  const [locations, setLocations] = useState<string[]>([]);
-  const [units, setUnits] = useState<string[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [brands, setBrands] = useState<any[]>([]);
+  const [locations, setLocations] = useState<any[]>([]);
+  const [units, setUnits] = useState<any[]>([]);
 
   // Filter States
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,6 +34,23 @@ export const ProductsPage: React.FC = () => {
   const [newBrandName, setNewBrandName] = useState('');
   const [newLocName, setNewLocName] = useState('');
   const [newUnitName, setNewUnitName] = useState('');
+
+  // Inline Master Rename States
+  const [editingCategoryName, setEditingCategoryName] = useState<string | null>(null);
+  const [editCategoryVal, setEditCategoryVal] = useState('');
+
+  const [editingBrandName, setEditingBrandName] = useState<string | null>(null);
+  const [editBrandVal, setEditBrandVal] = useState('');
+
+  const [editingLocationName, setEditingLocationName] = useState<string | null>(null);
+  const [editLocationVal, setEditLocationVal] = useState('');
+
+  const [editingUnitName, setEditingUnitName] = useState<string | null>(null);
+  const [editUnitVal, setEditUnitVal] = useState('');
+
+  // Helper getters for normalized entity items
+  const getItemName = (item: any): string => (typeof item === 'string' ? item : item?.name || '');
+  const getItemCount = (item: any): number => (typeof item === 'object' && item !== null ? item.productCount || 0 : 0);
 
   // Form Product State
   const [name, setName] = useState('');
@@ -539,6 +556,47 @@ export const ProductsPage: React.FC = () => {
     reader.readAsText(file);
   };
 
+  // Category Actions
+  const handleAddCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCatName.trim()) return;
+    try {
+      await api.post('/products/categories', { name: newCatName });
+      setNewCatName('');
+      setCategory(newCatName.trim());
+      fetchProducts();
+    } catch (err: any) {
+      alert(err.message || 'Lỗi thêm nhóm hàng mới');
+    }
+  };
+
+  const handleUpdateCategory = async (oldName: string) => {
+    if (!editCategoryVal.trim() || editCategoryVal.trim() === oldName) {
+      setEditingCategoryName(null);
+      return;
+    }
+    try {
+      await api.put(`/products/categories/${encodeURIComponent(oldName)}`, { newName: editCategoryVal.trim() });
+      setEditingCategoryName(null);
+      fetchProducts();
+    } catch (err: any) {
+      alert(err.message || 'Lỗi cập nhật nhóm hàng');
+    }
+  };
+
+  const handleDeleteCategory = async (catName: string, count: number) => {
+    const msg = count > 0
+      ? `CẢNH BÁO: Đang có ${count} sản phẩm thuộc nhóm "${catName}". Bạn có chắc chắn muốn xóa nhóm này không?`
+      : `Bạn có chắc muốn xóa nhóm hàng "${catName}"?`;
+    if (!confirm(msg)) return;
+    try {
+      await api.delete(`/products/categories/${encodeURIComponent(catName)}`);
+      fetchProducts();
+    } catch (err: any) {
+      alert(err.message || 'Lỗi xóa nhóm hàng');
+    }
+  };
+
   // Brand Actions
   const handleAddBrand = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -553,8 +611,25 @@ export const ProductsPage: React.FC = () => {
     }
   };
 
-  const handleDeleteBrand = async (bName: string) => {
-    if (!confirm(`Bạn có chắc muốn xóa thương hiệu "${bName}"?`)) return;
+  const handleUpdateBrand = async (oldName: string) => {
+    if (!editBrandVal.trim() || editBrandVal.trim() === oldName) {
+      setEditingBrandName(null);
+      return;
+    }
+    try {
+      await api.put(`/products/brands/${encodeURIComponent(oldName)}`, { newName: editBrandVal.trim() });
+      setEditingBrandName(null);
+      fetchProducts();
+    } catch (err: any) {
+      alert(err.message || 'Lỗi cập nhật thương hiệu');
+    }
+  };
+
+  const handleDeleteBrand = async (bName: string, count: number) => {
+    const msg = count > 0
+      ? `CẢNH BÁO: Đang có ${count} sản phẩm thuộc thương hiệu "${bName}". Bạn có chắc chắn muốn xóa không?`
+      : `Bạn có chắc muốn xóa thương hiệu "${bName}"?`;
+    if (!confirm(msg)) return;
     try {
       await api.delete(`/products/brands/${encodeURIComponent(bName)}`);
       fetchProducts();
@@ -577,8 +652,25 @@ export const ProductsPage: React.FC = () => {
     }
   };
 
-  const handleDeleteLocation = async (lName: string) => {
-    if (!confirm(`Bạn có chắc muốn xóa vị trí kho "${lName}"?`)) return;
+  const handleUpdateLocation = async (oldName: string) => {
+    if (!editLocationVal.trim() || editLocationVal.trim() === oldName) {
+      setEditingLocationName(null);
+      return;
+    }
+    try {
+      await api.put(`/products/locations/${encodeURIComponent(oldName)}`, { newName: editLocationVal.trim() });
+      setEditingLocationName(null);
+      fetchProducts();
+    } catch (err: any) {
+      alert(err.message || 'Lỗi cập nhật vị trí kho');
+    }
+  };
+
+  const handleDeleteLocation = async (lName: string, count: number) => {
+    const msg = count > 0
+      ? `CẢNH BÁO: Đang có ${count} sản phẩm lưu tại vị trí "${lName}". Bạn có chắc chắn muốn xóa không?`
+      : `Bạn có chắc muốn xóa vị trí kho "${lName}"?`;
+    if (!confirm(msg)) return;
     try {
       await api.delete(`/products/locations/${encodeURIComponent(lName)}`);
       fetchProducts();
@@ -592,7 +684,7 @@ export const ProductsPage: React.FC = () => {
     e.preventDefault();
     if (!newUnitName.trim()) return;
     try {
-      const res: any = await api.post('/products/units', { name: newUnitName });
+      await api.post('/products/units', { name: newUnitName });
       setNewUnitName('');
       setUnit(newUnitName.trim());
       fetchProducts();
@@ -601,13 +693,83 @@ export const ProductsPage: React.FC = () => {
     }
   };
 
-  const handleDeleteUnit = async (unitName: string) => {
-    if (!confirm(`Bạn có chắc muốn xóa đơn vị tính "${unitName}"?`)) return;
+  const handleUpdateUnit = async (oldName: string) => {
+    if (!editUnitVal.trim() || editUnitVal.trim() === oldName) {
+      setEditingUnitName(null);
+      return;
+    }
     try {
-      await api.delete(`/products/units/${encodeURIComponent(unitName)}`);
+      await api.put(`/products/units/${encodeURIComponent(oldName)}`, { newName: editUnitVal.trim() });
+      setEditingUnitName(null);
+      fetchProducts();
+    } catch (err: any) {
+      alert(err.message || 'Lỗi cập nhật đơn vị tính');
+    }
+  };
+
+  const handleDeleteUnit = async (uName: string, count: number) => {
+    const msg = count > 0
+      ? `CẢNH BÁO: Đang có ${count} sản phẩm sử dụng đơn vị tính "${uName}". Bạn có chắc chắn muốn xóa không?`
+      : `Bạn có chắc muốn xóa đơn vị tính "${uName}"?`;
+    if (!confirm(msg)) return;
+    try {
+      await api.delete(`/products/units/${encodeURIComponent(uName)}`);
       fetchProducts();
     } catch (err: any) {
       alert(err.message || 'Lỗi xóa đơn vị tính');
+    }
+  };
+
+  // Inline Quick-Add Helpers for Product Add/Edit Form
+  const handleQuickAddCategory = async () => {
+    const val = prompt('Nhập tên Nhóm Hàng / Danh Mục mới:');
+    if (val && val.trim()) {
+      try {
+        await api.post('/products/categories', { name: val.trim() });
+        setCategory(val.trim());
+        fetchProducts();
+      } catch (err: any) {
+        alert(err.message || 'Lỗi tạo nhóm hàng');
+      }
+    }
+  };
+
+  const handleQuickAddBrand = async () => {
+    const val = prompt('Nhập tên Thương Hiệu mới:');
+    if (val && val.trim()) {
+      try {
+        await api.post('/products/brands', { name: val.trim() });
+        setBrand(val.trim());
+        fetchProducts();
+      } catch (err: any) {
+        alert(err.message || 'Lỗi tạo thương hiệu');
+      }
+    }
+  };
+
+  const handleQuickAddLocation = async () => {
+    const val = prompt('Nhập tên Vị Trí Lưu Kho mới (VD: Kệ A1 - Dãy 3, Kho Lạnh 02):');
+    if (val && val.trim()) {
+      try {
+        await api.post('/products/locations', { name: val.trim() });
+        setLocation(val.trim());
+        fetchProducts();
+      } catch (err: any) {
+        alert(err.message || 'Lỗi tạo vị trí kho');
+      }
+    }
+  };
+
+  const handleQuickAddUnit = async () => {
+    const val = prompt('Nhập tên Đơn Vị Tính mới (VD: Chai 500ml, Thùng 24, Gói):');
+    if (val && val.trim()) {
+      try {
+        await api.post('/products/units', { name: val.trim() });
+        setUnit(val.trim());
+        fetchProducts();
+      } catch (err: any) {
+        alert(err.message || 'Lỗi tạo đơn vị tính');
+      }
     }
   };
 
@@ -804,24 +966,36 @@ export const ProductsPage: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setIsLocationModalOpen(true)}
-            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700/80 text-xs font-medium flex items-center gap-1.5 transition-all shadow-md shrink-0"
+            onClick={() => setIsCategoryModalOpen(true)}
+            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700/80 text-xs font-medium flex items-center gap-1.5 transition-all shadow-md shrink-0"
+            title="Quản lý danh mục nhóm hàng"
           >
-            <MapPin className="w-3.5 h-3.5" />
-            <span>Vị Trí Kho ({locations.length})</span>
+            <FolderTree className="w-3.5 h-3.5" />
+            <span>Nhóm Hàng ({categories.length})</span>
           </button>
 
           <button
             onClick={() => setIsBrandModalOpen(true)}
             className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-purple-400 border border-slate-700/80 text-xs font-medium flex items-center gap-1.5 transition-all shadow-md shrink-0"
+            title="Quản lý thương hiệu"
           >
             <Award className="w-3.5 h-3.5" />
             <span>Thương Hiệu ({brands.length})</span>
           </button>
 
           <button
+            onClick={() => setIsLocationModalOpen(true)}
+            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700/80 text-xs font-medium flex items-center gap-1.5 transition-all shadow-md shrink-0"
+            title="Quản lý vị trí lưu kho"
+          >
+            <MapPin className="w-3.5 h-3.5" />
+            <span>Vị Trí Kho ({locations.length})</span>
+          </button>
+
+          <button
             onClick={() => setIsUnitModalOpen(true)}
             className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700/80 text-xs font-medium flex items-center gap-1.5 transition-all shadow-md shrink-0"
+            title="Quản lý đơn vị tính"
           >
             <Scale className="w-3.5 h-3.5" />
             <span>ĐVT ({units.length})</span>
@@ -900,9 +1074,15 @@ export const ProductsPage: React.FC = () => {
               className="w-full px-3 py-2 rounded-xl glass-input bg-slate-900 font-semibold text-slate-200"
             >
               <option value="Tất cả">📁 Tất cả Nhóm Hàng ({categories.length})</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
+              {categories.map((c) => {
+                const name = getItemName(c);
+                const count = getItemCount(c);
+                return (
+                  <option key={name} value={name}>
+                    {name} {count > 0 ? `(${count})` : ''}
+                  </option>
+                );
+              })}
             </select>
           </div>
 
@@ -913,9 +1093,15 @@ export const ProductsPage: React.FC = () => {
               className="w-full px-3 py-2 rounded-xl glass-input bg-slate-900 font-semibold text-purple-300"
             >
               <option value="Tất cả">🏷️ Tất cả Thương Hiệu ({brands.length})</option>
-              {brands.map((b) => (
-                <option key={b} value={b}>{b}</option>
-              ))}
+              {brands.map((b) => {
+                const name = getItemName(b);
+                const count = getItemCount(b);
+                return (
+                  <option key={name} value={name}>
+                    {name} {count > 0 ? `(${count})` : ''}
+                  </option>
+                );
+              })}
             </select>
           </div>
 
@@ -926,9 +1112,15 @@ export const ProductsPage: React.FC = () => {
               className="w-full px-3 py-2 rounded-xl glass-input bg-slate-900 font-semibold text-amber-400"
             >
               <option value="Tất cả">📍 Tất cả Vị Trí Kho ({locations.length})</option>
-              {locations.map((l) => (
-                <option key={l} value={l}>{l}</option>
-              ))}
+              {locations.map((l) => {
+                const name = getItemName(l);
+                const count = getItemCount(l);
+                return (
+                  <option key={name} value={name}>
+                    {name} {count > 0 ? `(${count})` : ''}
+                  </option>
+                );
+              })}
             </select>
           </div>
         </div>
@@ -1410,41 +1602,74 @@ export const ProductsPage: React.FC = () => {
               {/* Category, Brand & Location Selectors */}
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">Nhóm hàng</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-slate-300 font-semibold">Nhóm hàng</label>
+                    <button
+                      type="button"
+                      onClick={handleQuickAddCategory}
+                      className="text-blue-400 hover:text-blue-300 text-[11px] font-bold"
+                      title="Thêm nhanh nhóm hàng mới"
+                    >
+                      + Thêm
+                    </button>
+                  </div>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl glass-input bg-slate-900 font-semibold"
+                    className="w-full px-3 py-2.5 rounded-xl glass-input bg-slate-900 font-semibold text-slate-200"
                   >
-                    {categories.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
+                    {categories.map((c) => {
+                      const name = getItemName(c);
+                      return <option key={name} value={name}>{name}</option>;
+                    })}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-purple-300 font-bold mb-1">Thương hiệu</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-purple-300 font-bold">Thương hiệu</label>
+                    <button
+                      type="button"
+                      onClick={handleQuickAddBrand}
+                      className="text-purple-400 hover:text-purple-300 text-[11px] font-bold"
+                      title="Thêm nhanh thương hiệu mới"
+                    >
+                      + Thêm
+                    </button>
+                  </div>
                   <select
                     value={brand}
                     onChange={(e) => setBrand(e.target.value)}
                     className="w-full px-3 py-2.5 rounded-xl glass-input bg-slate-900 font-bold text-purple-300"
                   >
-                    {brands.map((b) => (
-                      <option key={b} value={b}>{b}</option>
-                    ))}
+                    {brands.map((b) => {
+                      const name = getItemName(b);
+                      return <option key={name} value={name}>{name}</option>;
+                    })}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-amber-400 font-bold mb-1">📍 Vị trí kho</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-amber-400 font-bold">📍 Vị trí kho</label>
+                    <button
+                      type="button"
+                      onClick={handleQuickAddLocation}
+                      className="text-amber-400 hover:text-amber-300 text-[11px] font-bold"
+                      title="Thêm nhanh vị trí kho mới"
+                    >
+                      + Thêm
+                    </button>
+                  </div>
                   <select
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                     className="w-full px-3 py-2.5 rounded-xl glass-input bg-slate-900 font-bold text-amber-300"
                   >
-                    {locations.map((l) => (
-                      <option key={l} value={l}>{l}</option>
-                    ))}
+                    {locations.map((l) => {
+                      const name = getItemName(l);
+                      return <option key={name} value={name}>{name}</option>;
+                    })}
                   </select>
                 </div>
               </div>
@@ -1456,14 +1681,23 @@ export const ProductsPage: React.FC = () => {
                     <Scale className="w-4 h-4" />
                     <span>1. Đơn Vị Tính Cơ Bản (Nhỏ Nhất) & Giá Bán Lẻ Mặc Định</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsUnitModalOpen(true)}
-                    className="text-[11px] text-emerald-400 hover:underline font-bold flex items-center gap-1"
-                  >
-                    <Plus className="w-3 h-3" />
-                    <span>Thêm / Quản lý ĐVT Hệ Thống</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleQuickAddUnit}
+                      className="text-[11px] text-emerald-400 hover:underline font-bold flex items-center gap-1"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>+ Thêm nhanh ĐVT</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsUnitModalOpen(true)}
+                      className="text-[11px] text-slate-400 hover:text-white hover:underline flex items-center gap-1"
+                    >
+                      <span>Quản lý ĐVT</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">
@@ -1474,9 +1708,10 @@ export const ProductsPage: React.FC = () => {
                       onChange={(e) => setUnit(e.target.value)}
                       className="w-full px-3 py-2.5 rounded-xl glass-input bg-slate-900 font-bold text-emerald-400 text-xs"
                     >
-                      {units.map((u) => (
-                        <option key={u} value={u}>{u}</option>
-                      ))}
+                      {units.map((u) => {
+                        const name = getItemName(u);
+                        return <option key={name} value={name}>{name}</option>;
+                      })}
                     </select>
                   </div>
 
@@ -1638,6 +1873,111 @@ export const ProductsPage: React.FC = () => {
         </div>
       )}
 
+      {/* Modal Manage Categories / Nhóm Hàng */}
+      {isCategoryModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2 text-blue-400">
+                <FolderTree className="w-5 h-5" />
+                <h3 className="font-bold text-lg text-white">Quản Lý Nhóm Hàng ({categories.length})</h3>
+              </div>
+              <button onClick={() => { setIsCategoryModalOpen(false); setEditingCategoryName(null); }} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddCategory} className="flex gap-2">
+              <input
+                type="text"
+                value={newCatName}
+                onChange={(e) => setNewCatName(e.target.value)}
+                placeholder="Nhập tên nhóm hàng mới..."
+                className="flex-1 px-3 py-2 rounded-xl glass-input text-xs"
+              />
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs flex items-center gap-1 shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Thêm Nhóm</span>
+              </button>
+            </form>
+
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1 text-xs">
+              {categories.map((c) => {
+                const name = getItemName(c);
+                const count = getItemCount(c);
+                const isEditing = editingCategoryName === name;
+
+                return (
+                  <div key={name} className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-center justify-between gap-2">
+                    {isEditing ? (
+                      <div className="flex-1 flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={editCategoryVal}
+                          onChange={(e) => setEditCategoryVal(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleUpdateCategory(name)}
+                          className="flex-1 px-2.5 py-1 rounded-lg bg-slate-900 border border-blue-500 text-white text-xs font-semibold focus:outline-none"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateCategory(name)}
+                          className="p-1 text-emerald-400 hover:bg-slate-700 rounded-md"
+                          title="Lưu thay đổi"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingCategoryName(null)}
+                          className="p-1 text-slate-400 hover:bg-slate-700 rounded-md"
+                          title="Hủy"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-semibold text-blue-300 truncate">{name}</span>
+                          <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-bold shrink-0">
+                            {count} SP
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingCategoryName(name);
+                              setEditCategoryVal(name);
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-slate-800 rounded-lg"
+                            title="Đổi tên nhóm hàng"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCategory(name, count)}
+                            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg"
+                            title="Xóa nhóm hàng"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal Manage Storage Locations */}
       {isLocationModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
@@ -1645,9 +1985,9 @@ export const ProductsPage: React.FC = () => {
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2 text-amber-400">
                 <MapPin className="w-5 h-5" />
-                <h3 className="font-bold text-lg text-white">Quản Lý Vị Trí Lưu Kho (Kệ / Dãy / Kho)</h3>
+                <h3 className="font-bold text-lg text-white">Quản Lý Vị Trí Kho ({locations.length})</h3>
               </div>
-              <button onClick={() => setIsLocationModalOpen(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => { setIsLocationModalOpen(false); setEditingLocationName(null); }} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1657,7 +1997,7 @@ export const ProductsPage: React.FC = () => {
                 type="text"
                 value={newLocName}
                 onChange={(e) => setNewLocName(e.target.value)}
-                placeholder="Nhập tên vị trí..."
+                placeholder="Nhập tên vị trí kho..."
                 className="flex-1 px-3 py-2 rounded-xl glass-input text-xs"
               />
               <button
@@ -1669,21 +2009,78 @@ export const ProductsPage: React.FC = () => {
               </button>
             </form>
 
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-1 text-xs">
-              {locations.map((l) => (
-                <div key={l} className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-center justify-between">
-                  <span className="font-semibold text-amber-300 flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5" />
-                    <span>{l}</span>
-                  </span>
-                  <button
-                    onClick={() => handleDeleteLocation(l)}
-                    className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1 text-xs">
+              {locations.map((l) => {
+                const name = getItemName(l);
+                const count = getItemCount(l);
+                const isEditing = editingLocationName === name;
+
+                return (
+                  <div key={name} className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-center justify-between gap-2">
+                    {isEditing ? (
+                      <div className="flex-1 flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={editLocationVal}
+                          onChange={(e) => setEditLocationVal(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleUpdateLocation(name)}
+                          className="flex-1 px-2.5 py-1 rounded-lg bg-slate-900 border border-amber-500 text-white text-xs font-semibold focus:outline-none"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateLocation(name)}
+                          className="p-1 text-emerald-400 hover:bg-slate-700 rounded-md"
+                          title="Lưu thay đổi"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingLocationName(null)}
+                          className="p-1 text-slate-400 hover:bg-slate-700 rounded-md"
+                          title="Hủy"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-semibold text-amber-300 flex items-center gap-1.5 truncate">
+                            <MapPin className="w-3.5 h-3.5 shrink-0" />
+                            <span className="truncate">{name}</span>
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold shrink-0">
+                            {count} SP
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingLocationName(name);
+                              setEditLocationVal(name);
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded-lg"
+                            title="Đổi tên vị trí kho"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteLocation(name, count)}
+                            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg"
+                            title="Xóa vị trí kho"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -1696,9 +2093,9 @@ export const ProductsPage: React.FC = () => {
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2 text-purple-400">
                 <Award className="w-5 h-5" />
-                <h3 className="font-bold text-lg text-white">Quản Lý Thương Hiệu (Brand)</h3>
+                <h3 className="font-bold text-lg text-white">Quản Lý Thương Hiệu ({brands.length})</h3>
               </div>
-              <button onClick={() => setIsBrandModalOpen(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => { setIsBrandModalOpen(false); setEditingBrandName(null); }} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1720,18 +2117,75 @@ export const ProductsPage: React.FC = () => {
               </button>
             </form>
 
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-1 text-xs">
-              {brands.map((b) => (
-                <div key={b} className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-center justify-between">
-                  <span className="font-semibold text-purple-300">{b}</span>
-                  <button
-                    onClick={() => handleDeleteBrand(b)}
-                    className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1 text-xs">
+              {brands.map((b) => {
+                const name = getItemName(b);
+                const count = getItemCount(b);
+                const isEditing = editingBrandName === name;
+
+                return (
+                  <div key={name} className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-center justify-between gap-2">
+                    {isEditing ? (
+                      <div className="flex-1 flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={editBrandVal}
+                          onChange={(e) => setEditBrandVal(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleUpdateBrand(name)}
+                          className="flex-1 px-2.5 py-1 rounded-lg bg-slate-900 border border-purple-500 text-white text-xs font-semibold focus:outline-none"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateBrand(name)}
+                          className="p-1 text-emerald-400 hover:bg-slate-700 rounded-md"
+                          title="Lưu thay đổi"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingBrandName(null)}
+                          className="p-1 text-slate-400 hover:bg-slate-700 rounded-md"
+                          title="Hủy"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-semibold text-purple-300 truncate">{name}</span>
+                          <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-bold shrink-0">
+                            {count} SP
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingBrandName(name);
+                              setEditBrandVal(name);
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-purple-400 hover:bg-slate-800 rounded-lg"
+                            title="Đổi tên thương hiệu"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteBrand(name, count)}
+                            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg"
+                            title="Xóa thương hiệu"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -1744,9 +2198,9 @@ export const ProductsPage: React.FC = () => {
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2 text-emerald-400">
                 <Scale className="w-5 h-5" />
-                <h3 className="font-bold text-lg text-white">Quản Lý Đơn Vị Tính Tự Tạo (Hệ Thống)</h3>
+                <h3 className="font-bold text-lg text-white">Quản Lý Đơn Vị Tính ({units.length})</h3>
               </div>
-              <button onClick={() => setIsUnitModalOpen(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => { setIsUnitModalOpen(false); setEditingUnitName(null); }} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1768,18 +2222,75 @@ export const ProductsPage: React.FC = () => {
               </button>
             </form>
 
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-1 text-xs">
-              {units.map((u) => (
-                <div key={u} className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-center justify-between">
-                  <span className="font-bold text-white text-sm">{u}</span>
-                  <button
-                    onClick={() => handleDeleteUnit(u)}
-                    className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1 text-xs">
+              {units.map((u) => {
+                const name = getItemName(u);
+                const count = getItemCount(u);
+                const isEditing = editingUnitName === name;
+
+                return (
+                  <div key={name} className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-center justify-between gap-2">
+                    {isEditing ? (
+                      <div className="flex-1 flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={editUnitVal}
+                          onChange={(e) => setEditUnitVal(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleUpdateUnit(name)}
+                          className="flex-1 px-2.5 py-1 rounded-lg bg-slate-900 border border-emerald-500 text-white text-xs font-semibold focus:outline-none"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateUnit(name)}
+                          className="p-1 text-emerald-400 hover:bg-slate-700 rounded-md"
+                          title="Lưu thay đổi"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingUnitName(null)}
+                          className="p-1 text-slate-400 hover:bg-slate-700 rounded-md"
+                          title="Hủy"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-bold text-white text-sm truncate">{name}</span>
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold shrink-0">
+                            {count} SP
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingUnitName(name);
+                              setEditUnitVal(name);
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded-lg"
+                            title="Đổi tên đơn vị tính"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteUnit(name, count)}
+                            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg"
+                            title="Xóa đơn vị tính"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -1838,41 +2349,74 @@ export const ProductsPage: React.FC = () => {
               {/* Category, Brand & Location Selectors */}
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">Nhóm hàng</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-slate-300 font-semibold">Nhóm hàng</label>
+                    <button
+                      type="button"
+                      onClick={handleQuickAddCategory}
+                      className="text-blue-400 hover:text-blue-300 text-[11px] font-bold"
+                      title="Thêm nhanh nhóm hàng mới"
+                    >
+                      + Thêm
+                    </button>
+                  </div>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl glass-input bg-slate-900 font-semibold"
+                    className="w-full px-3 py-2.5 rounded-xl glass-input bg-slate-900 font-semibold text-slate-200"
                   >
-                    {categories.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
+                    {categories.map((c) => {
+                      const name = getItemName(c);
+                      return <option key={name} value={name}>{name}</option>;
+                    })}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-purple-300 font-bold mb-1">Thương hiệu</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-purple-300 font-bold">Thương hiệu</label>
+                    <button
+                      type="button"
+                      onClick={handleQuickAddBrand}
+                      className="text-purple-400 hover:text-purple-300 text-[11px] font-bold"
+                      title="Thêm nhanh thương hiệu mới"
+                    >
+                      + Thêm
+                    </button>
+                  </div>
                   <select
                     value={brand}
                     onChange={(e) => setBrand(e.target.value)}
                     className="w-full px-3 py-2.5 rounded-xl glass-input bg-slate-900 font-bold text-purple-300"
                   >
-                    {brands.map((b) => (
-                      <option key={b} value={b}>{b}</option>
-                    ))}
+                    {brands.map((b) => {
+                      const name = getItemName(b);
+                      return <option key={name} value={name}>{name}</option>;
+                    })}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-amber-400 font-bold mb-1">📍 Vị trí kho</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-amber-400 font-bold">📍 Vị trí kho</label>
+                    <button
+                      type="button"
+                      onClick={handleQuickAddLocation}
+                      className="text-amber-400 hover:text-amber-300 text-[11px] font-bold"
+                      title="Thêm nhanh vị trí kho mới"
+                    >
+                      + Thêm
+                    </button>
+                  </div>
                   <select
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                     className="w-full px-3 py-2.5 rounded-xl glass-input bg-slate-900 font-bold text-amber-300"
                   >
-                    {locations.map((l) => (
-                      <option key={l} value={l}>{l}</option>
-                    ))}
+                    {locations.map((l) => {
+                      const name = getItemName(l);
+                      return <option key={name} value={name}>{name}</option>;
+                    })}
                   </select>
                 </div>
               </div>
@@ -1884,14 +2428,23 @@ export const ProductsPage: React.FC = () => {
                     <Scale className="w-4 h-4" />
                     <span>1. Đơn Vị Tính Cơ Bản (Nhỏ Nhất) & Giá Bán Lẻ</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsUnitModalOpen(true)}
-                    className="text-[11px] text-emerald-400 hover:underline font-bold flex items-center gap-1"
-                  >
-                    <Plus className="w-3 h-3" />
-                    <span>Thêm / Quản lý ĐVT Hệ Thống</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleQuickAddUnit}
+                      className="text-[11px] text-emerald-400 hover:underline font-bold flex items-center gap-1"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>+ Thêm nhanh ĐVT</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsUnitModalOpen(true)}
+                      className="text-[11px] text-slate-400 hover:text-white hover:underline flex items-center gap-1"
+                    >
+                      <span>Quản lý ĐVT</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">
@@ -1902,9 +2455,10 @@ export const ProductsPage: React.FC = () => {
                       onChange={(e) => setUnit(e.target.value)}
                       className="w-full px-3 py-2.5 rounded-xl glass-input bg-slate-900 font-bold text-emerald-400 text-xs"
                     >
-                      {units.map((u) => (
-                        <option key={u} value={u}>{u}</option>
-                      ))}
+                      {units.map((u) => {
+                        const name = getItemName(u);
+                        return <option key={name} value={name}>{name}</option>;
+                      })}
                     </select>
                   </div>
 

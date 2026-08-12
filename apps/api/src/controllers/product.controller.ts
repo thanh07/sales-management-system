@@ -112,6 +112,47 @@ export class ProductController {
     }
   };
 
+  // Category Management
+  static getCategories = async (req: Request, res: Response) => {
+    try {
+      const categories = ProductService.getCategories();
+      return sendSuccess(res, categories);
+    } catch (err: any) {
+      return sendError(res, err.message);
+    }
+  };
+
+  static createCategory = async (req: Request, res: Response) => {
+    try {
+      const { name } = req.body;
+      const categories = ProductService.addCategory(name);
+      return sendSuccess(res, categories, 'Thêm nhóm hàng mới thành công');
+    } catch (err: any) {
+      return sendError(res, err.message, 400);
+    }
+  };
+
+  static updateCategory = async (req: Request, res: Response) => {
+    try {
+      const { name } = req.params;
+      const { newName } = req.body;
+      const categories = ProductService.updateCategory(name, newName);
+      return sendSuccess(res, categories, 'Cập nhật nhóm hàng thành công');
+    } catch (err: any) {
+      return sendError(res, err.message, 400);
+    }
+  };
+
+  static deleteCategory = async (req: Request, res: Response) => {
+    try {
+      const { name } = req.params;
+      const categories = ProductService.deleteCategory(name);
+      return sendSuccess(res, categories, 'Xóa nhóm hàng thành công');
+    } catch (err: any) {
+      return sendError(res, err.message, 400);
+    }
+  };
+
   // Brand Management
   static getBrands = async (req: Request, res: Response) => {
     try {
@@ -127,6 +168,17 @@ export class ProductController {
       const { name } = req.body;
       const brands = ProductService.addBrand(name);
       return sendSuccess(res, brands, 'Thêm thương hiệu mới thành công');
+    } catch (err: any) {
+      return sendError(res, err.message, 400);
+    }
+  };
+
+  static updateBrand = async (req: Request, res: Response) => {
+    try {
+      const { name } = req.params;
+      const { newName } = req.body;
+      const brands = ProductService.updateBrand(name, newName);
+      return sendSuccess(res, brands, 'Cập nhật thương hiệu thành công');
     } catch (err: any) {
       return sendError(res, err.message, 400);
     }
@@ -162,6 +214,17 @@ export class ProductController {
     }
   };
 
+  static updateLocation = async (req: Request, res: Response) => {
+    try {
+      const { name } = req.params;
+      const { newName } = req.body;
+      const locations = ProductService.updateLocation(name, newName);
+      return sendSuccess(res, locations, 'Cập nhật vị trí kho thành công');
+    } catch (err: any) {
+      return sendError(res, err.message, 400);
+    }
+  };
+
   static deleteLocation = async (req: Request, res: Response) => {
     try {
       const { name } = req.params;
@@ -187,6 +250,17 @@ export class ProductController {
       const { name } = req.body;
       const units = ProductService.addUnit(name);
       return sendSuccess(res, units, 'Thêm đơn vị tính mới thành công');
+    } catch (err: any) {
+      return sendError(res, err.message, 400);
+    }
+  };
+
+  static updateUnit = async (req: Request, res: Response) => {
+    try {
+      const { name } = req.params;
+      const { newName } = req.body;
+      const units = ProductService.updateUnit(name, newName);
+      return sendSuccess(res, units, 'Cập nhật đơn vị tính thành công');
     } catch (err: any) {
       return sendError(res, err.message, 400);
     }

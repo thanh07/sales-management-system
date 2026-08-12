@@ -505,6 +505,14 @@ export class ProductService {
         } else {
           MOCK_PRODUCTS.push(newProduct);
         }
+
+        // Auto-register new master categories, brands, locations, units
+        if (category && !CATEGORIES_DB.includes(category)) CATEGORIES_DB.push(category);
+        if (brand && brand !== 'Khác' && !BRANDS_DB.includes(brand)) BRANDS_DB.push(brand);
+        if (location && !LOCATIONS_DB.includes(location)) LOCATIONS_DB.push(location);
+        if (unit && !UNITS_DB.includes(unit)) UNITS_DB.push(unit);
+        if (conversionUnit && !UNITS_DB.includes(conversionUnit)) UNITS_DB.push(conversionUnit);
+
         count++;
       }
     });
@@ -612,44 +620,150 @@ export class ProductService {
     }
   }
 
-  static getCategories() { return CATEGORIES_DB; }
-  static getBrands() { return BRANDS_DB; }
-  static getLocations() { return LOCATIONS_DB; }
-  static getUnits() { return UNITS_DB; }
+  static getCategories() {
+    return CATEGORIES_DB.map((cat) => ({
+      name: cat,
+      productCount: MOCK_PRODUCTS.filter((p) => p.category === cat).length,
+    }));
+  }
+
+  static addCategory(categoryName: string) {
+    const trimmed = categoryName.trim();
+    if (!trimmed) throw new Error('Tên nhóm hàng không được trống');
+    if (CATEGORIES_DB.includes(trimmed)) throw new Error('Nhóm hàng này đã tồn tại');
+    CATEGORIES_DB.push(trimmed);
+    return this.getCategories();
+  }
+
+  static updateCategory(oldName: string, newName: string) {
+    const trimmed = newName.trim();
+    if (!trimmed) throw new Error('Tên nhóm hàng mới không được trống');
+    const idx = CATEGORIES_DB.indexOf(oldName);
+    if (idx === -1) throw new Error(`Không tìm thấy nhóm hàng: ${oldName}`);
+    CATEGORIES_DB[idx] = trimmed;
+
+    // Cascade update to all matching products
+    MOCK_PRODUCTS.forEach((p) => {
+      if (p.category === oldName) {
+        p.category = trimmed;
+      }
+    });
+
+    return this.getCategories();
+  }
+
+  static deleteCategory(categoryName: string) {
+    CATEGORIES_DB = CATEGORIES_DB.filter((c) => c !== categoryName);
+    return this.getCategories();
+  }
+
+  static getBrands() {
+    return BRANDS_DB.map((brand) => ({
+      name: brand,
+      productCount: MOCK_PRODUCTS.filter((p) => p.brand === brand).length,
+    }));
+  }
 
   static addBrand(brandName: string) {
-    if (!brandName.trim()) throw new Error('Tên thương hiệu không được trống');
-    if (BRANDS_DB.includes(brandName.trim())) throw new Error('Thương hiệu đã tồn tại');
-    BRANDS_DB.push(brandName.trim());
-    return BRANDS_DB;
+    const trimmed = brandName.trim();
+    if (!trimmed) throw new Error('Tên thương hiệu không được trống');
+    if (BRANDS_DB.includes(trimmed)) throw new Error('Thương hiệu đã tồn tại');
+    BRANDS_DB.push(trimmed);
+    return this.getBrands();
+  }
+
+  static updateBrand(oldName: string, newName: string) {
+    const trimmed = newName.trim();
+    if (!trimmed) throw new Error('Tên thương hiệu mới không được trống');
+    const idx = BRANDS_DB.indexOf(oldName);
+    if (idx === -1) throw new Error(`Không tìm thấy thương hiệu: ${oldName}`);
+    BRANDS_DB[idx] = trimmed;
+
+    // Cascade update to all matching products
+    MOCK_PRODUCTS.forEach((p) => {
+      if (p.brand === oldName) {
+        p.brand = trimmed;
+      }
+    });
+
+    return this.getBrands();
   }
 
   static deleteBrand(brandName: string) {
     BRANDS_DB = BRANDS_DB.filter((b) => b !== brandName);
-    return BRANDS_DB;
+    return this.getBrands();
+  }
+
+  static getLocations() {
+    return LOCATIONS_DB.map((loc) => ({
+      name: loc,
+      productCount: MOCK_PRODUCTS.filter((p) => p.location === loc).length,
+    }));
   }
 
   static addLocation(locName: string) {
-    if (!locName.trim()) throw new Error('Vị trí kho không được trống');
-    if (LOCATIONS_DB.includes(locName.trim())) throw new Error('Vị trí kho đã tồn tại');
-    LOCATIONS_DB.push(locName.trim());
-    return LOCATIONS_DB;
+    const trimmed = locName.trim();
+    if (!trimmed) throw new Error('Vị trí kho không được trống');
+    if (LOCATIONS_DB.includes(trimmed)) throw new Error('Vị trí kho đã tồn tại');
+    LOCATIONS_DB.push(trimmed);
+    return this.getLocations();
+  }
+
+  static updateLocation(oldName: string, newName: string) {
+    const trimmed = newName.trim();
+    if (!trimmed) throw new Error('Tên vị trí kho mới không được trống');
+    const idx = LOCATIONS_DB.indexOf(oldName);
+    if (idx === -1) throw new Error(`Không tìm thấy vị trí kho: ${oldName}`);
+    LOCATIONS_DB[idx] = trimmed;
+
+    // Cascade update to all matching products
+    MOCK_PRODUCTS.forEach((p) => {
+      if (p.location === oldName) {
+        p.location = trimmed;
+      }
+    });
+
+    return this.getLocations();
   }
 
   static deleteLocation(locName: string) {
     LOCATIONS_DB = LOCATIONS_DB.filter((l) => l !== locName);
-    return LOCATIONS_DB;
+    return this.getLocations();
+  }
+
+  static getUnits() {
+    return UNITS_DB.map((unit) => ({
+      name: unit,
+      productCount: MOCK_PRODUCTS.filter((p) => p.unit === unit || p.conversionUnit === unit).length,
+    }));
   }
 
   static addUnit(unitName: string) {
-    if (!unitName.trim()) throw new Error('Tên đơn vị tính không được trống');
-    if (UNITS_DB.includes(unitName.trim())) throw new Error('Đơn vị tính đã tồn tại');
-    UNITS_DB.push(unitName.trim());
-    return UNITS_DB;
+    const trimmed = unitName.trim();
+    if (!trimmed) throw new Error('Tên đơn vị tính không được trống');
+    if (UNITS_DB.includes(trimmed)) throw new Error('Đơn vị tính đã tồn tại');
+    UNITS_DB.push(trimmed);
+    return this.getUnits();
+  }
+
+  static updateUnit(oldName: string, newName: string) {
+    const trimmed = newName.trim();
+    if (!trimmed) throw new Error('Tên đơn vị tính mới không được trống');
+    const idx = UNITS_DB.indexOf(oldName);
+    if (idx === -1) throw new Error(`Không tìm thấy đơn vị tính: ${oldName}`);
+    UNITS_DB[idx] = trimmed;
+
+    // Cascade update to all matching products
+    MOCK_PRODUCTS.forEach((p) => {
+      if (p.unit === oldName) p.unit = trimmed;
+      if (p.conversionUnit === oldName) p.conversionUnit = trimmed;
+    });
+
+    return this.getUnits();
   }
 
   static deleteUnit(unitName: string) {
     UNITS_DB = UNITS_DB.filter((u) => u !== unitName);
-    return UNITS_DB;
+    return this.getUnits();
   }
 }
