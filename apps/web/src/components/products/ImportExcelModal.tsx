@@ -40,33 +40,98 @@ interface ParsedProductRow {
   errorMessages: string[];
 }
 
+export const downloadProductExcelTemplate = () => {
+  const headers = [
+    'Tên sản phẩm (*)',
+    'Mã SKU',
+    'Mã Barcode / Mã vạch',
+    'Nhóm hàng / Danh mục',
+    'Thương hiệu',
+    'Vị trí lưu kho',
+    'Đơn vị cơ bản (*)',
+    'Giá nhập (Giá vốn)',
+    'Giá bán lẻ (*)',
+    'Tồn kho ban đầu',
+    'Ngưỡng báo sắp hết',
+    'Đơn vị quy đổi lớn',
+    'Hệ số quy đổi',
+    'Giá bán đơn vị lớn',
+  ];
+
+  const sampleRows = [
+    [
+      '"Nước Tăng Lực Red Bull 250ml"',
+      'TAP-REDB-001',
+      '893800100001',
+      '"Nước Giải Khát & Đồ Uống"',
+      '"Red Bull"',
+      '"Kệ A1 - Dãy 1"',
+      'Lon',
+      '11000',
+      '15800',
+      '120',
+      '12',
+      'Thùng',
+      '24',
+      '360000',
+    ],
+    [
+      '"Bia Heineken Silver Lon 330ml"',
+      'TAP-HEIN-002',
+      '893800100002',
+      '"Nước Giải Khát & Đồ Uống"',
+      '"Heineken"',
+      '"Kệ A1 - Dãy 2"',
+      'Lon',
+      '16500',
+      '20600',
+      '96',
+      '24',
+      'Thùng',
+      '24',
+      '480000',
+    ],
+    [
+      '"Mì Tôm Chua Cay Hảo Hảo 75g"',
+      'TAP-ACEC-004',
+      '893800100004',
+      '"Mì, Phở & Thực Phẩm Khô"',
+      '"Acecook"',
+      '"Kệ C1 - Tầng 2"',
+      'Gói',
+      '3500',
+      '4500',
+      '300',
+      '30',
+      'Thùng',
+      '30',
+      '130000',
+    ],
+  ];
+
+  const csvContent = '\uFEFF' + [headers.join(','), ...sampleRows.map((r) => r.join(','))].join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'mau_nhap_hang_hoa_chuan.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+};
+
 export const ImportExcelModal: React.FC<ImportExcelModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const [file, setFile] = useState<File | null>(null);
   const [parsedRows, setParsedRows] = useState<ParsedProductRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
-  const handleDownloadTemplate = async () => {
-    setIsDownloadingTemplate(true);
-    try {
-      const res = await api.get('/products/template-excel', { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'mau_nhap_hang_hoa_chuan.csv';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err: any) {
-      alert(err.message || 'Lỗi tải file mẫu');
-    } finally {
-      setIsDownloadingTemplate(false);
-    }
+  const handleDownloadTemplate = () => {
+    downloadProductExcelTemplate();
   };
 
   // Robust CSV Line Parser that handles quotes
@@ -286,11 +351,11 @@ export const ImportExcelModal: React.FC<ImportExcelModalProps> = ({ isOpen, onCl
 
             <button
               onClick={handleDownloadTemplate}
-              disabled={isDownloadingTemplate}
               className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-md shadow-blue-600/20 shrink-0"
+              title="Tải file mẫu Excel chuẩn"
             >
               <Download className="w-4 h-4" />
-              <span>{isDownloadingTemplate ? 'Đang tạo file...' : 'Tải File Mẫu Chuẩn (.csv)'}</span>
+              <span>Tải File Mẫu Chuẩn (.csv)</span>
             </button>
           </div>
 

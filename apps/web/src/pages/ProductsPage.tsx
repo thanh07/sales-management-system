@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import api from '../services/api';
 import { PackagePlus, Search, Tag, Barcode, Layers, Edit2, Trash2, Plus, X, Download, Upload, ArrowRightLeft, ShieldAlert, Scale, ChevronDown, ChevronRight, MapPin, Award, Filter, RefreshCw, DollarSign, RotateCcw, Edit3, Save, Check, Sparkles, FileSpreadsheet } from 'lucide-react';
-import { ImportExcelModal } from '../components/products/ImportExcelModal';
+import { ImportExcelModal, downloadProductExcelTemplate } from '../components/products/ImportExcelModal';
 
 export const ProductsPage: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
@@ -491,20 +491,8 @@ export const ProductsPage: React.FC = () => {
     }
   };
 
-  const handleDownloadTemplate = async () => {
-    try {
-      const res = await api.get('/products/template-excel', { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'mau_nhap_hang_hoa_chuan.csv';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err: any) {
-      alert(err.message || 'Lỗi tải file mẫu');
-    }
+  const handleDownloadTemplate = () => {
+    downloadProductExcelTemplate();
   };
 
   const handleImportExcelClick = () => {
