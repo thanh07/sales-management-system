@@ -18,7 +18,8 @@ export const ProductGrid: React.FC = () => {
         params: { query: searchQuery, category: selectedCategory },
       });
       setProducts(res.data.products || []);
-      setCategories(res.data.categories || []);
+      const rawCats = res.data.categories || [];
+      setCategories(rawCats.map((c: any) => (typeof c === 'string' ? c : c.name)));
     } catch (err) {
       console.error(err);
     }
@@ -86,20 +87,23 @@ export const ProductGrid: React.FC = () => {
 
       {/* Category Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 shrink-0">
-        {['Tất cả', ...categories].map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setSelectedCategory(cat)}
-            className={`px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
-              selectedCategory === cat
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-semibold'
-                : 'bg-slate-900/60 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
-            }`}
-          >
-            <Tag className="w-3.5 h-3.5" />
-            <span>{cat}</span>
-          </button>
-        ))}
+        {['Tất cả', ...categories].map((cat) => {
+          const catName = typeof cat === 'string' ? cat : (cat as any)?.name || '';
+          return (
+            <button
+              key={catName}
+              onClick={() => setSelectedCategory(catName)}
+              className={`px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                selectedCategory === catName
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-semibold'
+                  : 'bg-slate-900/60 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
+              }`}
+            >
+              <Tag className="w-3.5 h-3.5" />
+              <span>{catName}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Product Grid */}

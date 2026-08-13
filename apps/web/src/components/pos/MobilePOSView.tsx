@@ -48,7 +48,8 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
         params: { query: searchQuery, category: selectedCategory },
       });
       setProducts(res.data.products || []);
-      setCategories(res.data.categories || []);
+      const rawCats = res.data.categories || [];
+      setCategories(rawCats.map((c: any) => (typeof c === 'string' ? c : c.name)));
     } catch (err) {
       console.error(err);
     } finally {

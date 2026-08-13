@@ -4,7 +4,7 @@ import { Tag, X, Check } from 'lucide-react';
 interface CategorySelectDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  categories: string[];
+  categories: any[];
   selectedCategory: string;
   onSelectCategory: (category: string) => void;
 }
@@ -34,12 +34,13 @@ export const CategorySelectDrawer: React.FC<CategorySelectDrawerProps> = ({
         </div>
 
         <div className="space-y-2">
-          {allCategories.map((cat) => {
-            const isSelected = selectedCategory === cat;
+          {allCategories.map((c) => {
+            const catName = typeof c === 'string' ? c : (c as any)?.name || '';
+            const isSelected = selectedCategory === catName;
             return (
               <div
-                key={cat}
-                onClick={() => onSelectCategory(cat)}
+                key={catName}
+                onClick={() => onSelectCategory(catName)}
                 className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between text-xs font-semibold ${
                   isSelected
                     ? 'bg-blue-600/20 border-blue-500 text-white shadow-md'
@@ -48,7 +49,7 @@ export const CategorySelectDrawer: React.FC<CategorySelectDrawerProps> = ({
               >
                 <div className="flex items-center gap-2">
                   <Tag className="w-4 h-4 text-slate-400" />
-                  <span>{cat}</span>
+                  <span>{catName}</span>
                 </div>
                 {isSelected && <Check className="w-4 h-4 text-blue-400" />}
               </div>
