@@ -1,8 +1,17 @@
 import React, { useEffect, useState, useRef } from 'react';
 import api from '../services/api';
-import { PackagePlus, Search, Tag, Barcode, Layers, Edit2, Trash2, Plus, X, Download, Upload, ArrowRightLeft, ShieldAlert, Scale, ChevronDown, ChevronRight, MapPin, Award, Filter, RefreshCw, DollarSign, RotateCcw, Edit3, Save, Check, Sparkles, FileSpreadsheet, FolderTree, Eye } from 'lucide-react';
+import { PackagePlus, Search, Tag, Barcode, Layers, Edit2, Trash2, Plus, X, Download, Upload, ArrowRightLeft, ShieldAlert, Scale, ChevronDown, ChevronRight, MapPin, Award, Filter, RefreshCw, DollarSign, RotateCcw, Edit3, Save, Check, Sparkles, FileSpreadsheet, FolderTree, Eye, Image as ImageIcon } from 'lucide-react';
 import { ImportExcelModal, downloadProductExcelTemplate } from '../components/products/ImportExcelModal';
 import { useAuthStore } from '../store/authStore';
+
+const PRESET_IMAGES = [
+  { label: '🥤 Nước ngọt / Đồ uống', url: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400&q=80' },
+  { label: '🥛 Sữa / Đồ tươi', url: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=400&q=80' },
+  { label: '🍜 Mì / Thực phẩm khô', url: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&q=80' },
+  { label: '🍪 Bánh kẹo / Snack', url: 'https://images.unsplash.com/photo-1582293041079-7814c2f12063?w=400&q=80' },
+  { label: '🧂 Gia vị / Nước mắm', url: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=400&q=80' },
+  { label: '🧼 Hóa mỹ phẩm / Tạp hóa', url: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&q=80' },
+];
 
 export const ProductsPage: React.FC = () => {
   const { user } = useAuthStore();
@@ -213,9 +222,31 @@ export const ProductsPage: React.FC = () => {
     }
   };
 
+  const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleOpenAddModal = () => {
     handleGenerateBarcode();
     setName('');
+    setImage('https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80');
+    setCategory(getItemName(categories[0]) || 'Nước Giải Khát & Đồ Uống');
+    setBrand(getItemName(brands[0]) || 'Red Bull');
+    setLocation(getItemName(locations[0]) || 'Kệ Nước A1 - Dãy 1');
+    setUnit(getItemName(units[0]) || 'Lon');
+    setCostPrice(10000);
+    setSellingPrice(15000);
+    setStockQuantity(100);
+    setMinStock(10);
+    setHasConversion(false);
+    setConversions([]);
     setHasVariants(false);
     setAttributes([{ name: 'Hương vị', values: ['Truyền Thống', 'Ít Đường'] }]);
     setVariantMatrix([]);
@@ -227,15 +258,15 @@ export const ProductsPage: React.FC = () => {
     setName(p.name || '');
     setSku(p.sku || '');
     setBarcode(p.barcode || '');
-    setCategory(p.category || categories[0] || 'Nước Giải Khát & Đồ Uống');
-    setBrand(p.brand || brands[0] || 'Red Bull');
-    setLocation(p.location || locations[0] || 'Kệ Nước A1 - Dãy 1');
-    setUnit(p.unit || units[0] || 'Lon');
+    setCategory(p.category || getItemName(categories[0]) || 'Nước Giải Khát & Đồ Uống');
+    setBrand(p.brand || getItemName(brands[0]) || 'Red Bull');
+    setLocation(p.location || getItemName(locations[0]) || 'Kệ Nước A1 - Dãy 1');
+    setUnit(p.unit || getItemName(units[0]) || 'Lon');
     setCostPrice(p.costPrice || 0);
     setSellingPrice(p.sellingPrice || 0);
     setStockQuantity(p.stockQuantity || 0);
     setMinStock(p.minStock || 10);
-    setImage(p.image || '');
+    setImage(p.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80');
 
     const convList = p.conversions && p.conversions.length > 0
       ? p.conversions
@@ -370,8 +401,10 @@ export const ProductsPage: React.FC = () => {
   };
 
   const handleAddConversionRow = () => {
-    const availableUnits = units.filter((u) => u !== unit && !conversions.some((c) => c.unitName === u));
-    const nextUnit = availableUnits.length > 0 ? availableUnits[0] : (units.find((u) => u !== unit) || 'Thùng');
+    const availableUnits = units
+      .map(getItemName)
+      .filter((uName) => uName !== unit && !conversions.some((c) => c.unitName === uName));
+    const nextUnit = availableUnits.length > 0 ? availableUnits[0] : (units.map(getItemName).find((uName) => uName !== unit) || 'Thùng');
     const updatedConvs = [
       ...conversions,
       {
@@ -1624,6 +1657,66 @@ export const ProductsPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Product Image & Thumbnail Section */}
+              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
+                <label className="block text-slate-300 font-semibold text-xs flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-blue-400">
+                    <ImageIcon className="w-4 h-4" />
+                    <span>Hình Ảnh Sản Phẩm</span>
+                  </div>
+                  <span className="text-slate-500 font-normal text-[11px]">(Link URL hoặc Tải ảnh từ máy)</span>
+                </label>
+
+                <div className="flex items-center gap-3">
+                  <div className="relative group/img shrink-0">
+                    <img
+                      src={image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80'}
+                      alt="Preview"
+                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover bg-slate-900 border-2 border-slate-700 shadow-md"
+                      onError={(e) => {
+                        (e.target as any).src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80';
+                      }}
+                    />
+                  </div>
+
+                  <div className="flex-1 space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={image}
+                        onChange={(e) => setImage(e.target.value)}
+                        placeholder="Dán đường dẫn link ảnh (https://...) hoặc chọn ảnh mẫu bên dưới"
+                        className="flex-1 px-3 py-2 rounded-xl glass-input text-xs"
+                      />
+                      <label className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1 cursor-pointer shrink-0 border border-slate-700">
+                        <Upload className="w-3.5 h-3.5 text-blue-400" />
+                        <span>Tải file</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleImageFileSelect}
+                        />
+                      </label>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-[10px] text-slate-400 font-medium">Gợi ý mẫu:</span>
+                      {PRESET_IMAGES.map((preset) => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => setImage(preset.url)}
+                          className="px-2 py-0.5 rounded-md bg-slate-900 hover:bg-blue-600/20 text-slate-300 hover:text-blue-300 text-[10px] border border-slate-800 transition-all"
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Category, Brand & Location Selectors */}
               <div className="grid grid-cols-3 gap-3">
                 <div>
@@ -2395,6 +2488,66 @@ export const ProductsPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Product Image & Thumbnail Section */}
+              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
+                <label className="block text-slate-300 font-semibold text-xs flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-blue-400">
+                    <ImageIcon className="w-4 h-4" />
+                    <span>Hình Ảnh Sản Phẩm</span>
+                  </div>
+                  <span className="text-slate-500 font-normal text-[11px]">(Link URL hoặc Tải ảnh từ máy)</span>
+                </label>
+
+                <div className="flex items-center gap-3">
+                  <div className="relative group/img shrink-0">
+                    <img
+                      src={image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80'}
+                      alt="Preview"
+                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover bg-slate-900 border-2 border-slate-700 shadow-md"
+                      onError={(e) => {
+                        (e.target as any).src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80';
+                      }}
+                    />
+                  </div>
+
+                  <div className="flex-1 space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={image}
+                        onChange={(e) => setImage(e.target.value)}
+                        placeholder="Dán đường dẫn link ảnh (https://...) hoặc chọn ảnh mẫu bên dưới"
+                        className="flex-1 px-3 py-2 rounded-xl glass-input text-xs"
+                      />
+                      <label className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1 cursor-pointer shrink-0 border border-slate-700">
+                        <Upload className="w-3.5 h-3.5 text-blue-400" />
+                        <span>Tải file</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleImageFileSelect}
+                        />
+                      </label>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-[10px] text-slate-400 font-medium">Gợi ý mẫu:</span>
+                      {PRESET_IMAGES.map((preset) => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => setImage(preset.url)}
+                          className="px-2 py-0.5 rounded-md bg-slate-900 hover:bg-blue-600/20 text-slate-300 hover:text-blue-300 text-[10px] border border-slate-800 transition-all"
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Category, Brand & Location Selectors */}
               <div className="grid grid-cols-3 gap-3">
                 <div>
@@ -2577,9 +2730,10 @@ export const ProductsPage: React.FC = () => {
                               onChange={(e) => handleUpdateConversionRow(conv.id, 'unitName', e.target.value)}
                               className="w-full px-2.5 py-1.5 rounded-lg glass-input bg-slate-950 font-bold text-purple-300 text-xs"
                             >
-                              {units.filter((u) => u !== unit).map((u) => (
-                                <option key={u} value={u}>{u}</option>
-                              ))}
+                              {units.filter((u) => getItemName(u) !== unit).map((u) => {
+                                const uName = getItemName(u);
+                                return <option key={uName} value={uName}>{uName}</option>;
+                              })}
                             </select>
                           </div>
 
