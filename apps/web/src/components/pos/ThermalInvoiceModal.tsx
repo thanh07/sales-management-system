@@ -1,5 +1,6 @@
 import React from 'react';
 import { usePosStore } from '../../store/posStore';
+import api from '../../services/api';
 import { Printer, CheckCircle, X } from 'lucide-react';
 
 interface ThermalInvoiceModalProps {
@@ -14,6 +15,13 @@ export const ThermalInvoiceModal: React.FC<ThermalInvoiceModalProps> = ({
   onClose,
 }) => {
   const { isInvoiceModalOpen, setInvoiceModalOpen, lastOrder } = usePosStore();
+  const [storeSettings, setStoreSettings] = React.useState<any>(null);
+
+  React.useEffect(() => {
+    api.get('/settings').then((res: any) => {
+      if (res.data) setStoreSettings(res.data);
+    }).catch(() => {});
+  }, []);
 
   const isModalOpen = propIsOpen !== undefined ? propIsOpen : isInvoiceModalOpen;
   const currentOrder = propOrder || lastOrder;
@@ -32,6 +40,12 @@ export const ThermalInvoiceModal: React.FC<ThermalInvoiceModalProps> = ({
   const handlePrint = () => {
     window.print();
   };
+
+  const storeName = storeSettings?.storeName || 'CỬA HÀNG RETAIL PRO';
+  const storeAddress = storeSettings?.address || '123 Lê Lợi, P. Bến Thành, Q.1, TP.HCM';
+  const storePhone = storeSettings?.phone || '1900 6868';
+  const storeTax = storeSettings?.taxCode;
+  const receiptFooter = storeSettings?.receiptFooter || 'Cảm ơn Quý khách & Hẹn gặp lại!';
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
@@ -53,9 +67,10 @@ export const ThermalInvoiceModal: React.FC<ThermalInvoiceModalProps> = ({
         {/* Printable Thermal Receipt (K80 Standard) */}
         <div className="p-6 bg-white text-slate-900 font-mono text-sm space-y-4 print:p-0 print:bg-white print:text-black">
           <div className="text-center border-b border-dashed border-slate-300 pb-3">
-            <h2 className="font-bold text-base uppercase tracking-wider">CỬA HÀNG RETAIL PRO</h2>
-            <p className="text-xs text-slate-600">Đ/c: 123 Lê Lợi, P. Bến Thành, Q.1, TP.HCM</p>
-            <p className="text-xs text-slate-600">Hotline: 1900 6868</p>
+            <h2 className="font-bold text-base uppercase tracking-wider">{storeName}</h2>
+            <p className="text-xs text-slate-600">Đ/c: {storeAddress}</p>
+            <p className="text-xs text-slate-600">Hotline: {storePhone}</p>
+            {storeTax && <p className="text-[11px] text-slate-500">MST: {storeTax}</p>}
             <h3 className="font-bold text-sm uppercase mt-2">HÓA ĐƠN BÁN HÀNG</h3>
             <p className="text-[11px] text-slate-500">Mã HD: {currentOrder.orderNumber}</p>
             <p className="text-[11px] text-slate-500">Ngày: {new Date(currentOrder.createdAt).toLocaleString('vi-VN')}</p>
@@ -108,8 +123,8 @@ export const ThermalInvoiceModal: React.FC<ThermalInvoiceModalProps> = ({
           </div>
 
           <div className="text-center text-[11px] text-slate-500 border-t border-dashed border-slate-300 pt-3">
-            <p>Cảm ơn Quý khách & Hẹn gặp lại!</p>
-            <p className="text-[9px] mt-0.5">Powered by Sales Manager Pro</p>
+            <p className="font-semibold">{receiptFooter}</p>
+            <p className="text-[9px] mt-0.5">Hệ thống quản trị bán lẻ Sales Manager Pro</p>
           </div>
         </div>
 

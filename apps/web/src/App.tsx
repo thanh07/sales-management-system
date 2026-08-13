@@ -8,11 +8,12 @@ import { DashboardPage } from './pages/DashboardPage';
 import { ProductsPage } from './pages/ProductsPage';
 import { UsersPage } from './pages/UsersPage';
 import { PriceListsPage } from './pages/PriceListsPage';
-import { LogOut, Store, LayoutDashboard, ShoppingCart, Package, Users, BarChart3, ShieldCheck, Tag } from 'lucide-react';
+import { SettingsPage } from './pages/SettingsPage';
+import { LogOut, Store, LayoutDashboard, ShoppingCart, Package, Users, BarChart3, ShieldCheck, Tag, Settings } from 'lucide-react';
 
 export const App: React.FC = () => {
   const { isAuthenticated, user, logout, initAuth } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'POS' | 'DASHBOARD' | 'PRODUCTS' | 'CRM' | 'REPORTS' | 'USERS' | 'PRICELISTS'>('POS');
+  const [activeTab, setActiveTab] = useState<'POS' | 'DASHBOARD' | 'PRODUCTS' | 'CRM' | 'REPORTS' | 'USERS' | 'PRICELISTS' | 'SETTINGS'>('POS');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -155,6 +156,18 @@ export const App: React.FC = () => {
               <BarChart3 className="w-4 h-4" />
               <span>Báo cáo doanh thu</span>
             </button>
+
+            <button
+              onClick={() => setActiveTab('SETTINGS')}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs transition-all ${
+                activeTab === 'SETTINGS'
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-semibold'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <Settings className="w-4 h-4 text-purple-400" />
+              <span>Thiết lập chung</span>
+            </button>
           </aside>
 
           {/* Main View (Full width on mobile) */}
@@ -164,6 +177,7 @@ export const App: React.FC = () => {
             {activeTab === 'PRODUCTS' && <ProductsPage />}
             {activeTab === 'PRICELISTS' && <PriceListsPage />}
             {activeTab === 'USERS' && <UsersPage />}
+            {activeTab === 'SETTINGS' && <SettingsPage />}
             {(activeTab === 'DASHBOARD' || activeTab === 'REPORTS') && <DashboardPage />}
           </main>
         </div>
@@ -192,6 +206,7 @@ export const App: React.FC = () => {
                     { id: 'CRM', label: 'Khách hàng (CRM)', icon: Users },
                     { id: 'USERS', label: 'Quản lý Nhân viên', icon: ShieldCheck },
                     { id: 'REPORTS', label: 'Báo cáo doanh thu', icon: BarChart3 },
+                    { id: 'SETTINGS', label: 'Thiết lập chung', icon: Settings },
                   ].map((tab) => {
                     const Icon = tab.icon;
                     const isSelected = activeTab === tab.id;
