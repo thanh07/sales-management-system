@@ -7,7 +7,7 @@ import { OrderTabBar } from './OrderTabBar';
 
 export const ProductGrid: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<{ name: string; icon?: string; showOnPos?: boolean }[]>([]);
   const { addToCart, selectedCategory, setSelectedCategory, searchQuery, setSearchQuery, activePriceList } = usePosStore();
 
   const [activeVariantProduct, setActiveVariantProduct] = useState<any | null>(null);
@@ -19,7 +19,12 @@ export const ProductGrid: React.FC = () => {
       });
       setProducts(res.data.products || []);
       const rawCats = res.data.categories || [];
-      setCategories(rawCats.map((c: any) => (typeof c === 'string' ? c : c.name)));
+      const normalized = rawCats.map((c: any) => 
+        typeof c === 'string' 
+          ? { name: c, icon: '🏷️', showOnPos: true } 
+          : { name: c.name, icon: c.icon || '🏷️', showOnPos: c.showOnPos !== false }
+      );
+      setCategories(normalized.filter((c: any) => c.showOnPos !== false));
     } catch (err) {
       console.error(err);
     }
@@ -87,20 +92,20 @@ export const ProductGrid: React.FC = () => {
 
       {/* Category Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 shrink-0">
-        {['Tất cả', ...categories].map((cat) => {
-          const catName = typeof cat === 'string' ? cat : (cat as any)?.name || '';
+        {[{ name: 'Tất cả', icon: '⚡' }, ...categories].map((cat) => {
+          const isSelected = selectedCategory === cat.name;
           return (
             <button
-              key={catName}
-              onClick={() => setSelectedCategory(catName)}
+              key={cat.name}
+              onClick={() => setSelectedCategory(cat.name)}
               className={`px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                selectedCategory === catName
+                isSelected
                   ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-semibold'
                   : 'bg-slate-900/60 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
               }`}
             >
-              <Tag className="w-3.5 h-3.5" />
-              <span>{catName}</span>
+              <span className="text-sm">{cat.icon || '🏷️'}</span>
+              <span>{cat.name}</span>
             </button>
           );
         })}

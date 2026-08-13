@@ -49,14 +49,20 @@ export interface Product {
   variants?: ProductVariant[];
 }
 
-let CATEGORIES_DB: string[] = [
-  'Nước Giải Khát & Đồ Uống',
-  'Sữa & Sản Phẩm Từ Sữa',
-  'Mì, Phở & Thực Phẩm Khô',
-  'Gia Vị & Nước Chấm',
-  'Bánh Kẹo & Snack',
-  'Hóa Mỹ Phẩm & Chăm Sóc Cá Nhân',
-  'Đồ Dùng Gia Đình & Tạp Hóa',
+export interface CategoryData {
+  name: string;
+  icon?: string;
+  showOnPos?: boolean;
+}
+
+let CATEGORIES_DB: CategoryData[] = [
+  { name: 'Nước Giải Khát & Đồ Uống', icon: '🥤', showOnPos: true },
+  { name: 'Sữa & Sản Phẩm Từ Sữa', icon: '🥛', showOnPos: true },
+  { name: 'Mì, Phở & Thực Phẩm Khô', icon: '🍜', showOnPos: true },
+  { name: 'Gia Vị & Nước Chấm', icon: '🧂', showOnPos: true },
+  { name: 'Bánh Kẹo & Snack', icon: '🍪', showOnPos: true },
+  { name: 'Hóa Mỹ Phẩm & Chăm Sóc Cá Nhân', icon: '🧼', showOnPos: true },
+  { name: 'Đồ Dùng Gia Đình & Tạp Hóa', icon: '📦', showOnPos: true },
 ];
 
 let BRANDS_DB: string[] = [
@@ -395,8 +401,8 @@ export class ProductService {
     }
 
     MOCK_PRODUCTS.unshift(newProduct);
-    if (!CATEGORIES_DB.includes(data.category)) {
-      CATEGORIES_DB.push(data.category);
+    if (data.category && !CATEGORIES_DB.some(c => c.name === data.category)) {
+      CATEGORIES_DB.push({ name: data.category, icon: '🏷️', showOnPos: true });
     }
     if (data.brand && !BRANDS_DB.includes(data.brand)) {
       BRANDS_DB.push(data.brand);
@@ -507,7 +513,9 @@ export class ProductService {
         }
 
         // Auto-register new master categories, brands, locations, units
-        if (category && !CATEGORIES_DB.includes(category)) CATEGORIES_DB.push(category);
+        if (category && !CATEGORIES_DB.some(c => c.name === category)) {
+          CATEGORIES_DB.push({ name: category, icon: '🏷️', showOnPos: true });
+        }
         if (brand && brand !== 'Khác' && !BRANDS_DB.includes(brand)) BRANDS_DB.push(brand);
         if (location && !LOCATIONS_DB.includes(location)) LOCATIONS_DB.push(location);
         if (unit && !UNITS_DB.includes(unit)) UNITS_DB.push(unit);
@@ -621,26 +629,48 @@ export class ProductService {
   }
 
   static getCategories() {
-    return CATEGORIES_DB.map((cat) => ({
-      name: cat,
-      productCount: MOCK_PRODUCTS.filter((p) => p.category === cat).length,
-    }));
+    return CATEGORIES_DB.map((cat) => {
+      const catName = typeof cat === 'string' ? cat : cat.name;
+      const catIcon = typeof cat === 'string' ? '🏷️' : (cat.icon || '🏷️');
+      const catShow = typeof cat === 'string' ? true : (cat.showOnPos !== false);
+      return {
+        name: catName,
+        icon: catIcon,
+        showOnPos: catShow,
+        productCount: MOCK_PRODUCTS.filter((p) => p.category === catName).length,
+      };
+    });
   }
 
-  static addCategory(categoryName: string) {
+  static addCategory(categoryName: string, icon?: string, showOnPos: boolean = true) {
     const trimmed = categoryName.trim();
     if (!trimmed) throw new Error('Tên nhóm hàng không được trống');
-    if (CATEGORIES_DB.includes(trimmed)) throw new Error('Nhóm hàng này đã tồn tại');
-    CATEGORIES_DB.push(trimmed);
+    if (CATEGORIES_DB.some((c) => (typeof c === 'string' ? c : c.name) === trimmed)) {
+      throw new Error('Nhóm hàng này đã tồn tại');
+    }
+    CATEGORIES_DB.push({
+      name: trimmed,
+      icon: icon || '🏷️',
+      showOnPos,
+    });
     return this.getCategories();
   }
 
-  static updateCategory(oldName: string, newName: string) {
+  static updateCategory(oldName: string, newName: string, icon?: string, showOnPos?: boolean) {
     const trimmed = newName.trim();
     if (!trimmed) throw new Error('Tên nhóm hàng mới không được trống');
-    const idx = CATEGORIES_DB.indexOf(oldName);
+    const idx = CATEGORIES_DB.findIndex((c) => (typeof c === 'string' ? c : c.name) === oldName);
     if (idx === -1) throw new Error(`Không tìm thấy nhóm hàng: ${oldName}`);
-    CATEGORIES_DB[idx] = trimmed;
+
+    const existing = CATEGORIES_DB[idx];
+    const prevIcon = typeof existing === 'string' ? '🏷️' : (existing.icon || '🏷️');
+    const prevShow = typeof existing === 'string' ? true : existing.showOnPos !== false;
+
+    CATEGORIES_DB[idx] = {
+      name: trimmed,
+      icon: icon !== undefined ? icon : prevIcon,
+      showOnPos: showOnPos !== undefined ? showOnPos : prevShow,
+    };
 
     // Cascade update to all matching products
     MOCK_PRODUCTS.forEach((p) => {
@@ -653,7 +683,7 @@ export class ProductService {
   }
 
   static deleteCategory(categoryName: string) {
-    CATEGORIES_DB = CATEGORIES_DB.filter((c) => c !== categoryName);
+    CATEGORIES_DB = CATEGORIES_DB.filter((c) => (typeof c === 'string' ? c : c.name) !== categoryName);
     return this.getCategories();
   }
 

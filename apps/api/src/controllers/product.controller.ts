@@ -150,8 +150,8 @@ export class ProductController {
 
   static createCategory = async (req: Request, res: Response) => {
     try {
-      const { name } = req.body;
-      const categories = ProductService.addCategory(name);
+      const { name, icon, showOnPos } = req.body;
+      const categories = ProductService.addCategory(name, icon, showOnPos);
       return sendSuccess(res, categories, 'Thêm nhóm hàng mới thành công');
     } catch (err: any) {
       return sendError(res, err.message, 400);
@@ -161,8 +161,8 @@ export class ProductController {
   static updateCategory = async (req: Request, res: Response) => {
     try {
       const { name } = req.params;
-      const { newName } = req.body;
-      const categories = ProductService.updateCategory(name, newName);
+      const { newName, icon, showOnPos } = req.body;
+      const categories = ProductService.updateCategory(name, newName, icon, showOnPos);
       return sendSuccess(res, categories, 'Cập nhật nhóm hàng thành công');
     } catch (err: any) {
       return sendError(res, err.message, 400);
