@@ -25,6 +25,25 @@ export const authenticateToken = (req: AuthenticatedRequest, res: Response, next
   }
 };
 
+export const requireRoles = (allowedRoles: string[]) => {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return sendError(res, 'Chưa đăng nhập', null, 401);
+    }
+
+    if (req.user.role === 'ADMIN' || allowedRoles.includes(req.user.role)) {
+      return next();
+    }
+
+    return sendError(
+      res,
+      `Tài khoản (${req.user.role}) không có quyền thực hiện thao tác quản trị này. Vui lòng đăng nhập tài khoản Quản Trị Viên (Admin).`,
+      null,
+      403
+    );
+  };
+};
+
 export const requirePermission = (module: string, action: string) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.user) {

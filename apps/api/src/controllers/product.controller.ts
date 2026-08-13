@@ -16,7 +16,25 @@ export class ProductController {
       const brands = ProductService.getBrands();
       const locations = ProductService.getLocations();
       const units = ProductService.getUnits();
-      return sendSuccess(res, { products, categories, brands, locations, units });
+
+      // SECURITY: Mask cost price (giá vốn) if user is a CASHIER
+      const userRole = (req as any).user?.role;
+      let sanitizedProducts = products;
+
+      if (userRole === 'CASHIER') {
+        sanitizedProducts = products.map((p) => {
+          const { costPrice, ...pRest } = p;
+          if (pRest.variants) {
+            pRest.variants = pRest.variants.map((v) => {
+              const { costPrice: vCost, ...vRest } = v;
+              return vRest as any;
+            });
+          }
+          return pRest as any;
+        });
+      }
+
+      return sendSuccess(res, { products: sanitizedProducts, categories, brands, locations, units });
     } catch (err: any) {
       return sendError(res, err.message);
     }
@@ -44,6 +62,14 @@ export class ProductController {
     try {
       const { barcode } = req.params;
       const product = ProductService.getProductByBarcode(barcode);
+
+      // SECURITY: Mask cost price if user is a CASHIER
+      const userRole = (req as any).user?.role;
+      if (userRole === 'CASHIER') {
+        const { costPrice, ...rest } = product;
+        return sendSuccess(res, rest);
+      }
+
       return sendSuccess(res, product);
     } catch (err: any) {
       return sendError(res, err.message, 404);

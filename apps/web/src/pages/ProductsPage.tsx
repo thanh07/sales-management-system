@@ -1,9 +1,13 @@
 import React, { useEffect, useState, useRef } from 'react';
 import api from '../services/api';
-import { PackagePlus, Search, Tag, Barcode, Layers, Edit2, Trash2, Plus, X, Download, Upload, ArrowRightLeft, ShieldAlert, Scale, ChevronDown, ChevronRight, MapPin, Award, Filter, RefreshCw, DollarSign, RotateCcw, Edit3, Save, Check, Sparkles, FileSpreadsheet, FolderTree } from 'lucide-react';
+import { PackagePlus, Search, Tag, Barcode, Layers, Edit2, Trash2, Plus, X, Download, Upload, ArrowRightLeft, ShieldAlert, Scale, ChevronDown, ChevronRight, MapPin, Award, Filter, RefreshCw, DollarSign, RotateCcw, Edit3, Save, Check, Sparkles, FileSpreadsheet, FolderTree, Eye } from 'lucide-react';
 import { ImportExcelModal, downloadProductExcelTemplate } from '../components/products/ImportExcelModal';
+import { useAuthStore } from '../store/authStore';
 
 export const ProductsPage: React.FC = () => {
+  const { user } = useAuthStore();
+  const isCashier = user?.role === 'CASHIER';
+
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
@@ -957,13 +961,22 @@ export const ProductsPage: React.FC = () => {
           <p className="text-slate-400 text-xs mt-0.5">Quản lý sản phẩm, tồn kho, vị trí kho & bảng giá quy đổi đơn vị</p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          <button
-            onClick={handleOpenAddModal}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-lg shadow-blue-600/30 transition-all shrink-0"
-          >
-            <PackagePlus className="w-4 h-4" />
-            <span>Thêm Sản Phẩm Mới</span>
-          </button>
+          {isCashier && (
+            <div className="px-3 py-2 rounded-xl bg-amber-500/10 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1.5">
+              <Eye className="w-4 h-4 text-amber-400" />
+              <span>Chế độ Thu Ngân (Chỉ Xem Tồn Kho & Giá Bán)</span>
+            </div>
+          )}
+
+          {!isCashier && (
+            <button
+              onClick={handleOpenAddModal}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-lg shadow-blue-600/30 transition-all shrink-0"
+            >
+              <PackagePlus className="w-4 h-4" />
+              <span>Thêm Sản Phẩm Mới</span>
+            </button>
+          )}
 
           <button
             onClick={() => setIsCategoryModalOpen(true)}
@@ -1010,41 +1023,45 @@ export const ProductsPage: React.FC = () => {
             <span className="hidden sm:inline">Xuất Excel</span>
           </button>
 
-          <button
-            onClick={() => setIsImportExcelModalOpen(true)}
-            className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500/80 text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-emerald-600/20 shrink-0"
-            title="Nhập hàng hóa từ file Excel / CSV có xem trước dữ liệu"
-          >
-            <Upload className="w-3.5 h-3.5" />
-            <span>Nhập Excel</span>
-          </button>
+          {!isCashier && (
+            <>
+              <button
+                onClick={() => setIsImportExcelModalOpen(true)}
+                className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500/80 text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-emerald-600/20 shrink-0"
+                title="Nhập hàng hóa từ file Excel / CSV có xem trước dữ liệu"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span>Nhập Excel</span>
+              </button>
 
-          <button
-            onClick={handleDownloadTemplate}
-            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700/80 text-xs font-medium flex items-center gap-1.5 transition-all shadow-md shrink-0"
-            title="Tải file mẫu Excel chuẩn có sẵn cột bắt buộc và dữ liệu mẫu"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Tải File Mẫu</span>
-          </button>
+              <button
+                onClick={handleDownloadTemplate}
+                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700/80 text-xs font-medium flex items-center gap-1.5 transition-all shadow-md shrink-0"
+                title="Tải file mẫu Excel chuẩn có sẵn cột bắt buộc và dữ liệu mẫu"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Tải File Mẫu</span>
+              </button>
 
-          <button
-            onClick={handleResetData}
-            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700/80 text-xs font-medium flex items-center gap-1.5 transition-all shadow-md shrink-0"
-            title="Tạo lại 300 sản phẩm mẫu"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Tạo Lại 300 SP</span>
-          </button>
+              <button
+                onClick={handleResetData}
+                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700/80 text-xs font-medium flex items-center gap-1.5 transition-all shadow-md shrink-0"
+                title="Tạo lại 300 sản phẩm mẫu"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Tạo Lại 300 SP</span>
+              </button>
 
-          <button
-            onClick={handleClearAllData}
-            className="px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-medium flex items-center gap-1.5 transition-all shadow-md shrink-0"
-            title="Xóa sạch toàn bộ sản phẩm hàng hóa"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Xóa Hết SP</span>
-          </button>
+              <button
+                onClick={handleClearAllData}
+                className="px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-medium flex items-center gap-1.5 transition-all shadow-md shrink-0"
+                title="Xóa sạch toàn bộ sản phẩm hàng hóa"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Xóa Hết SP</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -1159,22 +1176,24 @@ export const ProductsPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      onClick={() => handleOpenEditModal(p)}
-                      className="p-1.5 rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white border border-blue-500/30"
-                      title="Sửa sản phẩm"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={(e) => handleDeleteProduct(p, e)}
-                      className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-red-400 border border-slate-700/80"
-                      title="Xóa sản phẩm"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  {!isCashier && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => handleOpenEditModal(p)}
+                        className="p-1.5 rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white border border-blue-500/30"
+                        title="Sửa sản phẩm"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => handleDeleteProduct(p, e)}
+                        className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-red-400 border border-slate-700/80"
+                        title="Xóa sản phẩm"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Badges: Category, Brand, Location */}
@@ -1271,7 +1290,7 @@ export const ProductsPage: React.FC = () => {
                 <th className="p-4 text-purple-300">Các Cấp Đơn Vị Quy Đổi</th>
                 <th className="p-4">Giá Bán Theo Cấp Đơn Vị / Biến Thể</th>
                 <th className="p-4">Tồn Kho (Nhỏ Nhất)</th>
-                <th className="p-4 text-right">Thao Tác (Chỉnh Sửa)</th>
+                <th className="p-4 text-right">{isCashier ? 'Chi Tiết' : 'Thao Tác (Chỉnh Sửa)'}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
@@ -1286,8 +1305,8 @@ export const ProductsPage: React.FC = () => {
                   <React.Fragment key={p.id}>
                     {/* Parent Product Row */}
                     <tr
-                      onClick={() => handleOpenEditModal(p)}
-                      className={`hover:bg-slate-800/50 transition-colors cursor-pointer group/row ${hasChildren ? 'bg-slate-900/40 font-semibold' : ''}`}
+                      onClick={!isCashier ? () => handleOpenEditModal(p) : undefined}
+                      className={`hover:bg-slate-800/50 transition-colors ${!isCashier ? 'cursor-pointer' : 'cursor-default'} group/row ${hasChildren ? 'bg-slate-900/40 font-semibold' : ''}`}
                     >
                       <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
                         {hasChildren && (
@@ -1356,7 +1375,9 @@ export const ProductsPage: React.FC = () => {
                             Bán {c.unitName}: {formatVND(c.sellingPrice)}
                           </div>
                         ))}
-                        <div className="text-slate-400 text-[10px] mt-0.5">Giá nhập: {formatVND(p.costPrice)}</div>
+                        {!isCashier && p.costPrice !== undefined && (
+                          <div className="text-slate-400 text-[10px] mt-0.5 font-mono">Giá nhập: {formatVND(p.costPrice)}</div>
+                        )}
                       </td>
 
                       <td className="p-4">
@@ -1375,24 +1396,28 @@ export const ProductsPage: React.FC = () => {
                       </td>
 
                       <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => handleOpenEditModal(p)}
-                            className="px-2.5 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/40 text-[11px] font-bold flex items-center gap-1 transition-all shadow-sm"
-                            title="Click để chỉnh sửa thông tin sản phẩm và ma trận biến thể"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                            <span>Sửa Sản Phẩm</span>
-                          </button>
+                        {!isCashier ? (
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handleOpenEditModal(p)}
+                              className="px-2.5 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/40 text-[11px] font-bold flex items-center gap-1 transition-all shadow-sm"
+                              title="Click để chỉnh sửa thông tin sản phẩm và ma trận biến thể"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                              <span>Sửa Sản Phẩm</span>
+                            </button>
 
-                          <button
-                            onClick={(e) => handleDeleteProduct(p, e)}
-                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 border border-slate-700/80 transition-all"
-                            title="Xóa sản phẩm"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                            <button
+                              onClick={(e) => handleDeleteProduct(p, e)}
+                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 border border-slate-700/80 transition-all"
+                              title="Xóa sản phẩm"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-slate-500 text-[11px] font-medium italic">Chỉ xem</span>
+                        )}
                       </td>
                     </tr>
 
@@ -1887,22 +1912,26 @@ export const ProductsPage: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleAddCategory} className="flex gap-2">
-              <input
-                type="text"
-                value={newCatName}
-                onChange={(e) => setNewCatName(e.target.value)}
-                placeholder="Nhập tên nhóm hàng mới..."
-                className="flex-1 px-3 py-2 rounded-xl glass-input text-xs"
-              />
-              <button
-                type="submit"
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs flex items-center gap-1 shrink-0"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Thêm Nhóm</span>
-              </button>
-            </form>
+            {!isCashier ? (
+              <form onSubmit={handleAddCategory} className="flex gap-2">
+                <input
+                  type="text"
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  placeholder="Nhập tên nhóm hàng mới..."
+                  className="flex-1 px-3 py-2 rounded-xl glass-input text-xs"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs flex items-center gap-1 shrink-0"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Thêm Nhóm</span>
+                </button>
+              </form>
+            ) : (
+              <div className="text-[11px] text-slate-400 italic py-1">Chế độ xem danh mục nhóm hàng (Thu ngân)</div>
+            )}
 
             <div className="space-y-2 max-h-72 overflow-y-auto pr-1 text-xs">
               {categories.map((c) => {
@@ -1947,27 +1976,29 @@ export const ProductsPage: React.FC = () => {
                             {count} SP
                           </span>
                         </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingCategoryName(name);
-                              setEditCategoryVal(name);
-                            }}
-                            className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-slate-800 rounded-lg"
-                            title="Đổi tên nhóm hàng"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteCategory(name, count)}
-                            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg"
-                            title="Xóa nhóm hàng"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        {!isCashier && (
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingCategoryName(name);
+                                setEditCategoryVal(name);
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-slate-800 rounded-lg"
+                              title="Đổi tên nhóm hàng"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCategory(name, count)}
+                              className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg"
+                              title="Xóa nhóm hàng"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </>
                     )}
                   </div>
@@ -1992,22 +2023,26 @@ export const ProductsPage: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleAddLocation} className="flex gap-2">
-              <input
-                type="text"
-                value={newLocName}
-                onChange={(e) => setNewLocName(e.target.value)}
-                placeholder="Nhập tên vị trí kho..."
-                className="flex-1 px-3 py-2 rounded-xl glass-input text-xs"
-              />
-              <button
-                type="submit"
-                className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs flex items-center gap-1 shrink-0"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Thêm Vị Trí</span>
-              </button>
-            </form>
+            {!isCashier ? (
+              <form onSubmit={handleAddLocation} className="flex gap-2">
+                <input
+                  type="text"
+                  value={newLocName}
+                  onChange={(e) => setNewLocName(e.target.value)}
+                  placeholder="Nhập tên vị trí kho..."
+                  className="flex-1 px-3 py-2 rounded-xl glass-input text-xs"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs flex items-center gap-1 shrink-0"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Thêm Vị Trí</span>
+                </button>
+              </form>
+            ) : (
+              <div className="text-[11px] text-slate-400 italic py-1">Chế độ xem vị trí kho (Thu ngân)</div>
+            )}
 
             <div className="space-y-2 max-h-72 overflow-y-auto pr-1 text-xs">
               {locations.map((l) => {
@@ -2055,27 +2090,29 @@ export const ProductsPage: React.FC = () => {
                             {count} SP
                           </span>
                         </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingLocationName(name);
-                              setEditLocationVal(name);
-                            }}
-                            className="p-1.5 text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded-lg"
-                            title="Đổi tên vị trí kho"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteLocation(name, count)}
-                            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg"
-                            title="Xóa vị trí kho"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        {!isCashier && (
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingLocationName(name);
+                                setEditLocationVal(name);
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded-lg"
+                              title="Đổi tên vị trí kho"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteLocation(name, count)}
+                              className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg"
+                              title="Xóa vị trí kho"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </>
                     )}
                   </div>
@@ -2100,22 +2137,26 @@ export const ProductsPage: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleAddBrand} className="flex gap-2">
-              <input
-                type="text"
-                value={newBrandName}
-                onChange={(e) => setNewBrandName(e.target.value)}
-                placeholder="Nhập tên thương hiệu mới..."
-                className="flex-1 px-3 py-2 rounded-xl glass-input text-xs"
-              />
-              <button
-                type="submit"
-                className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs flex items-center gap-1 shrink-0"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Thêm Brand</span>
-              </button>
-            </form>
+            {!isCashier ? (
+              <form onSubmit={handleAddBrand} className="flex gap-2">
+                <input
+                  type="text"
+                  value={newBrandName}
+                  onChange={(e) => setNewBrandName(e.target.value)}
+                  placeholder="Nhập tên thương hiệu mới..."
+                  className="flex-1 px-3 py-2 rounded-xl glass-input text-xs"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs flex items-center gap-1 shrink-0"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Thêm Brand</span>
+                </button>
+              </form>
+            ) : (
+              <div className="text-[11px] text-slate-400 italic py-1">Chế độ xem thương hiệu (Thu ngân)</div>
+            )}
 
             <div className="space-y-2 max-h-72 overflow-y-auto pr-1 text-xs">
               {brands.map((b) => {
@@ -2160,27 +2201,29 @@ export const ProductsPage: React.FC = () => {
                             {count} SP
                           </span>
                         </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingBrandName(name);
-                              setEditBrandVal(name);
-                            }}
-                            className="p-1.5 text-slate-400 hover:text-purple-400 hover:bg-slate-800 rounded-lg"
-                            title="Đổi tên thương hiệu"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteBrand(name, count)}
-                            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg"
-                            title="Xóa thương hiệu"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        {!isCashier && (
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingBrandName(name);
+                                setEditBrandVal(name);
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-purple-400 hover:bg-slate-800 rounded-lg"
+                              title="Đổi tên thương hiệu"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteBrand(name, count)}
+                              className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg"
+                              title="Xóa thương hiệu"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </>
                     )}
                   </div>
@@ -2205,22 +2248,26 @@ export const ProductsPage: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleAddUnit} className="flex gap-2">
-              <input
-                type="text"
-                value={newUnitName}
-                onChange={(e) => setNewUnitName(e.target.value)}
-                placeholder="Nhập tên đơn vị tính mới..."
-                className="flex-1 px-3 py-2 rounded-xl glass-input text-xs font-semibold text-emerald-300"
-              />
-              <button
-                type="submit"
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center gap-1 shrink-0 shadow-md"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Thêm ĐVT</span>
-              </button>
-            </form>
+            {!isCashier ? (
+              <form onSubmit={handleAddUnit} className="flex gap-2">
+                <input
+                  type="text"
+                  value={newUnitName}
+                  onChange={(e) => setNewUnitName(e.target.value)}
+                  placeholder="Nhập tên đơn vị tính mới..."
+                  className="flex-1 px-3 py-2 rounded-xl glass-input text-xs font-semibold text-emerald-300"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center gap-1 shrink-0 shadow-md"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Thêm ĐVT</span>
+                </button>
+              </form>
+            ) : (
+              <div className="text-[11px] text-slate-400 italic py-1">Chế độ xem đơn vị tính (Thu ngân)</div>
+            )}
 
             <div className="space-y-2 max-h-72 overflow-y-auto pr-1 text-xs">
               {units.map((u) => {
@@ -2260,32 +2307,34 @@ export const ProductsPage: React.FC = () => {
                     ) : (
                       <>
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="font-bold text-white text-sm truncate">{name}</span>
+                          <span className="font-semibold text-emerald-300 truncate">{name}</span>
                           <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold shrink-0">
                             {count} SP
                           </span>
                         </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingUnitName(name);
-                              setEditUnitVal(name);
-                            }}
-                            className="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded-lg"
-                            title="Đổi tên đơn vị tính"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteUnit(name, count)}
-                            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg"
-                            title="Xóa đơn vị tính"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        {!isCashier && (
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingUnitName(name);
+                                setEditUnitVal(name);
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded-lg"
+                              title="Đổi tên ĐVT"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteUnit(name, count)}
+                              className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg"
+                              title="Xóa ĐVT"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </>
                     )}
                   </div>
