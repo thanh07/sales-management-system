@@ -5,6 +5,7 @@ import api from '../../services/api';
 import { Search, Tag, Barcode, Layers, Package, History } from 'lucide-react';
 import { VariantSelectModal } from './VariantSelectModal';
 import { OrderTabBar } from './OrderTabBar';
+import { getSmartProductIcon } from '../../utils/productIconHelper';
 
 export const ProductGrid: React.FC = () => {
   const { selectedBranchId, branches } = useBranchStore();
@@ -120,6 +121,7 @@ export const ProductGrid: React.FC = () => {
             const currBranchStock = p.branchStocks && p.branchStocks[selectedBranchId] !== undefined ? p.branchStocks[selectedBranchId] : p.stockQuantity;
             const isLowStock = currBranchStock <= p.minStock;
             const branchCode = branches.find((b) => b.id === selectedBranchId)?.code || 'CN-01';
+            const theme = getSmartProductIcon(p.name, p.category);
 
             return (
               <div
@@ -136,12 +138,21 @@ export const ProductGrid: React.FC = () => {
                 )}
 
                 <div>
-                  <div className="relative h-32 w-full rounded-xl overflow-hidden mb-3 bg-slate-950">
-                    <img
-                      src={p.image}
-                      alt={p.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
+                  <div className={`relative h-32 w-full rounded-xl overflow-hidden mb-3 bg-gradient-to-br ${theme.gradientBg} flex items-center justify-center border border-slate-800/60`}>
+                    {p.image ? (
+                      <img
+                        src={p.image}
+                        alt={p.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          // If image fails, hide image element and show icon
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <span className="text-4xl select-none animate-in zoom-in-50">{theme.icon}</span>
+                    )}
+
                     <span
                       className={`absolute bottom-2 left-2 px-2 py-0.5 rounded-md font-bold text-[10px] backdrop-blur-md flex items-center gap-1 ${
                         isLowStock ? 'bg-red-500/85 text-white' : 'bg-slate-900/85 text-emerald-400 border border-slate-700/50'

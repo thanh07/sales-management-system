@@ -44,6 +44,8 @@ import {
 } from 'lucide-react';
 import { ImportExcelModal, downloadProductExcelTemplate } from '../components/products/ImportExcelModal';
 import { BarcodePrintModal } from '../components/products/BarcodePrintModal';
+import { CloneProductModal } from '../components/products/CloneProductModal';
+import { getSmartProductIcon } from '../utils/productIconHelper';
 import { useAuthStore } from '../store/authStore';
 import { useBranchStore } from '../store/branchStore';
 
@@ -83,6 +85,8 @@ export const ProductsPage: React.FC = () => {
   const [isAddDropdownOpen, setIsAddDropdownOpen] = useState(false);
   const [isUtilityDropdownOpen, setIsUtilityDropdownOpen] = useState(false);
   const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
+  const [isCloneModalOpen, setIsCloneModalOpen] = useState(false);
+  const [cloningSourceProduct, setCloningSourceProduct] = useState<any | null>(null);
 
   // MISA Inline Column Filter States
   const [filterSku, setFilterSku] = useState('');
@@ -268,33 +272,43 @@ export const ProductsPage: React.FC = () => {
     }
   };
 
-  const handleDuplicateSelectedProduct = () => {
-    if (selectedProductIds.length === 0) {
+  const handleDuplicateSelectedProduct = (productToClone?: any) => {
+    const target = productToClone || (selectedProductIds.length > 0 ? products.find((p) => p.id === selectedProductIds[0]) : null);
+    if (!target) {
       alert('Vui lòng tích chọn 1 hàng hóa trên bảng để nhân bản!');
       return;
     }
-    const target = products.find((p) => p.id === selectedProductIds[0]);
-    if (!target) return;
 
-    setName(`[Bản sao] ${target.name}`);
-    const randomCode = Math.floor(100000 + Math.random() * 900000);
-    setSku(`SKU${randomCode}`);
-    setBarcode(`893${Math.floor(1000000000 + Math.random() * 9000000000)}`);
-    setCategory(target.category || 'Nước Giải Khát & Đồ Uống');
-    setBrand(target.brand || 'Red Bull');
-    setLocation(target.location || 'Kệ Nước A1 - Dãy 1');
-    setUnit(target.unit || 'Lon');
-    setConversions(target.conversions ? JSON.parse(JSON.stringify(target.conversions)) : []);
-    setHasConversion(!!(target.conversions && target.conversions.length > 0));
-    setCostPrice(target.costPrice || 0);
-    setSellingPrice(target.sellingPrice || 0);
-    setStockQuantity(target.stockQuantity || 0);
-    setMinStock(target.minStock || 10);
-    setImage(target.image || PRESET_IMAGES[0].url);
-    setHasVariants(target.hasVariants || false);
-    setAttributes(target.attributes ? JSON.parse(JSON.stringify(target.attributes)) : []);
-    setVariantMatrix(target.variants ? JSON.parse(JSON.stringify(target.variants)) : []);
-    setBranchStocksForm(target.branchStocks ? { ...target.branchStocks } : { 'branch-01': 50, 'branch-02': 50, 'branch-03': 140 });
+    setCloningSourceProduct(target);
+    setIsCloneModalOpen(true);
+  };
+
+  const handleCloneSuccess = (newProduct: any) => {
+    fetchProducts();
+    if (newProduct?.id) {
+      setSelectedProductIds([newProduct.id]);
+    }
+  };
+
+  const handleOpenFullAddModalFromDraft = (draft: any) => {
+    setName(draft.name || '');
+    setSku(draft.sku || '');
+    setBarcode(draft.barcode || '');
+    setCategory(draft.category || 'Nước Giải Khát & Đồ Uống');
+    setBrand(draft.brand || 'Red Bull');
+    setLocation(draft.location || 'Kệ Nước A1 - Dãy 1');
+    setUnit(draft.unit || 'Lon');
+    setConversions(draft.conversions || []);
+    setHasConversion(!!(draft.conversions && draft.conversions.length > 0));
+    setCostPrice(draft.costPrice || 0);
+    setSellingPrice(draft.sellingPrice || 0);
+    setStockQuantity(draft.stockQuantity || 0);
+    setMinStock(draft.minStock || 10);
+    setImage(draft.image || PRESET_IMAGES[0].url);
+    setHasVariants(draft.hasVariants || false);
+    setAttributes(draft.attributes || []);
+    setVariantMatrix(draft.variants || []);
+    setBranchStocksForm(draft.branchStocks || { 'branch-01': 50, 'branch-02': 50, 'branch-03': 140 });
 
     setIsAddModalOpen(true);
   };
@@ -1764,6 +1778,13 @@ export const ProductsPage: React.FC = () => {
                           {!isCashier ? (
                             <div className="flex items-center justify-end gap-1.5">
                               <button
+                                onClick={() => handleDuplicateSelectedProduct(p)}
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-blue-400 border border-slate-700/80 text-[11px] transition-all"
+                                title="Nhân bản sản phẩm này"
+                              >
+                                <Copy className="w-3.5 h-3.5 text-blue-400" />
+                              </button>
+                              <button
                                 onClick={() => handleOpenEditModal(p)}
                                 className="p-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/40 text-[11px] transition-all"
                                 title="Sửa hàng hóa"
@@ -3198,6 +3219,21 @@ export const ProductsPage: React.FC = () => {
         selectedProducts={products.filter((p) => selectedProductIds.includes(p.id))}
         allProducts={products}
         selectedBranchName={branches.find((b) => b.id === selectedBranchId)?.name}
+        selectedBranchId={selectedBranchId}
+        branches={branches}
+      />
+
+      {/* Clone Product Modal (MISA Standard) */}
+      <CloneProductModal
+        isOpen={isCloneModalOpen}
+        onClose={() => {
+          setIsCloneModalOpen(false);
+          setCloningSourceProduct(null);
+        }}
+        product={cloningSourceProduct}
+        onCloneSuccess={handleCloneSuccess}
+        onOpenFullAddModal={handleOpenFullAddModalFromDraft}
+        branches={branches}
       />
     </div>
   );
