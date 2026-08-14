@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import api from '../services/api';
-import { PackagePlus, Search, Tag, Barcode, Layers, Edit2, Trash2, Plus, X, Download, Upload, ArrowRightLeft, ShieldAlert, Scale, ChevronDown, ChevronRight, MapPin, Award, Filter, RefreshCw, DollarSign, RotateCcw, Edit3, Save, Check, Sparkles, FileSpreadsheet, FolderTree, Eye, Image as ImageIcon } from 'lucide-react';
+import { PackagePlus, Search, Tag, Barcode, Layers, Edit2, Trash2, Plus, X, Download, Upload, ArrowRightLeft, ShieldAlert, Scale, ChevronDown, ChevronRight, MapPin, Award, Filter, RefreshCw, DollarSign, RotateCcw, Edit3, Save, Check, Sparkles, FileSpreadsheet, FolderTree, Eye, Image as ImageIcon, Building2 } from 'lucide-react';
 import { ImportExcelModal, downloadProductExcelTemplate } from '../components/products/ImportExcelModal';
 import { useAuthStore } from '../store/authStore';
+import { useBranchStore } from '../store/branchStore';
 
 const PRESET_IMAGES = [
   { label: '🥤 Nước ngọt / Đồ uống', url: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400&q=80' },
@@ -15,9 +16,15 @@ const PRESET_IMAGES = [
 
 export const ProductsPage: React.FC = () => {
   const { user } = useAuthStore();
+  const { branches, selectedBranchId } = useBranchStore();
   const isCashier = user?.role === 'CASHIER';
 
   const [products, setProducts] = useState<any[]>([]);
+  const [branchStocksForm, setBranchStocksForm] = useState<Record<string, number>>({
+    'branch-01': 50,
+    'branch-02': 50,
+    'branch-03': 140,
+  });
   const [categories, setCategories] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
@@ -245,6 +252,11 @@ export const ProductsPage: React.FC = () => {
     setSellingPrice(15000);
     setStockQuantity(100);
     setMinStock(10);
+    setBranchStocksForm({
+      'branch-01': 40,
+      'branch-02': 35,
+      'branch-03': 25,
+    });
     setHasConversion(false);
     setConversions([]);
     setHasVariants(false);
@@ -267,6 +279,19 @@ export const ProductsPage: React.FC = () => {
     setStockQuantity(p.stockQuantity || 0);
     setMinStock(p.minStock || 10);
     setImage(p.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80');
+
+    if (p.branchStocks) {
+      setBranchStocksForm({ ...p.branchStocks });
+    } else {
+      const b1 = Math.round((p.stockQuantity || 0) * 0.4);
+      const b2 = Math.round((p.stockQuantity || 0) * 0.35);
+      const b3 = Math.max(0, (p.stockQuantity || 0) - b1 - b2);
+      setBranchStocksForm({
+        'branch-01': b1,
+        'branch-02': b2,
+        'branch-03': b3,
+      });
+    }
 
     const convList = p.conversions && p.conversions.length > 0
       ? p.conversions
@@ -313,6 +338,7 @@ export const ProductsPage: React.FC = () => {
         costPrice: Number(costPrice),
         sellingPrice: Number(sellingPrice),
         stockQuantity: hasVariants ? variantMatrix.reduce((sum, v) => sum + Number(v.stockQuantity), 0) : Number(stockQuantity),
+        branchStocks: branchStocksForm,
         minStock: Number(minStock),
         image: image || editingProduct.image,
         hasVariants,
@@ -502,6 +528,7 @@ export const ProductsPage: React.FC = () => {
         costPrice: Number(costPrice),
         sellingPrice: Number(sellingPrice),
         stockQuantity: hasVariants ? variantMatrix.reduce((s, v) => s + Number(v.stockQuantity), 0) : Number(stockQuantity),
+        branchStocks: branchStocksForm,
         minStock: Number(minStock),
         image: defaultImg,
         isActive: true,
@@ -1249,17 +1276,28 @@ export const ProductsPage: React.FC = () => {
 
                 {/* Stock & Pricing Breakdown Grid */}
                 <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/80 text-xs">
-                  <div>
-                    <span className="text-[10px] text-slate-400 block font-medium">Tồn kho thực tế:</span>
-                    <div className={`font-bold ${isLowStock ? 'text-red-400' : 'text-emerald-400'}`}>
-                      {p.stockQuantity} {p.unit}
+                    <div>
+                      {(() => {
+                        const activeBranchObj = branches.find((b) => b.id === selectedBranchId) || branches[0];
+                        const currentBranchStock = p.branchStocks && p.branchStocks[selectedBranchId] !== undefined ? p.branchStocks[selectedBranchId] : p.stockQuantity;
+                        return (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] text-slate-400 block font-medium">Tồn kho ({activeBranchObj?.code}):</span>
+                              <span className="text-[9px] font-mono bg-blue-500/15 text-blue-300 px-1 py-0.2 rounded">
+                                {activeBranchObj?.code || 'CN-01'}
+                              </span>
+                            </div>
+                            <div className={`font-bold ${currentBranchStock <= p.minStock ? 'text-red-400' : 'text-emerald-400'}`}>
+                              {currentBranchStock} {p.unit}
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-mono">
+                              Toàn chuỗi: <span className="text-white font-bold">{p.stockQuantity} {p.unit}</span>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
-                    {convList.length > 0 && (
-                      <div className="text-[10px] text-slate-500 font-mono">
-                        (= {Math.floor(p.stockQuantity / convList[0].conversionFactor)} {convList[0].unitName})
-                      </div>
-                    )}
-                  </div>
 
                   <div>
                     <span className="text-[10px] text-slate-400 block font-medium">Giá bán lẻ:</span>
@@ -1414,18 +1452,43 @@ export const ProductsPage: React.FC = () => {
                       </td>
 
                       <td className="p-4">
-                        <div className="font-bold text-emerald-400 text-sm">
-                          {p.stockQuantity} {p.unit}
-                        </div>
-                        {convList.length > 0 && (
-                          <div className="text-[10px] text-slate-400 font-mono space-y-0.5">
-                            {convList.map((c: any) => (
-                              <div key={c.id || c.unitName}>
-                                (= {Math.floor(p.stockQuantity / c.conversionFactor)} {c.unitName})
+                        {(() => {
+                          const activeBranchObj = branches.find((b) => b.id === selectedBranchId) || branches[0];
+                          const currentBranchStock = p.branchStocks && p.branchStocks[selectedBranchId] !== undefined ? p.branchStocks[selectedBranchId] : p.stockQuantity;
+                          return (
+                            <div>
+                              <div className="flex items-center gap-1.5 font-bold text-emerald-400 text-sm">
+                                <span>{currentBranchStock} {p.unit}</span>
+                                <span
+                                  className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300 border border-blue-500/20"
+                                  title={`Tồn kho tại ${activeBranchObj?.name}`}
+                                >
+                                  {activeBranchObj?.code || 'CN-01'}
+                                </span>
                               </div>
-                            ))}
-                          </div>
-                        )}
+                              <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                Chuỗi: <strong className="text-slate-200">{p.stockQuantity}</strong> {p.unit}
+                              </div>
+                              {p.branchStocks && (
+                                <div className="flex flex-wrap gap-1 mt-1.5">
+                                  {branches.map((b) => (
+                                    <span
+                                      key={b.id}
+                                      className={`px-1.5 py-0.5 rounded text-[9px] font-mono ${
+                                        b.id === selectedBranchId
+                                          ? 'bg-blue-600/30 text-blue-300 font-bold border border-blue-500/40'
+                                          : 'bg-slate-900 text-slate-400 border border-slate-800'
+                                      }`}
+                                      title={b.name}
+                                    >
+                                      {b.code}: {p.branchStocks[b.id] ?? 0}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
 
                       <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
@@ -1944,26 +2007,49 @@ export const ProductsPage: React.FC = () => {
               {renderAttributesAndVariantsSection()}
 
               {!hasVariants && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-slate-300 font-semibold mb-1">
-                      Tổng tồn kho (Tính theo đơn vị nhỏ nhất `{unit}`) (*)
-                    </label>
-                    <input
-                      type="number"
-                      value={stockQuantity}
-                      onChange={(e) => setStockQuantity(Number(e.target.value))}
-                      className="w-full px-3 py-2.5 rounded-xl glass-input font-bold text-emerald-400 text-sm"
-                    />
+                <div className="space-y-3">
+                  <div className="p-3.5 rounded-xl bg-slate-950/90 border border-blue-500/30 space-y-2.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-blue-400 flex items-center gap-1.5">
+                        <Building2 className="w-3.5 h-3.5" />
+                        <span>Phân Bổ Tồn Kho Theo Chi Nhánh (Chuỗi Bán Lẻ)</span>
+                      </span>
+                      <span className="text-slate-400 text-[11px]">
+                        Tổng chuỗi: <strong className="text-emerald-400 font-mono text-xs">{stockQuantity} {unit}</strong>
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+                      {branches.map((b) => (
+                        <div key={b.id} className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-slate-300 font-semibold truncate max-w-[120px]">{b.name}</span>
+                            <span className="font-mono text-blue-400 text-[10px] bg-blue-500/10 px-1 rounded">{b.code}</span>
+                          </div>
+                          <input
+                            type="number"
+                            min="0"
+                            value={branchStocksForm[b.id] ?? 0}
+                            onChange={(e) => {
+                              const val = Math.max(0, Number(e.target.value));
+                              const updated = { ...branchStocksForm, [b.id]: val };
+                              setBranchStocksForm(updated);
+                              setStockQuantity(Object.values(updated).reduce((sum, q) => sum + Number(q), 0));
+                            }}
+                            className="w-full px-2.5 py-1.5 rounded-lg glass-input text-xs font-mono font-bold text-emerald-400"
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Ngưỡng cảnh báo sắp hết hàng</label>
+                    <label className="block text-slate-300 font-semibold mb-1">Ngưỡng cảnh báo sắp hết hàng toàn chuỗi</label>
                     <input
                       type="number"
                       value={minStock}
                       onChange={(e) => setMinStock(Number(e.target.value))}
-                      className="w-full px-3 py-2.5 rounded-xl glass-input font-bold text-red-400"
+                      className="w-full px-3 py-2 rounded-xl glass-input font-bold text-red-400 text-xs"
                     />
                   </div>
                 </div>
@@ -2776,26 +2862,49 @@ export const ProductsPage: React.FC = () => {
               {renderAttributesAndVariantsSection()}
 
               {!hasVariants && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-slate-300 font-semibold mb-1">
-                      Tổng tồn kho (Tính theo đơn vị nhỏ nhất `{unit}`) (*)
-                    </label>
-                    <input
-                      type="number"
-                      value={stockQuantity}
-                      onChange={(e) => setStockQuantity(Number(e.target.value))}
-                      className="w-full px-3 py-2.5 rounded-xl glass-input font-bold text-emerald-400 text-sm"
-                    />
+                <div className="space-y-3">
+                  <div className="p-3.5 rounded-xl bg-slate-950/90 border border-blue-500/30 space-y-2.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-blue-400 flex items-center gap-1.5">
+                        <Building2 className="w-3.5 h-3.5" />
+                        <span>Phân Bổ Tồn Kho Theo Chi Nhánh (Chuỗi Bán Lẻ)</span>
+                      </span>
+                      <span className="text-slate-400 text-[11px]">
+                        Tổng chuỗi: <strong className="text-emerald-400 font-mono text-xs">{stockQuantity} {unit}</strong>
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+                      {branches.map((b) => (
+                        <div key={b.id} className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-slate-300 font-semibold truncate max-w-[120px]">{b.name}</span>
+                            <span className="font-mono text-blue-400 text-[10px] bg-blue-500/10 px-1 rounded">{b.code}</span>
+                          </div>
+                          <input
+                            type="number"
+                            min="0"
+                            value={branchStocksForm[b.id] ?? 0}
+                            onChange={(e) => {
+                              const val = Math.max(0, Number(e.target.value));
+                              const updated = { ...branchStocksForm, [b.id]: val };
+                              setBranchStocksForm(updated);
+                              setStockQuantity(Object.values(updated).reduce((sum, q) => sum + Number(q), 0));
+                            }}
+                            className="w-full px-2.5 py-1.5 rounded-lg glass-input text-xs font-mono font-bold text-emerald-400"
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Ngưỡng cảnh báo sắp hết hàng</label>
+                    <label className="block text-slate-300 font-semibold mb-1">Ngưỡng cảnh báo sắp hết hàng toàn chuỗi</label>
                     <input
                       type="number"
                       value={minStock}
                       onChange={(e) => setMinStock(Number(e.target.value))}
-                      className="w-full px-3 py-2.5 rounded-xl glass-input font-bold text-red-400"
+                      className="w-full px-3 py-2 rounded-xl glass-input font-bold text-red-400 text-xs"
                     />
                   </div>
                 </div>

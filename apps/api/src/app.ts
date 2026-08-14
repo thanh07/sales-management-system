@@ -9,6 +9,7 @@ import reportRoutes from './routes/report.routes';
 import userRoutes from './routes/user.routes';
 import pricelistRoutes from './routes/pricelist.routes';
 import settingsRoutes from './routes/settings.routes';
+import branchRoutes from './routes/branch.routes';
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/pricelists', pricelistRoutes);
 app.use('/api/v1/settings', settingsRoutes);
+app.use('/api/v1/branches', branchRoutes);
 
 // Health check
 app.get('/api/v1/health', (req, res) => {

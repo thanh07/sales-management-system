@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useAuthStore } from './store/authStore';
+import { useBranchStore } from './store/branchStore';
 import { LoginPage } from './pages/LoginPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { POSPage } from './pages/POSPage';
@@ -9,16 +10,53 @@ import { ProductsPage } from './pages/ProductsPage';
 import { UsersPage } from './pages/UsersPage';
 import { PriceListsPage } from './pages/PriceListsPage';
 import { SettingsPage } from './pages/SettingsPage';
-import { LogOut, Store, LayoutDashboard, ShoppingCart, Package, Users, BarChart3, ShieldCheck, Tag, Settings } from 'lucide-react';
+import { BranchesPage } from './pages/BranchesPage';
+import {
+  LogOut,
+  Store,
+  LayoutDashboard,
+  ShoppingCart,
+  Package,
+  Users,
+  BarChart3,
+  ShieldCheck,
+  Tag,
+  Settings,
+  Building2,
+  ChevronDown,
+  Check,
+  ExternalLink
+} from 'lucide-react';
 
 export const App: React.FC = () => {
   const { isAuthenticated, user, logout, initAuth } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'POS' | 'DASHBOARD' | 'PRODUCTS' | 'CRM' | 'REPORTS' | 'USERS' | 'PRICELISTS' | 'SETTINGS'>('POS');
+  const { branches, selectedBranchId, setSelectedBranchId, getSelectedBranch, fetchBranches } = useBranchStore();
+
+  const [activeTab, setActiveTab] = useState<
+    'POS' | 'DASHBOARD' | 'PRODUCTS' | 'CRM' | 'REPORTS' | 'USERS' | 'PRICELISTS' | 'SETTINGS' | 'BRANCHES'
+  >('POS');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isBranchDropdownOpen, setIsBranchDropdownOpen] = useState(false);
+  const branchDropdownRef = useRef<HTMLDivElement>(null);
+
+  const isAdmin = user?.role === 'ADMIN';
+  const activeBranch = getSelectedBranch();
 
   useEffect(() => {
     initAuth();
-  }, [initAuth]);
+    fetchBranches();
+  }, [initAuth, fetchBranches]);
+
+  // Close branch dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (branchDropdownRef.current && !branchDropdownRef.current.contains(event.target as Node)) {
+        setIsBranchDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   if (!isAuthenticated) {
     return <LoginPage />;
@@ -27,8 +65,12 @@ export const App: React.FC = () => {
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-slate-950 flex flex-col text-slate-100 overflow-x-hidden">
-        {/* Top Navbar - Hidden on Mobile when in POS mode for full-screen mobile POS experience */}
-        <header className={`${activeTab === 'POS' ? 'hidden md:flex' : 'flex'} h-16 border-b border-slate-800 bg-slate-900/90 backdrop-blur-md px-4 md:px-6 items-center justify-between sticky top-0 z-30`}>
+        {/* Top Navbar */}
+        <header
+          className={`${
+            activeTab === 'POS' ? 'hidden md:flex' : 'flex'
+          } h-16 border-b border-slate-800 bg-slate-900/90 backdrop-blur-md px-4 md:px-6 items-center justify-between sticky top-0 z-30`}
+        >
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -42,7 +84,79 @@ export const App: React.FC = () => {
             </div>
             <div>
               <h1 className="font-bold text-white tracking-wide text-sm sm:text-base leading-none">Sales Manager Pro</h1>
-              <span className="text-[11px] sm:text-xs text-blue-400 font-medium">Chi nhánh Chợ Bến Thành (CN-01)</span>
+
+              {/* Global Branch Switcher Dropdown */}
+              <div className="relative mt-1" ref={branchDropdownRef}>
+                <button
+                  onClick={() => setIsBranchDropdownOpen(!isBranchDropdownOpen)}
+                  className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 text-xs font-semibold transition-all group"
+                  title="Bấm để đổi chi nhánh làm việc"
+                >
+                  <Building2 className="w-3.5 h-3.5 text-blue-400" />
+                  <span className="max-w-[180px] sm:max-w-[240px] truncate">{activeBranch?.name || 'Chi nhánh mặc định'}</span>
+                  {isAdmin && <ChevronDown className="w-3.5 h-3.5 text-blue-400 group-hover:translate-y-0.5 transition-transform" />}
+                </button>
+
+                {/* Dropdown Menu */}
+                {isBranchDropdownOpen && (
+                  <div className="absolute left-0 top-full mt-2 w-72 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 flex items-center justify-between">
+                      <span>Chọn Chi Nhánh Làm Việc</span>
+                      <span className="text-blue-400">{branches.length} địa điểm</span>
+                    </div>
+
+                    <div className="py-1 space-y-0.5 max-h-60 overflow-y-auto">
+                      {branches.map((b) => {
+                        const isSelected = b.id === selectedBranchId;
+                        return (
+                          <button
+                            key={b.id}
+                            onClick={() => {
+                              setSelectedBranchId(b.id);
+                              setIsBranchDropdownOpen(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition-all ${
+                              isSelected
+                                ? 'bg-blue-600 text-white font-bold shadow'
+                                : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div
+                                className={`w-2 h-2 rounded-full ${
+                                  b.isCentralWarehouse ? 'bg-purple-400' : 'bg-emerald-400'
+                                }`}
+                              />
+                              <div>
+                                <div className="font-semibold text-xs leading-tight">{b.name}</div>
+                                <div className={`text-[10px] ${isSelected ? 'text-blue-200' : 'text-slate-500'}`}>
+                                  {b.code} • {b.district || b.city}
+                                </div>
+                              </div>
+                            </div>
+                            {isSelected && <Check className="w-4 h-4 text-white shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {isAdmin && (
+                      <div className="pt-1.5 mt-1 border-t border-slate-800">
+                        <button
+                          onClick={() => {
+                            setActiveTab('BRANCHES');
+                            setIsBranchDropdownOpen(false);
+                          }}
+                          className="w-full px-3 py-2 rounded-xl text-xs font-bold text-blue-400 hover:bg-blue-600/15 flex items-center justify-center gap-1.5 transition-all"
+                        >
+                          <Building2 className="w-3.5 h-3.5" />
+                          <span>Quản Lý Danh Sách Chi Nhánh</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -77,8 +191,8 @@ export const App: React.FC = () => {
 
         {/* Main Application Workspace */}
         <div className="flex-1 flex overflow-hidden w-full relative">
-          {/* Left Sidebar Nav (Desktop only: hidden md:flex) */}
-          <aside className="hidden md:flex w-56 border-r border-slate-800 bg-slate-900/50 p-3 flex-col gap-1 shrink-0">
+          {/* Left Sidebar Nav */}
+          <aside className="hidden md:flex w-56 border-r border-slate-800 bg-slate-900/50 p-3 flex-col gap-1 shrink-0 overflow-y-auto">
             <button
               onClick={() => setActiveTab('POS')}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs transition-all ${
@@ -112,6 +226,20 @@ export const App: React.FC = () => {
               <Package className="w-4 h-4" />
               <span>Sản phẩm & Kho</span>
             </button>
+
+            {/* Chi nhánh Tab */}
+            <button
+              onClick={() => setActiveTab('BRANCHES')}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs transition-all ${
+                activeTab === 'BRANCHES'
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-semibold'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <Building2 className="w-4 h-4 text-cyan-400" />
+              <span>Chi nhánh ({branches.length})</span>
+            </button>
+
             <button
               onClick={() => setActiveTab('PRICELISTS')}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs transition-all ${
@@ -170,11 +298,12 @@ export const App: React.FC = () => {
             </button>
           </aside>
 
-          {/* Main View (Full width on mobile) */}
+          {/* Main View */}
           <main className="flex-1 overflow-hidden w-full">
             {activeTab === 'POS' && <POSPage onOpenMobileMenu={() => setIsMobileMenuOpen(true)} />}
             {activeTab === 'CRM' && <CustomersPage />}
             {activeTab === 'PRODUCTS' && <ProductsPage />}
+            {activeTab === 'BRANCHES' && <BranchesPage />}
             {activeTab === 'PRICELISTS' && <PriceListsPage />}
             {activeTab === 'USERS' && <UsersPage />}
             {activeTab === 'SETTINGS' && <SettingsPage />}
@@ -185,7 +314,7 @@ export const App: React.FC = () => {
         {/* Mobile Navigation Drawer Overlay */}
         {isMobileMenuOpen && (
           <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex md:hidden">
-            <div className="w-72 bg-slate-900 border-r border-slate-800 p-5 flex flex-col justify-between h-full animate-in slide-in-from-left duration-200">
+            <div className="w-72 bg-slate-900 border-r border-slate-800 p-5 flex flex-col justify-between h-full animate-in slide-in-from-left duration-200 overflow-y-auto">
               <div className="space-y-4">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                   <div className="flex items-center gap-2 text-white font-bold text-sm">
@@ -202,6 +331,7 @@ export const App: React.FC = () => {
                     { id: 'POS', label: 'Bán quầy (POS)', icon: ShoppingCart },
                     { id: 'DASHBOARD', label: 'Tổng quan', icon: LayoutDashboard },
                     { id: 'PRODUCTS', label: 'Sản phẩm & Kho', icon: Package },
+                    { id: 'BRANCHES', label: 'Chi nhánh', icon: Building2 },
                     { id: 'PRICELISTS', label: 'Thiết lập Bảng giá', icon: Tag },
                     { id: 'CRM', label: 'Khách hàng (CRM)', icon: Users },
                     { id: 'USERS', label: 'Quản lý Nhân viên', icon: ShieldCheck },

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import api from '../services/api';
+import { useBranchStore } from './branchStore';
 
 export interface CartItem {
   product: any;
@@ -435,10 +436,14 @@ export const usePosStore = create<PosState>((set, get) => ({
     const method = paymentData?.method || 'CASH';
     const paidAmount = paymentData?.paidAmount ?? total;
 
+    const activeBranchId = useBranchStore.getState().selectedBranchId || 'branch-01';
+
     const checkoutPayload = {
       customerId: activeTab.customer?.id,
       customerName: activeTab.customer ? (activeTab.customer.fullName || activeTab.customer.name) : 'Khách lẻ',
       customerPhone: activeTab.customer?.phone || '',
+      cashierId: 'usr-cashier-01',
+      branchId: activeBranchId,
       items: activeTab.cart.map((item) => ({
         productId: item.product.id,
         name: item.product.name,

@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { usePosStore, calculateProductPrice } from '../../store/posStore';
+import { useBranchStore } from '../../store/branchStore';
 import api from '../../services/api';
 import { Search, Tag, Barcode, Layers, Package, History } from 'lucide-react';
 import { VariantSelectModal } from './VariantSelectModal';
 import { OrderTabBar } from './OrderTabBar';
 
 export const ProductGrid: React.FC = () => {
+  const { selectedBranchId, branches } = useBranchStore();
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<{ name: string; icon?: string; showOnPos?: boolean }[]>([]);
   const { addToCart, selectedCategory, setSelectedCategory, searchQuery, setSearchQuery, activePriceList } = usePosStore();
@@ -115,7 +117,10 @@ export const ProductGrid: React.FC = () => {
       <div className="flex-1 overflow-y-auto pr-1">
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
           {products.map((p) => {
-            const isLowStock = p.stockQuantity <= p.minStock;
+            const currBranchStock = p.branchStocks && p.branchStocks[selectedBranchId] !== undefined ? p.branchStocks[selectedBranchId] : p.stockQuantity;
+            const isLowStock = currBranchStock <= p.minStock;
+            const branchCode = branches.find((b) => b.id === selectedBranchId)?.code || 'CN-01';
+
             return (
               <div
                 key={p.id}
@@ -138,11 +143,12 @@ export const ProductGrid: React.FC = () => {
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                     <span
-                      className={`absolute bottom-2 left-2 px-2 py-0.5 rounded-md font-bold text-[10px] backdrop-blur-md ${
-                        isLowStock ? 'bg-red-500/80 text-white' : 'bg-slate-900/80 text-emerald-400'
+                      className={`absolute bottom-2 left-2 px-2 py-0.5 rounded-md font-bold text-[10px] backdrop-blur-md flex items-center gap-1 ${
+                        isLowStock ? 'bg-red-500/85 text-white' : 'bg-slate-900/85 text-emerald-400 border border-slate-700/50'
                       }`}
                     >
-                      Tồn: {p.stockQuantity} {p.unit}
+                      <span className="text-[9px] text-blue-300 font-mono">[{branchCode}]</span>
+                      <span>Tồn: {currBranchStock} {p.unit}</span>
                     </span>
                   </div>
 

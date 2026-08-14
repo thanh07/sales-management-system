@@ -144,11 +144,12 @@ export class PosService {
       throw new Error('Giỏ hàng trống, không thể thanh toán');
     }
 
-    // Deduct stock levels in ProductService in SMALLEST unit (quantity * conversionFactor)
+    // Deduct stock levels in ProductService in SMALLEST unit (quantity * conversionFactor) for the active branch
+    const branchId = input.branchId || 'branch-01';
     input.items.forEach((item) => {
       const factor = item.conversionFactor || 1;
       const totalSmallestUnitsDeducted = item.quantity * factor;
-      ProductService.updateStock(item.productId, -totalSmallestUnitsDeducted);
+      ProductService.updateStock(item.productId, -totalSmallestUnitsDeducted, branchId);
     });
 
     const now = new Date();
@@ -246,10 +247,11 @@ export class PosService {
 
       calculatedRefund += retItem.quantity * origItem.unitPrice;
 
-      // Restock Product in SMALLEST unit (quantity * conversionFactor)
+      // Restock Product in SMALLEST unit (quantity * conversionFactor) to the branch
       const factor = retItem.conversionFactor || origItem.conversionFactor || 1;
       const totalUnitsRestocked = retItem.quantity * factor;
-      ProductService.updateStock(retItem.productId, totalUnitsRestocked);
+      const branchId = order.branchId || 'branch-01';
+      ProductService.updateStock(retItem.productId, totalUnitsRestocked, branchId);
     });
 
     const refundAmount = returnInput.refundAmount ?? calculatedRefund;

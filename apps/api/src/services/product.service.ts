@@ -14,6 +14,7 @@ export interface ProductVariant {
   variantConversions?: Record<string, number>; // Custom unit conversion prices for this variant e.g. { "Lốc": 45000, "Thùng": 500000 }
   stockQuantity: number;
   minStock: number;
+  branchStocks?: Record<string, number>; // e.g. { 'branch-01': 20, 'branch-02': 15, 'branch-03': 40 }
 }
 
 export interface ProductUnitConversion {
@@ -40,10 +41,11 @@ export interface Product {
   costPrice: number;
   sellingPrice: number;
   promoPrice?: number;
-  stockQuantity: number;
+  stockQuantity: number; // Total across all branches
   minStock: number;
   image: string;
   isActive: boolean;
+  branchStocks?: Record<string, number>; // e.g. { 'branch-01': 50, 'branch-02': 120, 'branch-03': 500 }
   hasVariants?: boolean;
   attributes?: ProductAttribute[];
   variants?: ProductVariant[];
@@ -259,6 +261,11 @@ function generate300GroceryProducts(): Product[] {
           });
         }
 
+        const varTotalStock = (count * 7 + idx * 5) % 80 + 15;
+        const vb1 = Math.round(varTotalStock * 0.4);
+        const vb2 = Math.round(varTotalStock * 0.35);
+        const vb3 = Math.max(0, varTotalStock - vb1 - vb2);
+
         return {
           id: `var-${count}-${idx + 1}`,
           sku: `${sku}-${v.toUpperCase().replace(/[^A-Z0-9]/g, '')}`,
@@ -268,16 +275,38 @@ function generate300GroceryProducts(): Product[] {
           costPrice: tpl.cost + idx * 1000,
           sellingPrice: vSellPrice,
           variantConversions,
-          stockQuantity: (count * 7 + idx * 5) % 80 + 10,
+          stockQuantity: varTotalStock,
           minStock: 10,
+          branchStocks: {
+            'branch-01': vb1,
+            'branch-02': vb2,
+            'branch-03': vb3,
+          },
         };
       });
     }
 
     const costPrice = tpl.cost + ((count * 500) % 5000);
     const sellingPrice = tpl.sell + ((count * 800) % 8000);
-    const stockQuantity = (count * 13) % 150 + 15;
+    const rawStock = (count * 13) % 150 + 20;
 
+    const b1 = Math.round(rawStock * 0.4);
+    const b2 = Math.round(rawStock * 0.35);
+    const b3 = Math.max(0, rawStock - b1 - b2);
+
+    const branchStocks: Record<string, number> = hasVariants
+      ? {
+          'branch-01': variants!.reduce((sum, v) => sum + (v.branchStocks?.['branch-01'] || 0), 0),
+          'branch-02': variants!.reduce((sum, v) => sum + (v.branchStocks?.['branch-02'] || 0), 0),
+          'branch-03': variants!.reduce((sum, v) => sum + (v.branchStocks?.['branch-03'] || 0), 0),
+        }
+      : {
+          'branch-01': b1,
+          'branch-02': b2,
+          'branch-03': b3,
+        };
+
+    const finalTotalStock = Object.values(branchStocks).reduce((sum, q) => sum + Number(q), 0);
     const mainConv = tpl.conversions?.[0];
 
     products.push({
@@ -297,10 +326,11 @@ function generate300GroceryProducts(): Product[] {
       ],
       costPrice,
       sellingPrice,
-      stockQuantity: hasVariants ? variants!.reduce((s, v) => s + v.stockQuantity, 0) : stockQuantity,
+      stockQuantity: finalTotalStock,
       minStock: 12,
       image: tpl.img,
       isActive: true,
+      branchStocks,
       hasVariants,
       attributes,
       variants,
@@ -312,7 +342,7 @@ function generate300GroceryProducts(): Product[] {
   return products;
 }
 
-let MOCK_PRODUCTS: Product[] = [];
+let MOCK_PRODUCTS: Product[] = generate300GroceryProducts();
 
 export class ProductService {
   static getAllProducts(query?: string, category?: string, brand?: string, location?: string) {
@@ -395,6 +425,19 @@ export class ProductService {
       newProduct.conversionSellingPrice = newProduct.conversions[0].sellingPrice;
     }
 
+    if (newProduct.branchStocks) {
+      newProduct.stockQuantity = Object.values(newProduct.branchStocks).reduce((sum, q) => sum + Number(q), 0);
+    } else {
+      const b1 = Math.round((newProduct.stockQuantity || 0) * 0.4);
+      const b2 = Math.round((newProduct.stockQuantity || 0) * 0.35);
+      const b3 = Math.max(0, (newProduct.stockQuantity || 0) - b1 - b2);
+      newProduct.branchStocks = {
+        'branch-01': b1,
+        'branch-02': b2,
+        'branch-03': b3,
+      };
+    }
+
     if (newProduct.variants && newProduct.variants.length > 0) {
       newProduct.hasVariants = true;
       newProduct.stockQuantity = newProduct.variants.reduce((sum, v) => sum + Number(v.stockQuantity), 0);
@@ -431,6 +474,11 @@ export class ProductService {
       ...MOCK_PRODUCTS[index],
       ...data,
     };
+
+    if (data.branchStocks) {
+      updatedProduct.branchStocks = data.branchStocks;
+      updatedProduct.stockQuantity = Object.values(data.branchStocks).reduce((sum, q) => sum + Number(q), 0);
+    }
 
     if (updatedProduct.conversions && updatedProduct.conversions.length > 0) {
       updatedProduct.conversionUnit = updatedProduct.conversions[0].unitName;
@@ -621,10 +669,34 @@ export class ProductService {
     return [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
   }
 
-  static updateStock(productId: string, quantityChange: number) {
-    const p = MOCK_PRODUCTS.find((item) => item.id === productId);
-    if (p) {
-      p.stockQuantity += quantityChange;
+  static updateStock(productId: string, quantityChange: number, branchId: string = 'branch-01') {
+    for (const p of MOCK_PRODUCTS) {
+      if (p.id === productId) {
+        if (!p.branchStocks) {
+          const b1 = Math.round(p.stockQuantity * 0.4);
+          const b2 = Math.round(p.stockQuantity * 0.35);
+          const b3 = Math.max(0, p.stockQuantity - b1 - b2);
+          p.branchStocks = { 'branch-01': b1, 'branch-02': b2, 'branch-03': b3 };
+        }
+        p.branchStocks[branchId] = Math.max(0, (p.branchStocks[branchId] || 0) + quantityChange);
+        p.stockQuantity = Object.values(p.branchStocks).reduce((sum, q) => sum + Number(q), 0);
+        return;
+      }
+      if (p.variants) {
+        const v = p.variants.find((vr) => vr.id === productId);
+        if (v) {
+          if (!v.branchStocks) {
+            const vb1 = Math.round(v.stockQuantity * 0.4);
+            const vb2 = Math.round(v.stockQuantity * 0.35);
+            const vb3 = Math.max(0, v.stockQuantity - vb1 - vb2);
+            v.branchStocks = { 'branch-01': vb1, 'branch-02': vb2, 'branch-03': vb3 };
+          }
+          v.branchStocks[branchId] = Math.max(0, (v.branchStocks[branchId] || 0) + quantityChange);
+          v.stockQuantity = Object.values(v.branchStocks).reduce((sum, q) => sum + Number(q), 0);
+          p.stockQuantity = p.variants.reduce((sum, vr) => sum + Number(vr.stockQuantity), 0);
+          return;
+        }
+      }
     }
   }
 
