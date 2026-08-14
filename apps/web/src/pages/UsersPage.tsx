@@ -9,6 +9,7 @@ import {
   Building2, 
   UserCheck, 
   Lock, 
+  Key, 
   X, 
   Search, 
   Edit3, 
@@ -24,7 +25,8 @@ import {
   CreditCard, 
   Users,
   Copy,
-  RefreshCw
+  RefreshCw,
+  Sparkles
 } from 'lucide-react';
 
 const PRESET_AVATARS = [
@@ -52,6 +54,12 @@ export const UsersPage: React.FC = () => {
   const [modalTab, setModalTab] = useState<'BASIC' | 'ROLE' | 'BRANCH'>('BASIC');
   const [detailTab, setDetailTab] = useState<'ROLE' | 'INFO' | 'BRANCH'>('ROLE');
 
+  // Reset Password Modal State
+  const [isResetPassModalOpen, setIsResetPassModalOpen] = useState(false);
+  const [resetTargetUser, setResetTargetUser] = useState<any | null>(null);
+  const [newResetPassword, setNewResetPassword] = useState('123456');
+  const [showResetPassword, setShowResetPassword] = useState(false);
+
   // Form Fields
   const [employeeCode, setEmployeeCode] = useState('');
   const [fullName, setFullName] = useState('');
@@ -61,8 +69,8 @@ export const UsersPage: React.FC = () => {
   const [role, setRole] = useState<'ADMIN' | 'MANAGER' | 'CASHIER' | 'WAREHOUSE' | 'SALE'>('CASHIER');
   const [workStatus, setWorkStatus] = useState<'CHINH_THUC' | 'THU_VIEC' | 'NGHI_VIEC' | 'TAM_NGHI'>('CHINH_THUC');
   const [allowSoftwareAccess, setAllowSoftwareAccess] = useState(true);
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [password, setPassword] = useState('123456');
+  const [confirmPassword, setConfirmPassword] = useState('123456');
   const [showPassword, setShowPassword] = useState(false);
   const [idCardNumber, setIdCardNumber] = useState('');
   const [idCardIssueDate, setIdCardIssueDate] = useState('');
@@ -70,7 +78,7 @@ export const UsersPage: React.FC = () => {
   const [birthday, setBirthday] = useState('');
   const [maritalStatus, setMaritalStatus] = useState<'DOC_THAN' | 'DA_KET_HON'>('DOC_THAN');
   const [gender, setGender] = useState<'NAM' | 'NU'>('NAM');
-  const [branchName, setBranchName] = useState('Chi nhánh Bến Thành (CN-01)');
+  const [branchName, setBranchName] = useState('Chi nhánh Chợ Bến Thành (CN-01)');
 
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
@@ -115,7 +123,7 @@ export const UsersPage: React.FC = () => {
     setBirthday('1998-01-01');
     setMaritalStatus('DOC_THAN');
     setGender('NAM');
-    setBranchName('Chi nhánh Bến Thành (CN-01)');
+    setBranchName('Chi nhánh Chợ Bến Thành (CN-01)');
     setEditingUserId(null);
     setModalTab('BASIC');
   };
@@ -143,9 +151,35 @@ export const UsersPage: React.FC = () => {
     setBirthday(u.birthday || '');
     setMaritalStatus(u.maritalStatus || 'DOC_THAN');
     setGender(u.gender || 'NAM');
-    setBranchName(u.branchName || 'Chi nhánh Bến Thành (CN-01)');
+    setBranchName(u.branchName || 'Chi nhánh Chợ Bến Thành (CN-01)');
     setModalTab('BASIC');
     setIsModalOpen(true);
+  };
+
+  const handleOpenResetPassModal = (u: any) => {
+    setResetTargetUser(u);
+    setNewResetPassword('123456');
+    setShowResetPassword(false);
+    setIsResetPassModalOpen(true);
+  };
+
+  const handleSaveResetPassword = async () => {
+    if (!resetTargetUser) return;
+    if (!newResetPassword || newResetPassword.trim().length < 6) {
+      alert('Mật khẩu mới phải có ít nhất 6 ký tự');
+      return;
+    }
+
+    try {
+      await api.post(`/users/${resetTargetUser.id}/reset-password`, {
+        password: newResetPassword.trim(),
+      });
+      showToast(`Đã đổi mật khẩu thành công cho nhân viên "${resetTargetUser.fullName}"!`);
+      setIsResetPassModalOpen(false);
+      setResetTargetUser(null);
+    } catch (err: any) {
+      alert(err.message || 'Lỗi đặt lại mật khẩu');
+    }
   };
 
   const handleAvatarFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -177,9 +211,10 @@ export const UsersPage: React.FC = () => {
       return;
     }
 
-    const payload = {
+    const payload: any = {
       employeeCode: employeeCode.trim(),
       username: employeeCode.trim().toLowerCase(),
+      password: password ? password.trim() : undefined,
       fullName: fullName.trim(),
       email: email.trim(),
       phone: phone.trim(),
@@ -202,7 +237,7 @@ export const UsersPage: React.FC = () => {
         showToast('Cập nhật thông tin nhân viên thành công!');
       } else {
         await api.post('/users', payload);
-        showToast('Thêm mới nhân viên thành công!');
+        showToast('Thêm mới nhân viên và cấp tài khoản thành công!');
       }
 
       fetchUsers();
@@ -297,7 +332,9 @@ export const UsersPage: React.FC = () => {
             <Users className="w-6 h-6 text-blue-400" />
             <span>Nhân viên</span>
           </h1>
-          <p className="text-slate-400 text-xs mt-0.5">Quản lý hồ sơ nhân viên, trạng thái làm việc và phân quyền truy cập hệ thống</p>
+          <p className="text-slate-400 text-xs mt-0.5">
+            Quản lý hồ sơ nhân viên, cấp tài khoản & mật khẩu đăng nhập, phân quyền truy cập hệ thống
+          </p>
         </div>
 
         {isAdmin && (
@@ -319,6 +356,18 @@ export const UsersPage: React.FC = () => {
             >
               <Edit3 className="w-3.5 h-3.5 text-blue-400" />
               <span>Sửa</span>
+            </button>
+
+            <button
+              onClick={() => {
+                if (selectedUser) handleOpenResetPassModal(selectedUser);
+                else alert('Vui lòng chọn 1 nhân viên trên bảng để đổi mật khẩu');
+              }}
+              className="px-3.5 py-2 bg-slate-800 hover:bg-amber-600 text-amber-300 hover:text-white font-semibold text-xs rounded-xl flex items-center gap-1.5 border border-slate-700 transition-all"
+              title="Đặt lại mật khẩu cho nhân viên"
+            >
+              <Key className="w-3.5 h-3.5" />
+              <span>Đổi Mật Khẩu</span>
             </button>
 
             <button
@@ -352,7 +401,7 @@ export const UsersPage: React.FC = () => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Tìm theo Mã NV, Họ tên, Số điện thoại, Email..."
+            placeholder="Tìm theo Mã NV, Tên đăng nhập, Họ tên, Số điện thoại, Email..."
             className="w-full pl-10 pr-4 py-2.5 rounded-xl glass-input text-xs"
           />
         </div>
@@ -394,13 +443,13 @@ export const UsersPage: React.FC = () => {
             <thead className="bg-slate-900/90 text-slate-400 font-bold border-b border-slate-800 sticky top-0 z-10">
               <tr>
                 <th className="p-3 w-10 text-center"></th>
-                <th className="p-3">Mã nhân viên</th>
+                <th className="p-3">Mã NV / Đăng nhập</th>
                 <th className="p-3">Tên nhân viên</th>
                 <th className="p-3">Ngày sinh</th>
                 <th className="p-3">Số điện thoại</th>
                 <th className="p-3">Vai trò</th>
                 <th className="p-3">Trạng thái làm việc</th>
-                <th className="p-3 text-center">Phần mềm</th>
+                <th className="p-3 text-center">Quyền Đăng Nhập</th>
                 {isAdmin && <th className="p-3 text-right">Thao tác</th>}
               </tr>
             </thead>
@@ -425,7 +474,10 @@ export const UsersPage: React.FC = () => {
                         className="w-3.5 h-3.5 text-blue-600 bg-slate-900 border-slate-700"
                       />
                     </td>
-                    <td className="p-3 font-mono font-bold text-blue-400">{u.employeeCode || u.username}</td>
+                    <td className="p-3 font-mono font-bold text-blue-400">
+                      <div>{u.employeeCode || u.username}</div>
+                      <div className="text-[10px] text-slate-500 font-normal">user: {u.username}</div>
+                    </td>
                     <td className="p-3">
                       <div className="flex items-center gap-2.5">
                         <img
@@ -462,6 +514,13 @@ export const UsersPage: React.FC = () => {
                       <td className="p-3 text-right">
                         <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                           <button
+                            onClick={() => handleOpenResetPassModal(u)}
+                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-amber-600 text-amber-300 hover:text-white transition-all"
+                            title="Đặt lại mật khẩu cho nhân viên"
+                          >
+                            <Key className="w-3.5 h-3.5" />
+                          </button>
+                          <button
                             onClick={() => handleOpenEditModal(u)}
                             className="p-1.5 rounded-lg bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white transition-all"
                             title="Sửa nhân viên"
@@ -485,7 +544,7 @@ export const UsersPage: React.FC = () => {
           </table>
         </div>
 
-        {/* Bottom Detail View Drawer (like MISA) */}
+        {/* Bottom Detail View Drawer */}
         {selectedUser && (
           <div className="border-t border-slate-800 bg-slate-900/90 p-4 space-y-3">
             <div className="flex items-center gap-2 border-b border-slate-800 pb-2 text-xs font-bold">
@@ -495,7 +554,7 @@ export const UsersPage: React.FC = () => {
                   detailTab === 'ROLE' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Vai trò & Nhiệm vụ
+                Tài khoản & Vai trò
               </button>
               <button
                 onClick={() => setDetailTab('INFO')}
@@ -516,10 +575,29 @@ export const UsersPage: React.FC = () => {
             </div>
 
             {detailTab === 'ROLE' && (
-              <div className="text-xs space-y-1">
-                <div className="flex items-center gap-3">
-                  <span className="text-slate-400">Tên vai trò:</span>
-                  <span className="font-bold text-white">{getRoleLabel(selectedUser.role).label}</span>
+              <div className="text-xs space-y-2">
+                <div className="flex flex-wrap items-center gap-6">
+                  <div>
+                    <span className="text-slate-400">Tên đăng nhập hệ thống:</span>{' '}
+                    <span className="font-mono font-bold text-blue-400">{selectedUser.username}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Mã nhân viên:</span>{' '}
+                    <span className="font-mono font-bold text-amber-400">{selectedUser.employeeCode}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Tên vai trò:</span>{' '}
+                    <span className="font-bold text-white">{getRoleLabel(selectedUser.role).label}</span>
+                  </div>
+                  {isAdmin && (
+                    <button
+                      onClick={() => handleOpenResetPassModal(selectedUser)}
+                      className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/40 text-[11px] font-bold flex items-center gap-1.5"
+                    >
+                      <Key className="w-3.5 h-3.5" />
+                      <span>Cấp lại mật khẩu</span>
+                    </button>
+                  )}
                 </div>
                 <div className="text-slate-400">
                   Mô tả quyền hạn: {
@@ -557,7 +635,7 @@ export const UsersPage: React.FC = () => {
               <div className="text-xs flex items-center gap-6">
                 <div>
                   <span className="text-slate-500 block">Chi nhánh làm việc:</span>
-                  <span className="font-bold text-emerald-400">{selectedUser.branchName || 'Chi nhánh Bến Thành (CN-01)'}</span>
+                  <span className="font-bold text-emerald-400">{selectedUser.branchName || 'Chi nhánh Chợ Bến Thành (CN-01)'}</span>
                 </div>
                 <div>
                   <span className="text-slate-500 block">Ngày tạo hồ sơ:</span>
@@ -569,14 +647,14 @@ export const UsersPage: React.FC = () => {
         )}
       </div>
 
-      {/* --- MODAL THÊM / SỬA NHÂN VIÊN (MISA eShop EXACT CLONE) --- */}
+      {/* --- MODAL THÊM / SỬA NHÂN VIÊN (MISA eShop) --- */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl max-h-[92vh] overflow-hidden flex flex-col shadow-2xl animate-in zoom-in-95 duration-150">
             {/* Modal Header */}
             <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
               <h2 className="font-bold text-base sm:text-lg text-white">
-                {editingUserId ? 'Chỉnh sửa Thông tin Nhân viên' : 'Thêm mới Nhân viên'}
+                {editingUserId ? 'Chỉnh sửa Thông tin Nhân viên' : 'Thêm mới Nhân viên & Cấp Tài Khoản'}
               </h2>
               <button
                 onClick={() => setIsModalOpen(false)}
@@ -622,7 +700,7 @@ export const UsersPage: React.FC = () => {
 
             {/* Modal Body */}
             <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4 text-xs">
-              {/* TAB 1: THÔNG TIN CƠ BẢN (MISA Form) */}
+              {/* TAB 1: THÔNG TIN CƠ BẢN */}
               {modalTab === 'BASIC' && (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                   {/* Left Column: Form Fields */}
@@ -630,7 +708,7 @@ export const UsersPage: React.FC = () => {
                     {/* Row: Mã nhân viên */}
                     <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
                       <label className="sm:col-span-4 text-slate-300 font-semibold">
-                        Mã nhân viên <span className="text-red-400">*</span>
+                        Mã nhân viên / Login <span className="text-red-400">*</span>
                       </label>
                       <div className="sm:col-span-8">
                         <input
@@ -642,7 +720,7 @@ export const UsersPage: React.FC = () => {
                           className="w-full px-3 py-2 rounded-xl glass-input font-bold font-mono text-white text-xs"
                         />
                         <p className="text-[10px] text-slate-500 mt-0.5">
-                          Nhập mã nhân viên, email, ĐT di động để dùng làm tên đăng nhập của hệ thống
+                          Dùng mã nhân viên, username hoặc SĐT để đăng nhập vào hệ thống
                         </p>
                       </div>
                     </div>
@@ -718,17 +796,27 @@ export const UsersPage: React.FC = () => {
                           onChange={(e) => setAllowSoftwareAccess(e.target.checked)}
                           className="w-4 h-4 rounded text-blue-600 bg-slate-900 border-slate-700"
                         />
-                        <span className="font-bold text-blue-300 text-xs">Cho phép làm việc với phần mềm</span>
+                        <span className="font-bold text-blue-300 text-xs">Cho phép đăng nhập làm việc với phần mềm</span>
                       </label>
                     </div>
 
                     {/* Software Password Inputs (when enabled) */}
                     {allowSoftwareAccess && (
                       <div className="p-3.5 rounded-xl bg-slate-950/90 border border-blue-500/30 space-y-3">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-blue-300 flex items-center gap-1.5">
+                            <Key className="w-3.5 h-3.5 text-blue-400" />
+                            <span>Mật khẩu Đăng Nhập Hệ Thống</span>
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            {editingUserId ? '(Để trống nếu giữ nguyên)' : '(Mặc định: 123456)'}
+                          </span>
+                        </div>
+
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div>
                             <label className="block text-slate-300 font-semibold mb-1">
-                              Mật khẩu <span className="text-red-400">*</span>
+                              Mật khẩu {!editingUserId && <span className="text-red-400">*</span>}
                             </label>
                             <div className="relative">
                               <input
@@ -757,13 +845,13 @@ export const UsersPage: React.FC = () => {
 
                           <div>
                             <label className="block text-slate-300 font-semibold mb-1">
-                              Xác nhận MK <span className="text-red-400">*</span>
+                              Xác nhận MK {!editingUserId && <span className="text-red-400">*</span>}
                             </label>
                             <input
                               type={showPassword ? 'text' : 'password'}
                               value={confirmPassword}
                               onChange={(e) => setConfirmPassword(e.target.value)}
-                              placeholder="Nhập lại mật khẩu..."
+                              placeholder={editingUserId ? 'Để trống nếu không đổi' : 'Nhập lại mật khẩu...'}
                               className="w-full px-3 py-2 rounded-xl glass-input text-xs font-mono"
                             />
                           </div>
@@ -871,7 +959,7 @@ export const UsersPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Right Column: Avatar Upload Box (like MISA) */}
+                  {/* Right Column: Avatar Upload Box */}
                   <div className="lg:col-span-4 space-y-3">
                     <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col items-center justify-center text-center space-y-3">
                       <div className="text-slate-300 font-semibold text-xs">Ảnh nhân viên</div>
@@ -992,9 +1080,9 @@ export const UsersPage: React.FC = () => {
                       onChange={(e) => setBranchName(e.target.value)}
                       className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs font-semibold"
                     >
-                      <option value="Chi nhánh Bến Thành (CN-01)">Chi nhánh Chợ Bến Thành (CN-01)</option>
+                      <option value="Chi nhánh Chợ Bến Thành (CN-01)">Chi nhánh Chợ Bến Thành (CN-01)</option>
                       <option value="Chi nhánh Quận 7 (CN-02)">Chi nhánh Quận 7 (CN-02)</option>
-                      <option value="Kho Tổng TP.HCM">Kho Tổng TP.HCM</option>
+                      <option value="Kho Tổng Trung Tâm TP.HCM (KHO-01)">Kho Tổng Trung Tâm TP.HCM (KHO-01)</option>
                     </select>
                   </div>
 
@@ -1006,7 +1094,7 @@ export const UsersPage: React.FC = () => {
               )}
             </div>
 
-            {/* Modal Actions (MISA style: Lưu, Lưu và thêm mới, Hủy bỏ) */}
+            {/* Modal Actions */}
             <div className="p-4 border-t border-slate-800 bg-slate-950 flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="flex items-center gap-1.5 text-slate-400 text-xs">
                 <HelpCircle className="w-4 h-4" />
@@ -1040,6 +1128,111 @@ export const UsersPage: React.FC = () => {
                 >
                   <X className="w-4 h-4" />
                   <span>Hủy bỏ</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL ĐẶT LẠI MẬT KHẨU (RESET PASSWORD MODAL) --- */}
+      {isResetPassModalOpen && resetTargetUser && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+              <div className="flex items-center gap-2">
+                <Key className="w-5 h-5 text-amber-400" />
+                <h3 className="font-bold text-sm text-white">Cấp Lại Mật Khẩu Đăng Nhập</h3>
+              </div>
+              <button
+                onClick={() => setIsResetPassModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-xs">
+              {/* Employee Summary Card */}
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-3">
+                <img
+                  src={resetTargetUser.avatar || PRESET_AVATARS[0]}
+                  alt={resetTargetUser.fullName}
+                  className="w-10 h-10 rounded-full object-cover border border-slate-700"
+                />
+                <div>
+                  <div className="font-bold text-white text-sm">{resetTargetUser.fullName}</div>
+                  <div className="text-slate-400 text-[11px] font-mono">
+                    Mã NV: <span className="text-blue-400 font-bold">{resetTargetUser.employeeCode}</span> • Username: <span className="text-amber-400 font-bold">{resetTargetUser.username}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Password Input */}
+              <div className="space-y-1.5">
+                <label className="block text-slate-300 font-semibold">
+                  Mật khẩu mới <span className="text-red-400">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showResetPassword ? 'text' : 'password'}
+                    value={newResetPassword}
+                    onChange={(e) => setNewResetPassword(e.target.value)}
+                    placeholder="Nhập mật khẩu mới..."
+                    className="w-full pr-10 pl-3 py-2.5 rounded-xl glass-input text-xs font-mono font-bold text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowResetPassword(!showResetPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  >
+                    {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick Preset Buttons */}
+              <div className="space-y-1">
+                <span className="text-[10px] text-slate-400 font-medium">Gợi ý mật khẩu nhanh:</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setNewResetPassword('123456')}
+                    className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-[11px] border border-slate-700"
+                  >
+                    ⚡ 123456
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewResetPassword(`Pass@${Math.floor(1000 + Math.random() * 9000)}`)}
+                    className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-blue-400 font-mono text-[11px] border border-slate-700 flex items-center gap-1"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>Tạo ngẫu nhiên</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px] leading-relaxed">
+                Sau khi đổi mật khẩu, nhân viên có thể sử dụng <strong>Mã NV ({resetTargetUser.employeeCode})</strong> hoặc <strong>Username ({resetTargetUser.username})</strong> kèm mật khẩu mới này để đăng nhập.
+              </div>
+
+              {/* Actions */}
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsResetPassModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveResetPassword}
+                  className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-lg shadow-amber-600/30 flex items-center gap-1.5"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Xác Nhận Đổi Mật Khẩu</span>
                 </button>
               </div>
             </div>

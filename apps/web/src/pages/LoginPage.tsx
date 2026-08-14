@@ -34,7 +34,7 @@ export const LoginPage: React.FC = () => {
             <Store className="w-9 h-9" />
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Sales Manager Pro</h1>
-          <p className="text-sm text-slate-400 mt-1">Hệ thống Quản lý Bán hàng & POS Doanh nghiệp</p>
+          <p className="text-sm text-slate-400 mt-1">Hệ thống Quản lý Bán hàng & POS Đa Chi Nhánh</p>
         </div>
 
         {error && (
@@ -48,7 +48,7 @@ export const LoginPage: React.FC = () => {
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-              Tên đăng nhập hoặc Email
+              Tài khoản đăng nhập (Mã NV / Username / Email / SĐT)
             </label>
             <div className="relative">
               <UserIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -57,8 +57,8 @@ export const LoginPage: React.FC = () => {
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Nhập username (e.g. admin)"
-                className="w-full pl-11 pr-4 py-3 rounded-xl glass-input text-sm"
+                placeholder="Nhập Mã NV (VD: NVA, ADMIN01), username..."
+                className="w-full pl-11 pr-4 py-3 rounded-xl glass-input text-sm font-medium"
               />
             </div>
           </div>
@@ -74,7 +74,7 @@ export const LoginPage: React.FC = () => {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Nhập mật khẩu (e.g. admin123)"
+                placeholder="Nhập mật khẩu..."
                 className="w-full pl-11 pr-4 py-3 rounded-xl glass-input text-sm"
               />
             </div>
@@ -97,22 +97,36 @@ export const LoginPage: React.FC = () => {
         </form>
 
         {/* Demo Quick Accounts */}
-        <div className="mt-8 pt-6 border-t border-slate-800/80">
-          <p className="text-xs text-slate-400 mb-3 font-medium text-center">Tài khoản thử nghiệm nhanh (Click để chọn):</p>
+        <div className="mt-7 pt-5 border-t border-slate-800/80">
+          <p className="text-xs text-slate-400 mb-2.5 font-medium text-center">Tài khoản nhân sự mẫu (Click để điền nhanh):</p>
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => handleQuickLogin('admin', 'admin123')}
-              className="px-3 py-2 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 rounded-lg text-xs text-slate-300 transition-colors text-left"
+              className="px-2.5 py-1.5 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 rounded-lg text-xs text-slate-300 transition-colors text-left"
             >
               <div className="font-semibold text-blue-400">👑 Admin</div>
-              <div className="text-[11px] text-slate-500">admin / admin123</div>
+              <div className="text-[10px] text-slate-500 font-mono">admin / admin123</div>
             </button>
             <button
-              onClick={() => handleQuickLogin('cashier', 'cashier123')}
-              className="px-3 py-2 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 rounded-lg text-xs text-slate-300 transition-colors text-left"
+              onClick={() => handleQuickLogin('NVA', 'cashier123')}
+              className="px-2.5 py-1.5 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 rounded-lg text-xs text-slate-300 transition-colors text-left"
             >
-              <div className="font-semibold text-emerald-400">🛒 Thu Ngân</div>
-              <div className="text-[11px] text-slate-500">cashier / cashier123</div>
+              <div className="font-semibold text-emerald-400">🛒 Thu Ngân (Mã: NVA)</div>
+              <div className="text-[10px] text-slate-500 font-mono">NVA / cashier123</div>
+            </button>
+            <button
+              onClick={() => handleQuickLogin('NV02', 'warehouse123')}
+              className="px-2.5 py-1.5 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 rounded-lg text-xs text-slate-300 transition-colors text-left"
+            >
+              <div className="font-semibold text-amber-400">📦 Thủ Kho (Mã: NV02)</div>
+              <div className="text-[10px] text-slate-500 font-mono">NV02 / warehouse123</div>
+            </button>
+            <button
+              onClick={() => handleQuickLogin('quynhnhu', '123456')}
+              className="px-2.5 py-1.5 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 rounded-lg text-xs text-slate-300 transition-colors text-left"
+            >
+              <div className="font-semibold text-purple-400">👩‍💼 Sale (quynhnhu)</div>
+              <div className="text-[10px] text-slate-500 font-mono">quynhnhu / 123456</div>
             </button>
           </div>
         </div>

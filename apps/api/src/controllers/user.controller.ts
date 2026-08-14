@@ -31,6 +31,17 @@ export class UserController {
     }
   }
 
+  static resetPassword(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { password } = req.body;
+      UserService.resetPassword(id, password);
+      return sendSuccess(res, null, 'Đặt lại mật khẩu thành công');
+    } catch (error: any) {
+      return sendError(res, error.message || 'Lỗi đặt lại mật khẩu', error, 400);
+    }
+  }
+
   static deleteUser(req: Request, res: Response) {
     try {
       const { id } = req.params;
