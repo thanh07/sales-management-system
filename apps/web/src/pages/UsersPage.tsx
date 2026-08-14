@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
+import { useBranchStore } from '../store/branchStore';
 import { 
   UserPlus, 
   Shield, 
@@ -26,7 +27,8 @@ import {
   Users,
   Copy,
   RefreshCw,
-  Sparkles
+  Sparkles,
+  Store
 } from 'lucide-react';
 
 const PRESET_AVATARS = [
@@ -40,18 +42,20 @@ const PRESET_AVATARS = [
 
 export const UsersPage: React.FC = () => {
   const { user: currentUser } = useAuthStore();
+  const { branches } = useBranchStore();
   const isAdmin = currentUser?.role === 'ADMIN';
 
   const [users, setUsers] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [branchFilter, setBranchFilter] = useState('ALL');
   const [roleFilter, setRoleFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
-  const [modalTab, setModalTab] = useState<'BASIC' | 'ROLE' | 'BRANCH'>('BASIC');
+  const [modalTab, setModalTab] = useState<'BASIC' | 'ROLE' | 'DETAIL'>('BASIC');
   const [detailTab, setDetailTab] = useState<'ROLE' | 'INFO' | 'BRANCH'>('ROLE');
 
   // Reset Password Modal State
@@ -285,6 +289,40 @@ export const UsersPage: React.FC = () => {
     }
   };
 
+  const getBranchBadge = (branchNameStr?: string, branchIdStr?: string) => {
+    const name = branchNameStr || '';
+    if (name.includes('Bến Thành') || branchIdStr === 'branch-01' || name.includes('CN-01')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-300 font-bold border border-blue-500/30 text-xs">
+          <Building2 className="w-3.5 h-3.5 text-blue-400" />
+          <span>[CN-01] Chợ Bến Thành</span>
+        </span>
+      );
+    }
+    if (name.includes('Quận 7') || branchIdStr === 'branch-02' || name.includes('CN-02')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-500/15 text-purple-300 font-bold border border-purple-500/30 text-xs">
+          <Building2 className="w-3.5 h-3.5 text-purple-400" />
+          <span>[CN-02] Quận 7</span>
+        </span>
+      );
+    }
+    if (name.includes('Kho Tổng') || branchIdStr === 'branch-03' || name.includes('KHO-01')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 font-bold border border-amber-500/30 text-xs">
+          <Store className="w-3.5 h-3.5 text-amber-400" />
+          <span>[KHO-01] Kho Tổng TP.HCM</span>
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 text-xs border border-slate-700">
+        <Building2 className="w-3.5 h-3.5 text-slate-400" />
+        <span>{name || 'Chi nhánh Bến Thành'}</span>
+      </span>
+    );
+  };
+
   const getStatusLabel = (st: string) => {
     switch (st) {
       case 'CHINH_THUC':
@@ -309,10 +347,18 @@ export const UsersPage: React.FC = () => {
       (u.phone && u.phone.includes(q)) ||
       (u.email && u.email.toLowerCase().includes(q));
 
+    const matchesBranch = 
+      branchFilter === 'ALL' ||
+      (u.branchName && u.branchName.includes(branchFilter)) ||
+      (u.branchId && u.branchId === branchFilter) ||
+      (branchFilter === 'CN-01' && (u.branchName?.includes('Bến Thành') || u.branchName?.includes('CN-01') || u.branchId === 'branch-01')) ||
+      (branchFilter === 'CN-02' && (u.branchName?.includes('Quận 7') || u.branchName?.includes('CN-02') || u.branchId === 'branch-02')) ||
+      (branchFilter === 'KHO-01' && (u.branchName?.includes('Kho Tổng') || u.branchName?.includes('KHO-01') || u.branchId === 'branch-03'));
+
     const matchesRole = roleFilter === 'ALL' || u.role === roleFilter;
     const matchesStatus = statusFilter === 'ALL' || (u.workStatus || 'CHINH_THUC') === statusFilter;
 
-    return matchesQuery && matchesRole && matchesStatus;
+    return matchesQuery && matchesBranch && matchesRole && matchesStatus;
   });
 
   return (
@@ -330,10 +376,10 @@ export const UsersPage: React.FC = () => {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
             <Users className="w-6 h-6 text-blue-400" />
-            <span>Nhân viên</span>
+            <span>Quản Lý Nhân Viên</span>
           </h1>
           <p className="text-slate-400 text-xs mt-0.5">
-            Quản lý hồ sơ nhân viên, cấp tài khoản & mật khẩu đăng nhập, phân quyền truy cập hệ thống
+            Quản lý hồ sơ nhân viên, phân bổ chi nhánh, cấp tài khoản & mật khẩu đăng nhập hệ thống
           </p>
         </div>
 
@@ -395,18 +441,33 @@ export const UsersPage: React.FC = () => {
 
       {/* Filter & Search Controls */}
       <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-        <div className="sm:col-span-6 relative">
+        <div className="sm:col-span-5 relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Tìm theo Mã NV, Tên đăng nhập, Họ tên, Số điện thoại, Email..."
+            placeholder="Tìm theo Mã NV, Tên đăng nhập, Họ tên, SĐT, Email..."
             className="w-full pl-10 pr-4 py-2.5 rounded-xl glass-input text-xs"
           />
         </div>
 
+        {/* Dropdown Lọc Theo Chi Nhánh */}
         <div className="sm:col-span-3">
+          <select
+            value={branchFilter}
+            onChange={(e) => setBranchFilter(e.target.value)}
+            className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-blue-400"
+          >
+            <option value="ALL">🏬 Tất cả chi nhánh (Toàn chuỗi)</option>
+            <option value="CN-01">🏬 Chi nhánh Chợ Bến Thành (CN-01)</option>
+            <option value="CN-02">🏬 Chi nhánh Quận 7 (CN-02)</option>
+            <option value="KHO-01">📦 Kho Tổng Trung Tâm TP.HCM (KHO-01)</option>
+          </select>
+        </div>
+
+        {/* Dropdown Lọc Theo Vai Trò */}
+        <div className="sm:col-span-2">
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
@@ -421,7 +482,8 @@ export const UsersPage: React.FC = () => {
           </select>
         </div>
 
-        <div className="sm:col-span-3">
+        {/* Dropdown Lọc Theo Trạng Thái */}
+        <div className="sm:col-span-2">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -445,7 +507,7 @@ export const UsersPage: React.FC = () => {
                 <th className="p-3 w-10 text-center"></th>
                 <th className="p-3">Mã NV / Đăng nhập</th>
                 <th className="p-3">Tên nhân viên</th>
-                <th className="p-3">Ngày sinh</th>
+                <th className="p-3">Chi nhánh trực thuộc</th>
                 <th className="p-3">Số điện thoại</th>
                 <th className="p-3">Vai trò</th>
                 <th className="p-3">Trạng thái làm việc</th>
@@ -483,23 +545,25 @@ export const UsersPage: React.FC = () => {
                         <img
                           src={u.avatar || PRESET_AVATARS[0]}
                           alt={u.fullName}
-                          className="w-7 h-7 rounded-full object-cover border border-slate-700"
+                          className="w-7 h-7 rounded-full object-cover border border-slate-700 shrink-0"
                           onError={(e) => {
                             (e.target as any).src = PRESET_AVATARS[0];
                           }}
                         />
-                        <span className="font-bold text-white text-sm">{u.fullName}</span>
+                        <span className="font-bold text-white text-sm whitespace-nowrap">{u.fullName}</span>
                       </div>
                     </td>
-                    <td className="p-3 text-slate-300 font-mono">{u.birthday || '--/--/----'}</td>
+                    <td className="p-3 whitespace-nowrap">
+                      {getBranchBadge(u.branchName, u.branchId)}
+                    </td>
                     <td className="p-3 text-slate-300 font-mono font-semibold">{u.phone || '---'}</td>
-                    <td className="p-3">
+                    <td className="p-3 whitespace-nowrap">
                       <span className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold border ${roleInfo.badge}`}>
                         {roleInfo.label}
                       </span>
                     </td>
-                    <td className="p-3">{getStatusLabel(u.workStatus || 'CHINH_THUC')}</td>
-                    <td className="p-3 text-center">
+                    <td className="p-3 whitespace-nowrap">{getStatusLabel(u.workStatus || 'CHINH_THUC')}</td>
+                    <td className="p-3 text-center whitespace-nowrap">
                       {u.allowSoftwareAccess !== false ? (
                         <span className="text-emerald-400 font-bold text-[11px] bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
                           ✓ Đang mở
@@ -511,7 +575,7 @@ export const UsersPage: React.FC = () => {
                       )}
                     </td>
                     {isAdmin && (
-                      <td className="p-3 text-right">
+                      <td className="p-3 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                           <button
                             onClick={() => handleOpenResetPassModal(u)}
@@ -562,7 +626,7 @@ export const UsersPage: React.FC = () => {
                   detailTab === 'INFO' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Thông tin liên hệ & CCCD
+                Thông tin liên hệ & CCCD / Ngày sinh
               </button>
               <button
                 onClick={() => setDetailTab('BRANCH')}
@@ -589,6 +653,10 @@ export const UsersPage: React.FC = () => {
                     <span className="text-slate-400">Tên vai trò:</span>{' '}
                     <span className="font-bold text-white">{getRoleLabel(selectedUser.role).label}</span>
                   </div>
+                  <div>
+                    <span className="text-slate-400">Chi nhánh:</span>{' '}
+                    <span className="font-bold text-emerald-400">{selectedUser.branchName || 'Chi nhánh Chợ Bến Thành (CN-01)'}</span>
+                  </div>
                   {isAdmin && (
                     <button
                       onClick={() => handleOpenResetPassModal(selectedUser)}
@@ -613,6 +681,10 @@ export const UsersPage: React.FC = () => {
             {detailTab === 'INFO' && (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                 <div>
+                  <span className="text-slate-500 block">Ngày sinh:</span>
+                  <span className="font-mono font-bold text-slate-200">{selectedUser.birthday || 'Chưa cập nhật'}</span>
+                </div>
+                <div>
                   <span className="text-slate-500 block">Số CMND/CCCD:</span>
                   <span className="font-mono font-bold text-slate-200">{selectedUser.idCardNumber || 'Chưa cập nhật'}</span>
                 </div>
@@ -624,17 +696,13 @@ export const UsersPage: React.FC = () => {
                   <span className="text-slate-500 block">Giới tính / Hôn nhân:</span>
                   <span className="text-slate-200">{selectedUser.gender === 'NAM' ? 'Nam' : 'Nữ'} / {selectedUser.maritalStatus === 'DA_KET_HON' ? 'Đã kết hôn' : 'Độc thân'}</span>
                 </div>
-                <div>
-                  <span className="text-slate-500 block">Email liên hệ:</span>
-                  <span className="text-blue-400 font-mono">{selectedUser.email || '--'}</span>
-                </div>
               </div>
             )}
 
             {detailTab === 'BRANCH' && (
               <div className="text-xs flex items-center gap-6">
                 <div>
-                  <span className="text-slate-500 block">Chi nhánh làm việc:</span>
+                  <span className="text-slate-500 block">Chi nhánh trực thuộc:</span>
                   <span className="font-bold text-emerald-400">{selectedUser.branchName || 'Chi nhánh Chợ Bến Thành (CN-01)'}</span>
                 </div>
                 <div>
@@ -674,7 +742,7 @@ export const UsersPage: React.FC = () => {
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Thông tin cơ bản
+                1. Thông tin cơ bản & Chi nhánh
               </button>
               <button
                 onClick={() => setModalTab('ROLE')}
@@ -684,23 +752,23 @@ export const UsersPage: React.FC = () => {
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Vai trò
+                2. Vai trò & Quyền hạn
               </button>
               <button
-                onClick={() => setModalTab('BRANCH')}
+                onClick={() => setModalTab('DETAIL')}
                 className={`px-4 py-2 border-b-2 transition-all whitespace-nowrap ${
-                  modalTab === 'BRANCH'
+                  modalTab === 'DETAIL'
                     ? 'border-blue-500 text-blue-400 bg-blue-500/10 rounded-t-lg'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Thông tin liên hệ & Chi nhánh
+                3. CMND / CCCD & Nhân thân
               </button>
             </div>
 
             {/* Modal Body */}
             <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4 text-xs">
-              {/* TAB 1: THÔNG TIN CƠ BẢN */}
+              {/* TAB 1: THÔNG TIN CƠ BẢN & CHI NHÁNH */}
               {modalTab === 'BASIC' && (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                   {/* Left Column: Form Fields */}
@@ -725,34 +793,6 @@ export const UsersPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Row: Email */}
-                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
-                      <label className="sm:col-span-4 text-slate-300 font-semibold">Email</label>
-                      <div className="sm:col-span-8">
-                        <input
-                          type="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          placeholder="email@cuahang.vn"
-                          className="w-full px-3 py-2 rounded-xl glass-input text-xs"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Row: ĐT di động */}
-                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
-                      <label className="sm:col-span-4 text-slate-300 font-semibold">ĐT di động</label>
-                      <div className="sm:col-span-8">
-                        <input
-                          type="text"
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
-                          placeholder="0564313451"
-                          className="w-full px-3 py-2 rounded-xl glass-input text-xs font-mono"
-                        />
-                      </div>
-                    </div>
-
                     {/* Row: Tên nhân viên */}
                     <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
                       <label className="sm:col-span-4 text-slate-300 font-semibold">
@@ -766,6 +806,49 @@ export const UsersPage: React.FC = () => {
                           onChange={(e) => setFullName(e.target.value)}
                           placeholder="VD: Nguyễn Văn A"
                           className="w-full px-3 py-2 rounded-xl glass-input font-bold text-white text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Row: Chi nhánh làm việc (MỚI ĐƯA LÊN TAB 1) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                      <label className="sm:col-span-4 text-slate-300 font-semibold flex items-center gap-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-blue-400" />
+                        <span>Chi nhánh làm việc <span className="text-red-400">*</span></span>
+                      </label>
+                      <div className="sm:col-span-8">
+                        <select
+                          value={branchName}
+                          onChange={(e) => setBranchName(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-blue-500/40 text-blue-300 text-xs font-bold"
+                        >
+                          <option value="Chi nhánh Chợ Bến Thành (CN-01)">🏬 Chi nhánh Chợ Bến Thành (CN-01)</option>
+                          <option value="Chi nhánh Quận 7 (CN-02)">🏬 Chi nhánh Quận 7 (CN-02)</option>
+                          <option value="Kho Tổng Trung Tâm TP.HCM (KHO-01)">📦 Kho Tổng Trung Tâm TP.HCM (KHO-01)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Row: Email & SĐT */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-slate-300 font-semibold mb-1">Email</label>
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="email@cuahang.vn"
+                          className="w-full px-3 py-2 rounded-xl glass-input text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-300 font-semibold mb-1">Số ĐT di động</label>
+                        <input
+                          type="text"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          placeholder="0564313451"
+                          className="w-full px-3 py-2 rounded-xl glass-input text-xs font-mono"
                         />
                       </div>
                     </div>
@@ -858,105 +941,6 @@ export const UsersPage: React.FC = () => {
                         </div>
                       </div>
                     )}
-
-                    {/* CCCD / Nhân thân */}
-                    <div className="pt-2 border-t border-slate-800/80 space-y-3">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div>
-                          <label className="block text-slate-300 font-semibold mb-1">Số CMND / CCCD</label>
-                          <input
-                            type="text"
-                            value={idCardNumber}
-                            onChange={(e) => setIdCardNumber(e.target.value)}
-                            placeholder="07909..."
-                            className="w-full px-3 py-2 rounded-xl glass-input text-xs font-mono"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-slate-300 font-semibold mb-1">Ngày cấp</label>
-                          <input
-                            type="date"
-                            value={idCardIssueDate}
-                            onChange={(e) => setIdCardIssueDate(e.target.value)}
-                            className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-slate-300 font-semibold mb-1">Nơi cấp CMND</label>
-                          <input
-                            type="text"
-                            value={idCardIssuePlace}
-                            onChange={(e) => setIdCardIssuePlace(e.target.value)}
-                            placeholder="Cục CSQLHC về TTXH"
-                            className="w-full px-3 py-2 rounded-xl glass-input text-xs"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
-                        <div>
-                          <label className="block text-slate-300 font-semibold mb-1">Ngày sinh</label>
-                          <input
-                            type="date"
-                            value={birthday}
-                            onChange={(e) => setBirthday(e.target.value)}
-                            className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-slate-300 font-semibold mb-1">Tình trạng hôn nhân</label>
-                          <div className="flex items-center gap-4 pt-1">
-                            <label className="flex items-center gap-1.5 cursor-pointer">
-                              <input
-                                type="radio"
-                                name="marital"
-                                checked={maritalStatus === 'DOC_THAN'}
-                                onChange={() => setMaritalStatus('DOC_THAN')}
-                                className="text-blue-600 bg-slate-900 border-slate-700"
-                              />
-                              <span className="text-slate-300 text-xs">Độc thân</span>
-                            </label>
-                            <label className="flex items-center gap-1.5 cursor-pointer">
-                              <input
-                                type="radio"
-                                name="marital"
-                                checked={maritalStatus === 'DA_KET_HON'}
-                                onChange={() => setMaritalStatus('DA_KET_HON')}
-                                className="text-blue-600 bg-slate-900 border-slate-700"
-                              />
-                              <span className="text-slate-300 text-xs">Đã kết hôn</span>
-                            </label>
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-slate-300 font-semibold mb-1">Giới tính</label>
-                          <div className="flex items-center gap-4 pt-1">
-                            <label className="flex items-center gap-1.5 cursor-pointer">
-                              <input
-                                type="radio"
-                                name="gender"
-                                checked={gender === 'NAM'}
-                                onChange={() => setGender('NAM')}
-                                className="text-blue-600 bg-slate-900 border-slate-700"
-                              />
-                              <span className="text-slate-300 text-xs">Nam</span>
-                            </label>
-                            <label className="flex items-center gap-1.5 cursor-pointer">
-                              <input
-                                type="radio"
-                                name="gender"
-                                checked={gender === 'NU'}
-                                onChange={() => setGender('NU')}
-                                className="text-blue-600 bg-slate-900 border-slate-700"
-                              />
-                              <span className="text-slate-300 text-xs">Nữ</span>
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
                   </div>
 
                   {/* Right Column: Avatar Upload Box */}
@@ -1070,25 +1054,103 @@ export const UsersPage: React.FC = () => {
                 </div>
               )}
 
-              {/* TAB 3: CHI NHÁNH LÀM VIỆC */}
-              {modalTab === 'BRANCH' && (
+              {/* TAB 3: CMND / CCCD & NHÂN THÂN */}
+              {modalTab === 'DETAIL' && (
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Chi nhánh trực thuộc</label>
-                    <select
-                      value={branchName}
-                      onChange={(e) => setBranchName(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs font-semibold"
-                    >
-                      <option value="Chi nhánh Chợ Bến Thành (CN-01)">Chi nhánh Chợ Bến Thành (CN-01)</option>
-                      <option value="Chi nhánh Quận 7 (CN-02)">Chi nhánh Quận 7 (CN-02)</option>
-                      <option value="Kho Tổng Trung Tâm TP.HCM (KHO-01)">Kho Tổng Trung Tâm TP.HCM (KHO-01)</option>
-                    </select>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-slate-300 font-semibold mb-1">Số CMND / CCCD</label>
+                      <input
+                        type="text"
+                        value={idCardNumber}
+                        onChange={(e) => setIdCardNumber(e.target.value)}
+                        placeholder="07909..."
+                        className="w-full px-3 py-2 rounded-xl glass-input text-xs font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-300 font-semibold mb-1">Ngày cấp</label>
+                      <input
+                        type="date"
+                        value={idCardIssueDate}
+                        onChange={(e) => setIdCardIssueDate(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-300 font-semibold mb-1">Nơi cấp CMND</label>
+                      <input
+                        type="text"
+                        value={idCardIssuePlace}
+                        onChange={(e) => setIdCardIssuePlace(e.target.value)}
+                        placeholder="Cục CSQLHC về TTXH"
+                        className="w-full px-3 py-2 rounded-xl glass-input text-xs"
+                      />
+                    </div>
                   </div>
 
-                  <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-slate-400 text-xs space-y-1">
-                    <p className="font-bold text-white">Ghi chú quyền truy cập theo chi nhánh:</p>
-                    <p>Nhân viên chỉ có quyền thực hiện bán hàng và kiểm tra kho tại chi nhánh được phân công.</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
+                    <div>
+                      <label className="block text-slate-300 font-semibold mb-1">Ngày sinh</label>
+                      <input
+                        type="date"
+                        value={birthday}
+                        onChange={(e) => setBirthday(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 font-semibold mb-1">Tình trạng hôn nhân</label>
+                      <div className="flex items-center gap-4 pt-1">
+                        <label className="flex items-center gap-1.5 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="marital"
+                            checked={maritalStatus === 'DOC_THAN'}
+                            onChange={() => setMaritalStatus('DOC_THAN')}
+                            className="text-blue-600 bg-slate-900 border-slate-700"
+                          />
+                          <span className="text-slate-300 text-xs">Độc thân</span>
+                        </label>
+                        <label className="flex items-center gap-1.5 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="marital"
+                            checked={maritalStatus === 'DA_KET_HON'}
+                            onChange={() => setMaritalStatus('DA_KET_HON')}
+                            className="text-blue-600 bg-slate-900 border-slate-700"
+                          />
+                          <span className="text-slate-300 text-xs">Đã kết hôn</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 font-semibold mb-1">Giới tính</label>
+                      <div className="flex items-center gap-4 pt-1">
+                        <label className="flex items-center gap-1.5 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="gender"
+                            checked={gender === 'NAM'}
+                            onChange={() => setGender('NAM')}
+                            className="text-blue-600 bg-slate-900 border-slate-700"
+                          />
+                          <span className="text-slate-300 text-xs">Nam</span>
+                        </label>
+                        <label className="flex items-center gap-1.5 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="gender"
+                            checked={gender === 'NU'}
+                            onChange={() => setGender('NU')}
+                            className="text-blue-600 bg-slate-900 border-slate-700"
+                          />
+                          <span className="text-slate-300 text-xs">Nữ</span>
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1164,6 +1226,9 @@ export const UsersPage: React.FC = () => {
                   <div className="font-bold text-white text-sm">{resetTargetUser.fullName}</div>
                   <div className="text-slate-400 text-[11px] font-mono">
                     Mã NV: <span className="text-blue-400 font-bold">{resetTargetUser.employeeCode}</span> • Username: <span className="text-amber-400 font-bold">{resetTargetUser.username}</span>
+                  </div>
+                  <div className="text-emerald-400 text-[10px] mt-0.5">
+                    {resetTargetUser.branchName || 'Chi nhánh Chợ Bến Thành (CN-01)'}
                   </div>
                 </div>
               </div>
