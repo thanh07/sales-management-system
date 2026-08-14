@@ -179,12 +179,19 @@ export const ProductsPage: React.FC = () => {
           location: selectedLocation,
         },
       });
-      setProducts(res.data.products || []);
+      const fetchedProducts = res.data.products || [];
+      setProducts(fetchedProducts);
       setCategories(res.data.categories || []);
       setBrands(res.data.brands || []);
       setLocations(res.data.locations || []);
       const fetchedUnits = res.data.units || [];
       setUnits(fetchedUnits);
+
+      // Auto-expand all products that have variants so user sees all variants by default
+      const variantProductIds = fetchedProducts
+        .filter((p: any) => p.hasVariants && p.variants && p.variants.length > 0)
+        .map((p: any) => p.id);
+      setExpandedProductIds(variantProductIds);
 
       if (fetchedUnits.length > 0 && !unit) {
         setUnit(fetchedUnits[0]);
@@ -247,6 +254,18 @@ export const ProductsPage: React.FC = () => {
     setSelectedProductIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
+  };
+
+  const handleToggleExpandAll = () => {
+    const variantProductIds = products
+      .filter((p: any) => p.hasVariants && p.variants && p.variants.length > 0)
+      .map((p: any) => p.id);
+
+    if (expandedProductIds.length >= variantProductIds.length) {
+      setExpandedProductIds([]);
+    } else {
+      setExpandedProductIds(variantProductIds);
+    }
   };
 
   const handleDuplicateSelectedProduct = () => {
@@ -1425,6 +1444,19 @@ export const ProductsPage: React.FC = () => {
             <Scale className="w-3 h-3" />
             <span>ĐVT ({units.length})</span>
           </button>
+
+          <button
+            onClick={handleToggleExpandAll}
+            className={`px-2.5 py-1 rounded-lg border text-[11px] font-semibold flex items-center gap-1.5 transition-all ${
+              expandedProductIds.length > 0
+                ? 'bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border-blue-500/40'
+                : 'bg-slate-900 hover:bg-slate-800 text-slate-400 border-slate-800'
+            }`}
+            title="Mở rộng hoặc thu gọn tất cả danh sách biến thể"
+          >
+            <Layers className="w-3 h-3 text-blue-400" />
+            <span>{expandedProductIds.length > 0 ? 'Thu Gọn Biến Thể' : 'Mở Rộng Tất Cả Biến Thể'}</span>
+          </button>
         </div>
       </div>
 
@@ -1621,14 +1653,47 @@ export const ProductsPage: React.FC = () => {
 
                         <td className="p-3">
                           <div className="flex items-center gap-2.5">
-                            <img src={p.image} alt={p.name} className="w-8 h-8 rounded-lg object-cover bg-slate-950 shrink-0 border border-slate-800" />
+                            <div className="relative shrink-0">
+                              <img src={p.image} alt={p.name} className="w-8 h-8 rounded-lg object-cover bg-slate-950 border border-slate-800" />
+                              {hasChildren && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleExpandProduct(p.id);
+                                  }}
+                                  className={`absolute -bottom-1 -right-1 p-0.5 rounded-full border shadow text-[9px] transition-all ${
+                                    isExpanded
+                                      ? 'bg-blue-600 text-white border-blue-400'
+                                      : 'bg-slate-900 text-blue-400 border-slate-700 hover:bg-blue-600 hover:text-white'
+                                  }`}
+                                  title={isExpanded ? 'Thu gọn danh sách biến thể' : 'Bấm để mở danh sách biến thể'}
+                                >
+                                  {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                                </button>
+                              )}
+                            </div>
+
                             <div>
-                              <div className="font-bold text-white text-xs flex items-center gap-1.5 group-hover/row:text-blue-400 transition-colors">
+                              <div className="font-bold text-white text-xs flex flex-wrap items-center gap-1.5 group-hover/row:text-blue-400 transition-colors">
                                 <span>{p.name}</span>
                                 {hasChildren && (
-                                  <span className="px-2 py-0.2 rounded-full bg-blue-500/20 text-blue-300 font-bold text-[9px] border border-blue-500/30">
-                                    {p.variants.length} biến thể
-                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleExpandProduct(p.id);
+                                    }}
+                                    className={`px-2 py-0.5 rounded-full font-bold text-[10px] border flex items-center gap-1 transition-all ${
+                                      isExpanded
+                                        ? 'bg-blue-500/20 text-blue-300 border-blue-500/40 hover:bg-blue-500/30'
+                                        : 'bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25 animate-pulse'
+                                    }`}
+                                    title="Bấm để xem hoặc ẩn danh sách các biến thể của sản phẩm này"
+                                  >
+                                    {isExpanded ? <ChevronDown className="w-3 h-3 text-blue-400" /> : <ChevronRight className="w-3 h-3 text-amber-400" />}
+                                    <span>{p.variants.length} biến thể {isExpanded ? '(Đang mở)' : '(Bấm để xem)'}</span>
+                                  </button>
                                 )}
                               </div>
                               {p.brand && <span className="text-[10px] text-slate-500 font-mono">TH: {p.brand}</span>}
