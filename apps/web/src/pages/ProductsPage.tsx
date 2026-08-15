@@ -1394,7 +1394,17 @@ export const ProductsPage: React.FC = () => {
                       className="w-full px-3.5 py-2 text-left text-blue-400 hover:bg-slate-800 flex items-center gap-2 border-t border-slate-800"
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
-                      <span>Nạp lại 300 sản phẩm mẫu</span>
+                      <span>Khởi tạo lại 300 SP theo Chi nhánh</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsUtilityDropdownOpen(false);
+                        handleClearAllData();
+                      }}
+                      className="w-full px-3.5 py-2 text-left text-red-400 hover:bg-red-500/10 flex items-center gap-2 border-t border-slate-800"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Xóa sạch toàn bộ sản phẩm</span>
                     </button>
                   </div>
                 )}
