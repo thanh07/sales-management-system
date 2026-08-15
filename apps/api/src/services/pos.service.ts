@@ -35,6 +35,22 @@ export interface ReturnRecord {
   createdAt: string;
 }
 
+export interface DeliveryInfo {
+  isDelivery: boolean;
+  recipientName: string;
+  recipientPhone: string;
+  recipientAddress: string;
+  deliveryNotes?: string;
+  shippingFee: number;
+  codAmount: number;
+  depositAmount: number;
+  partnerType: 'INTERNAL_SHIPPER' | 'GHN' | 'GHTK' | 'VIETTEL_POST' | 'AHAMOVE' | 'GRAB';
+  partnerName?: string;
+  deliveryStatus: 'PENDING' | 'SHIPPING' | 'DELIVERED' | 'FAILED' | 'RETURNED';
+  codStatus: 'PENDING' | 'COLLECTED';
+  failureReason?: string;
+}
+
 export interface CheckoutInput {
   customerId?: string;
   customerName?: string;
@@ -49,6 +65,7 @@ export interface CheckoutInput {
   paidAmount: number;
   paymentMethod: 'CASH' | 'BANK_TRANSFER' | 'CREDIT_CARD' | 'E_WALLET' | 'SPLIT';
   notes?: string;
+  deliveryInfo?: DeliveryInfo;
 }
 
 export interface OrderRecord extends CheckoutInput {
@@ -175,8 +192,12 @@ export class PosService {
     return newOrder;
   }
 
-  static getOrders(filter?: { date?: string; query?: string; status?: string }) {
+  static getOrders(filter?: { date?: string; query?: string; status?: string; branchId?: string }) {
     let list = [...ORDERS_DB];
+
+    if (filter?.branchId) {
+      list = list.filter((o) => o.branchId === filter.branchId);
+    }
 
     if (filter?.date) {
       const targetDate = filter.date; // e.g. "2026-08-10"
@@ -313,6 +334,46 @@ export class PosService {
 
   static deleteParkedOrder(id: string) {
     PARKED_ORDERS = PARKED_ORDERS.filter((p) => p.id !== id);
+    return true;
+  }
+
+  static updateDeliveryStatus(orderId: string, status: 'PENDING' | 'SHIPPING' | 'DELIVERED' | 'FAILED' | 'RETURNED', failureReason?: string) {
+    const order = ORDERS_DB.find((o) => o.id === orderId || o.orderNumber === orderId);
+    if (!order) throw new Error('Không tìm thấy hóa đơn giao hàng');
+    if (!order.deliveryInfo) throw new Error('Đơn hàng này không có thông tin giao hàng');
+
+    order.deliveryInfo.deliveryStatus = status;
+    if (failureReason) {
+      order.deliveryInfo.failureReason = failureReason;
+    }
+
+    // If returned (chuyển hoàn kho), restock all items back to branch
+    if (status === 'RETURNED') {
+      const branchId = order.branchId || 'branch-01';
+      order.items.forEach((item) => {
+        const factor = item.conversionFactor || 1;
+        const totalSmallestUnitsRestocked = item.quantity * factor;
+        ProductService.updateStock(item.productId, totalSmallestUnitsRestocked, branchId);
+      });
+      order.status = 'CANCELLED';
+    }
+
+    return order;
+  }
+
+  static collectCod(orderId: string) {
+    const order = ORDERS_DB.find((o) => o.id === orderId || o.orderNumber === orderId);
+    if (!order) throw new Error('Không tìm thấy hóa đơn');
+    if (!order.deliveryInfo) throw new Error('Đơn hàng này không có thông tin giao hàng');
+
+    order.deliveryInfo.codStatus = 'COLLECTED';
+    return order;
+  }
+
+  static resetAllOrders() {
+    ORDERS_DB.length = 0;
+    PARKED_ORDERS.length = 0;
+    RETURNS_DB.length = 0;
     return true;
   }
 }

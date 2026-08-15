@@ -32,6 +32,17 @@ export class CustomerController {
     }
   }
 
+  static payDebt(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { amount } = req.body;
+      const updated = CustomerService.payDebt(id, Number(amount));
+      return sendSuccess(res, updated, 'Thu nợ khách hàng thành công');
+    } catch (error: any) {
+      return sendError(res, error.message || 'Lỗi khi thu nợ khách hàng', error, 400);
+    }
+  }
+
   static getAbcAnalysis(req: Request, res: Response) {
     try {
       const data = CustomerService.getAbcAnalysis();

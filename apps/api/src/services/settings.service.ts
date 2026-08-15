@@ -33,6 +33,15 @@ export interface StoreSettings {
   bankAccountNo: string;
   bankAccountName: string;
   enableVietQR: boolean;
+
+  // 5. Quy tắc bán hàng POS & Quản lý Thu ngân
+  allowNegativeStock: boolean;
+  allowCustomerDebt: boolean;
+  maxDebtLimitPerCustomer: number;
+  maxDiscountPercent: number;
+  allowCashierChangePrice: boolean;
+  autoPrintInvoice: boolean;
+  roundCashAmount: boolean;
 }
 
 let STORE_SETTINGS: StoreSettings = {
@@ -66,7 +75,18 @@ let STORE_SETTINGS: StoreSettings = {
   bankAccountNo: '999988886666',
   bankAccountName: 'NGUYEN VAN THANH',
   enableVietQR: true,
+
+  allowNegativeStock: false,
+  allowCustomerDebt: true,
+  maxDebtLimitPerCustomer: 5000000,
+  maxDiscountPercent: 10,
+  allowCashierChangePrice: false,
+  autoPrintInvoice: true,
+  roundCashAmount: true,
 };
+
+import { ProductService } from './product.service';
+import { PosService } from './pos.service';
 
 export class SettingsService {
   static getSettings(): StoreSettings {
@@ -79,5 +99,11 @@ export class SettingsService {
       ...data,
     };
     return { ...STORE_SETTINGS };
+  }
+
+  static resetAppAllData() {
+    ProductService.resetAllData();
+    PosService.resetAllOrders();
+    return { success: true, message: 'Đã xóa toàn bộ dữ liệu và tái nạp 100 sản phẩm đầy đủ cho tất cả chi nhánh' };
   }
 }

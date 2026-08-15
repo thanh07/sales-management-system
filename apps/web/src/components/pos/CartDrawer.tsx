@@ -1,6 +1,6 @@
 import React from 'react';
 import { usePosStore } from '../../store/posStore';
-import { Trash2, Plus, Minus, CreditCard, User, Layers, Tag, Printer, Scale, ChevronDown, Percent } from 'lucide-react';
+import { Trash2, Plus, Minus, CreditCard, User, Layers, Tag, Printer, Scale, ChevronDown, Percent, Truck } from 'lucide-react';
 
 export const CartDrawer: React.FC = () => {
   const {
@@ -18,6 +18,7 @@ export const CartDrawer: React.FC = () => {
     setParkedModalOpen,
     setPriceListModalOpen,
     setCheckoutModalOpen,
+    setDeliveryModalOpen,
     tabs,
     activeTabId,
     setDiscount,
@@ -25,6 +26,7 @@ export const CartDrawer: React.FC = () => {
 
   const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
   const currentCart = activeTab?.cart || [];
+  const deliveryInfo = activeTab?.deliveryInfo;
   const { subtotal, discount, total } = calculateTotal();
 
   const formatVND = (num: number) => {
@@ -62,15 +64,31 @@ export const CartDrawer: React.FC = () => {
             <span className="truncate max-w-[150px]">{customer ? (customer.fullName || customer.name) : 'Chọn Khách (F4)'}</span>
           </button>
 
-          {parkedOrders.length > 0 && (
-            <button
-              onClick={() => setParkedModalOpen(true)}
-              className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-400 font-bold text-[11px] border border-amber-500/30 hover:bg-amber-500/30 flex items-center gap-1"
-            >
-              <span>Tạm giữ ({parkedOrders.length})</span>
-            </button>
-          )}
+          <button
+            onClick={() => setDeliveryModalOpen(true)}
+            className={`px-3 py-1.5 rounded-xl font-bold text-xs border transition-all flex items-center gap-1.5 ${
+              deliveryInfo
+                ? 'bg-blue-600 text-white border-blue-500 shadow-md animate-pulse'
+                : 'bg-slate-800 hover:bg-slate-700 text-blue-400 border-slate-700'
+            }`}
+            title="Khai báo thông tin giao hàng (F10)"
+          >
+            <Truck className="w-4 h-4" />
+            <span>{deliveryInfo ? 'Đã Giao Hàng' : 'Giao Hàng (F10)'}</span>
+          </button>
         </div>
+
+        {/* Delivery Info Badge Banner */}
+        {deliveryInfo && (
+          <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/30 text-[11px] text-blue-300 flex items-center justify-between">
+            <div className="truncate">
+              <strong>Giao: {deliveryInfo.recipientName}</strong> ({deliveryInfo.recipientPhone}) - {deliveryInfo.partnerName}
+            </div>
+            <button onClick={() => setDeliveryModalOpen(true)} className="text-blue-400 font-bold hover:underline shrink-0">
+              Sửa
+            </button>
+          </div>
+        )}
 
         {/* Active Price List Selector Badge */}
         <button
@@ -181,6 +199,13 @@ export const CartDrawer: React.FC = () => {
             <span className="font-semibold text-slate-200">{formatVND(subtotal)}</span>
           </div>
 
+          {deliveryInfo && deliveryInfo.shippingFee > 0 && (
+            <div className="flex justify-between text-amber-400">
+              <span>Phí giao hàng:</span>
+              <span className="font-bold">+{formatVND(deliveryInfo.shippingFee)}</span>
+            </div>
+          )}
+
           <div className="flex justify-between items-center text-slate-400">
             <button
               onClick={handleOpenDiscountPrompt}
@@ -194,7 +219,7 @@ export const CartDrawer: React.FC = () => {
 
           <div className="flex justify-between text-white font-bold text-base pt-1 border-t border-slate-800">
             <span>TỔNG THÀNH TIỀN:</span>
-            <span className="text-emerald-400">{formatVND(total)}</span>
+            <span className="text-emerald-400">{formatVND(total + (deliveryInfo?.shippingFee || 0))}</span>
           </div>
         </div>
 
@@ -204,7 +229,7 @@ export const CartDrawer: React.FC = () => {
             disabled={cart.length === 0}
             className="py-2.5 bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold text-xs rounded-xl border border-slate-700 disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center justify-center gap-1"
           >
-            <span>Tạm Giữ Đơn (F8)</span>
+            <span>Tạm Giữ (F8)</span>
           </button>
           <button
             onClick={() => setCheckoutModalOpen(true)}

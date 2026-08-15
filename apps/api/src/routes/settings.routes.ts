@@ -11,5 +11,6 @@ router.get('/', SettingsController.getSettings);
 
 // Only ADMIN can update store settings
 router.put('/', requireRoles(['ADMIN']), SettingsController.updateSettings);
+router.post('/reset-data', requireRoles(['ADMIN']), SettingsController.resetData);
 
 export default router;

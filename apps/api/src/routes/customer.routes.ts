@@ -8,5 +8,6 @@ router.get('/', authenticateToken, CustomerController.getCustomers);
 router.get('/abc-analysis', authenticateToken, CustomerController.getAbcAnalysis);
 router.get('/:id', authenticateToken, CustomerController.getById);
 router.post('/', authenticateToken, CustomerController.createCustomer);
+router.post('/:id/pay-debt', authenticateToken, CustomerController.payDebt);
 
 export default router;

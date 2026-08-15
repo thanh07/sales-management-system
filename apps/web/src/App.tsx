@@ -25,7 +25,8 @@ import {
   Building2,
   ChevronDown,
   Check,
-  ExternalLink
+  ExternalLink,
+  Lock
 } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -39,13 +40,33 @@ export const App: React.FC = () => {
   const [isBranchDropdownOpen, setIsBranchDropdownOpen] = useState(false);
   const branchDropdownRef = useRef<HTMLDivElement>(null);
 
-  const isAdmin = user?.role === 'ADMIN';
+  const role = user?.role || 'SALE';
+  const isAdmin = role === 'ADMIN';
+  const isManager = role === 'MANAGER';
+  const isWarehouse = role === 'WAREHOUSE';
+  const isSale = role === 'SALE' || role === 'CASHIER';
+
+  const canAccessDashboard = isAdmin || isManager;
+  const canAccessBranches = isAdmin || isManager || isWarehouse;
+  const canAccessPricelists = isAdmin || isManager;
+  const canAccessCRM = isAdmin || isManager || isSale;
+  const canAccessUsers = isAdmin || isManager;
+  const canAccessReports = isAdmin || isManager || isWarehouse;
+  const canAccessSettings = isAdmin;
+
   const activeBranch = getSelectedBranch();
 
   useEffect(() => {
     initAuth();
     fetchBranches();
   }, [initAuth, fetchBranches]);
+
+  // Sync active working branch with assigned user.branchId for non-admin staff (e.g. Sale, Cashier, Warehouse, Manager)
+  useEffect(() => {
+    if (user && user.branchId && !isAdmin) {
+      setSelectedBranchId(user.branchId);
+    }
+  }, [user, isAdmin, setSelectedBranchId]);
 
   // Close branch dropdown on outside click
   useEffect(() => {
@@ -88,13 +109,21 @@ export const App: React.FC = () => {
               {/* Global Branch Switcher Dropdown */}
               <div className="relative mt-1" ref={branchDropdownRef}>
                 <button
-                  onClick={() => setIsBranchDropdownOpen(!isBranchDropdownOpen)}
-                  className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 text-xs font-semibold transition-all group"
-                  title="Bấm để đổi chi nhánh làm việc"
+                  onClick={isAdmin ? () => setIsBranchDropdownOpen(!isBranchDropdownOpen) : undefined}
+                  className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg border text-xs font-semibold transition-all group ${
+                    isAdmin
+                      ? 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border-blue-500/20 cursor-pointer'
+                      : 'bg-slate-800/80 text-slate-400 border-slate-700/60 cursor-not-allowed'
+                  }`}
+                  title={isAdmin ? 'Bấm để đổi chi nhánh làm việc' : 'Chi nhánh làm việc được khóa cố định theo tài khoản của bạn'}
                 >
                   <Building2 className="w-3.5 h-3.5 text-blue-400" />
                   <span className="max-w-[180px] sm:max-w-[240px] truncate">{activeBranch?.name || 'Chi nhánh mặc định'}</span>
-                  {isAdmin && <ChevronDown className="w-3.5 h-3.5 text-blue-400 group-hover:translate-y-0.5 transition-transform" />}
+                  {isAdmin ? (
+                    <ChevronDown className="w-3.5 h-3.5 text-blue-400 group-hover:translate-y-0.5 transition-transform" />
+                  ) : (
+                    <Lock className="w-3.5 h-3.5 text-slate-500 ml-0.5" />
+                  )}
                 </button>
 
                 {/* Dropdown Menu */}
@@ -201,20 +230,24 @@ export const App: React.FC = () => {
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              <ShoppingCart className="w-4 h-4" />
+              <ShoppingCart className="w-4 h-4 text-blue-400" />
               <span>Bán quầy (POS)</span>
             </button>
-            <button
-              onClick={() => setActiveTab('DASHBOARD')}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs transition-all ${
-                activeTab === 'DASHBOARD'
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-semibold'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              <span>Tổng quan</span>
-            </button>
+
+            {canAccessDashboard && (
+              <button
+                onClick={() => setActiveTab('DASHBOARD')}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs transition-all ${
+                  activeTab === 'DASHBOARD'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-semibold'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <LayoutDashboard className="w-4 h-4 text-indigo-400" />
+                <span>Tổng quan</span>
+              </button>
+            )}
+
             <button
               onClick={() => setActiveTab('PRODUCTS')}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs transition-all ${
@@ -223,79 +256,93 @@ export const App: React.FC = () => {
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              <Package className="w-4 h-4" />
+              <Package className="w-4 h-4 text-emerald-400" />
               <span>Sản phẩm & Kho</span>
             </button>
 
-            {/* Chi nhánh Tab */}
-            <button
-              onClick={() => setActiveTab('BRANCHES')}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs transition-all ${
-                activeTab === 'BRANCHES'
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-semibold'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              <Building2 className="w-4 h-4 text-cyan-400" />
-              <span>Chi nhánh ({branches.length})</span>
-            </button>
+            {canAccessBranches && (
+              <button
+                onClick={() => setActiveTab('BRANCHES')}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs transition-all ${
+                  activeTab === 'BRANCHES'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-semibold'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <Building2 className="w-4 h-4 text-cyan-400" />
+                <span>Chi nhánh ({branches.length})</span>
+              </button>
+            )}
 
-            <button
-              onClick={() => setActiveTab('PRICELISTS')}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs transition-all ${
-                activeTab === 'PRICELISTS'
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-semibold'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              <Tag className="w-4 h-4 text-emerald-400" />
-              <span>Thiết lập Bảng giá</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('CRM')}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs transition-all ${
-                activeTab === 'CRM'
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-semibold'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              <span>Khách hàng (CRM)</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('USERS')}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs transition-all ${
-                activeTab === 'USERS'
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-semibold'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              <ShieldCheck className="w-4 h-4 text-amber-400" />
-              <span>Quản lý Nhân viên</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('REPORTS')}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs transition-all ${
-                activeTab === 'REPORTS'
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-semibold'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              <BarChart3 className="w-4 h-4" />
-              <span>Báo cáo doanh thu</span>
-            </button>
+            {canAccessPricelists && (
+              <button
+                onClick={() => setActiveTab('PRICELISTS')}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs transition-all ${
+                  activeTab === 'PRICELISTS'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-semibold'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <Tag className="w-4 h-4 text-amber-400" />
+                <span>Thiết lập Bảng giá</span>
+              </button>
+            )}
 
-            <button
-              onClick={() => setActiveTab('SETTINGS')}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs transition-all ${
-                activeTab === 'SETTINGS'
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-semibold'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              <Settings className="w-4 h-4 text-purple-400" />
-              <span>Thiết lập chung</span>
-            </button>
+            {canAccessCRM && (
+              <button
+                onClick={() => setActiveTab('CRM')}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs transition-all ${
+                  activeTab === 'CRM'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-semibold'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <Users className="w-4 h-4 text-purple-400" />
+                <span>Khách hàng (CRM)</span>
+              </button>
+            )}
+
+            {canAccessUsers && (
+              <button
+                onClick={() => setActiveTab('USERS')}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs transition-all ${
+                  activeTab === 'USERS'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-semibold'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <ShieldCheck className="w-4 h-4 text-amber-400" />
+                <span>Quản lý Nhân viên</span>
+              </button>
+            )}
+
+            {canAccessReports && (
+              <button
+                onClick={() => setActiveTab('REPORTS')}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs transition-all ${
+                  activeTab === 'REPORTS'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-semibold'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <BarChart3 className="w-4 h-4 text-blue-400" />
+                <span>Báo cáo doanh thu</span>
+              </button>
+            )}
+
+            {canAccessSettings && (
+              <button
+                onClick={() => setActiveTab('SETTINGS')}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs transition-all ${
+                  activeTab === 'SETTINGS'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-semibold'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <Settings className="w-4 h-4 text-purple-400" />
+                <span>Thiết lập chung</span>
+              </button>
+            )}
           </aside>
 
           {/* Main View */}

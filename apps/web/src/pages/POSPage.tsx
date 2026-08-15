@@ -10,6 +10,9 @@ import { CheckoutModal } from '../components/pos/CheckoutModal';
 import { OrderHistoryModal } from '../components/pos/OrderHistoryModal';
 import { usePosStore } from '../store/posStore';
 
+import { DeliveryModal } from '../components/pos/DeliveryModal';
+import { DeliveryLogModal } from '../components/pos/DeliveryLogModal';
+
 interface POSPageProps {
   onOpenMobileMenu?: () => void;
 }
@@ -27,6 +30,8 @@ export const POSPage: React.FC<POSPageProps> = ({ onOpenMobileMenu }) => {
     setCheckoutModalOpen,
     isOrderHistoryModalOpen,
     setOrderHistoryModalOpen,
+    setDeliveryModalOpen,
+    setDeliveryLogModalOpen,
     addTab,
     closeTab,
     activeTabId,
@@ -53,7 +58,7 @@ export const POSPage: React.FC<POSPageProps> = ({ onOpenMobileMenu }) => {
         setCheckoutModalOpen(true);
       } else if (e.key === 'F10') {
         e.preventDefault();
-        clearCart();
+        setDeliveryModalOpen(true);
       } else if (e.key === 'F12') {
         e.preventDefault();
         setInvoiceModalOpen(true);
@@ -68,7 +73,7 @@ export const POSPage: React.FC<POSPageProps> = ({ onOpenMobileMenu }) => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [parkCurrentOrder, clearCart, setInvoiceModalOpen, setCustomerModalOpen, setPriceListModalOpen, setCheckoutModalOpen, setOrderHistoryModalOpen, addTab, closeTab, activeTabId, tabs]);
+  }, [parkCurrentOrder, clearCart, setInvoiceModalOpen, setCustomerModalOpen, setPriceListModalOpen, setCheckoutModalOpen, setOrderHistoryModalOpen, setDeliveryModalOpen, addTab, closeTab, activeTabId, tabs]);
 
   return (
     <div className="h-[calc(100vh-4rem)] flex overflow-hidden bg-slate-950 w-full relative">
@@ -90,6 +95,8 @@ export const POSPage: React.FC<POSPageProps> = ({ onOpenMobileMenu }) => {
       <PriceListSelectModal isOpen={isPriceListModalOpen} onClose={() => setPriceListModalOpen(false)} />
       <CheckoutModal isOpen={isCheckoutModalOpen} onClose={() => setCheckoutModalOpen(false)} />
       <OrderHistoryModal isOpen={isOrderHistoryModalOpen} onClose={() => setOrderHistoryModalOpen(false)} />
+      <DeliveryModal />
+      <DeliveryLogModal />
     </div>
   );
 };

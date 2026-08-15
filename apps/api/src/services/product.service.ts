@@ -237,7 +237,7 @@ function generate300GroceryProducts(): Product[] {
   const products: Product[] = [];
   let count = 1;
 
-  while (products.length < 300) {
+  while (products.length < 100) {
     const tpl = groceryTemplates[(count - 1) % groceryTemplates.length];
     const itemNum = count.toString().padStart(3, '0');
     const sku = `TAP-${tpl.brand.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4)}-${itemNum}`;
@@ -248,12 +248,16 @@ function generate300GroceryProducts(): Product[] {
     let attributes: ProductAttribute[] | undefined;
     let variants: ProductVariant[] | undefined;
 
+    // Solid stocks for each branch
+    const b1 = 35 + ((count * 7) % 80);
+    const b2 = 30 + ((count * 9) % 90);
+    const b3 = 120 + ((count * 15) % 400);
+
     if (tpl.attr && count % 3 === 0) {
       hasVariants = true;
       attributes = [{ name: tpl.attr.name, values: tpl.attr.values }];
       variants = tpl.attr.values.map((v, idx) => {
         const vSellPrice = tpl.sell + idx * 1500;
-        // Auto calculate variant conversion prices based on parent conversion factors
         const variantConversions: Record<string, number> = {};
         if (tpl.conversions) {
           tpl.conversions.forEach((c) => {
@@ -261,10 +265,10 @@ function generate300GroceryProducts(): Product[] {
           });
         }
 
-        const varTotalStock = (count * 7 + idx * 5) % 80 + 15;
-        const vb1 = Math.round(varTotalStock * 0.4);
-        const vb2 = Math.round(varTotalStock * 0.35);
-        const vb3 = Math.max(0, varTotalStock - vb1 - vb2);
+        const vb1 = 15 + ((count * 3 + idx * 4) % 30);
+        const vb2 = 12 + ((count * 4 + idx * 3) % 25);
+        const vb3 = 50 + ((count * 10 + idx * 10) % 150);
+        const varTotalStock = vb1 + vb2 + vb3;
 
         return {
           id: `var-${count}-${idx + 1}`,
@@ -288,11 +292,6 @@ function generate300GroceryProducts(): Product[] {
 
     const costPrice = tpl.cost + ((count * 500) % 5000);
     const sellingPrice = tpl.sell + ((count * 800) % 8000);
-    const rawStock = (count * 13) % 150 + 20;
-
-    const b1 = Math.round(rawStock * 0.4);
-    const b2 = Math.round(rawStock * 0.35);
-    const b3 = Math.max(0, rawStock - b1 - b2);
 
     const branchStocks: Record<string, number> = hasVariants
       ? {
@@ -345,6 +344,10 @@ function generate300GroceryProducts(): Product[] {
 let MOCK_PRODUCTS: Product[] = generate300GroceryProducts();
 
 export class ProductService {
+  static resetAllData() {
+    MOCK_PRODUCTS = generate300GroceryProducts();
+    return MOCK_PRODUCTS;
+  }
   static getAllProducts(query?: string, category?: string, brand?: string, location?: string) {
     let list = [...MOCK_PRODUCTS];
 

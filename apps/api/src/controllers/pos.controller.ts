@@ -23,8 +23,9 @@ export class PosController {
 
   static getOrders(req: AuthenticatedRequest, res: Response) {
     try {
-      const { date, query, status } = req.query as { date?: string; query?: string; status?: string };
-      const orders = PosService.getOrders({ date, query, status });
+      const { date, query, status, branchId } = req.query as { date?: string; query?: string; status?: string; branchId?: string };
+      const effectiveBranchId = branchId || (req.user?.role !== 'ADMIN' ? req.user?.branchId : undefined);
+      const orders = PosService.getOrders({ date, query, status, branchId: effectiveBranchId });
       return sendSuccess(res, orders, 'Lấy danh sách hóa đơn thành công');
     } catch (error: any) {
       return sendError(res, 'Lỗi lấy hóa đơn', error, 500);
@@ -81,6 +82,27 @@ export class PosController {
       return sendSuccess(res, null, 'Đã xóa đơn tạm giữ');
     } catch (error: any) {
       return sendError(res, 'Lỗi xóa đơn tạm giữ', error, 400);
+    }
+  }
+
+  static updateDeliveryStatus(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { id } = req.params;
+      const { status, failureReason } = req.body;
+      const updated = PosService.updateDeliveryStatus(id, status, failureReason);
+      return sendSuccess(res, updated, 'Cập nhật trạng thái đơn giao hàng thành công');
+    } catch (error: any) {
+      return sendError(res, error.message || 'Lỗi cập nhật trạng thái đơn giao hàng', error, 400);
+    }
+  }
+
+  static collectCod(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { id } = req.params;
+      const updated = PosService.collectCod(id);
+      return sendSuccess(res, updated, 'Xác nhận thu tiền COD thành công');
+    } catch (error: any) {
+      return sendError(res, error.message || 'Lỗi xác nhận thu tiền COD', error, 400);
     }
   }
 }

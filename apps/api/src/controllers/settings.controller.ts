@@ -20,4 +20,13 @@ export class SettingsController {
       return sendError(res, err.message, 400);
     }
   };
+
+  static resetData = async (req: Request, res: Response) => {
+    try {
+      const resData = SettingsService.resetAppAllData();
+      return sendSuccess(res, resData, 'Đã xóa toàn bộ dữ liệu ứng dụng và nạp lại 100 sản phẩm đầy đủ cho tất cả các chi nhánh!');
+    } catch (err: any) {
+      return sendError(res, err.message, 400);
+    }
+  };
 }

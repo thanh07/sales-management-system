@@ -13,4 +13,7 @@ router.post('/parked-orders', authenticateToken, PosController.parkOrder);
 router.get('/parked-orders', authenticateToken, PosController.getParkedOrders);
 router.delete('/parked-orders/:id', authenticateToken, PosController.deleteParkedOrder);
 
+router.put('/orders/:id/delivery-status', authenticateToken, PosController.updateDeliveryStatus);
+router.post('/orders/:id/collect-cod', authenticateToken, PosController.collectCod);
+
 export default router;

@@ -21,6 +21,7 @@ export interface OrderTab {
   discount: number;
   discountType: 'AMOUNT' | 'PERCENT';
   notes: string;
+  deliveryInfo?: any | null;
   createdAt: string;
 }
 
@@ -112,6 +113,9 @@ interface PosState {
   isPriceListModalOpen: boolean;
   isCheckoutModalOpen: boolean;
   isOrderHistoryModalOpen: boolean;
+  isDeliveryModalOpen: boolean;
+  isDeliveryLogModalOpen: boolean;
+  deliveryInfo: any | null;
   lastOrder: any | null;
 
   // Tab Actions
@@ -132,6 +136,9 @@ interface PosState {
   setPriceListModalOpen: (open: boolean) => void;
   setCheckoutModalOpen: (open: boolean) => void;
   setOrderHistoryModalOpen: (open: boolean) => void;
+  setDeliveryModalOpen: (open: boolean) => void;
+  setDeliveryLogModalOpen: (open: boolean) => void;
+  setDeliveryInfo: (info: any | null) => void;
   setLastOrder: (order: any | null) => void;
 
   addToCart: (product: any, unitName?: string) => void;
@@ -178,7 +185,18 @@ export const usePosStore = create<PosState>((set, get) => ({
   isPriceListModalOpen: false,
   isCheckoutModalOpen: false,
   isOrderHistoryModalOpen: false,
+  isDeliveryModalOpen: false,
+  isDeliveryLogModalOpen: false,
+  deliveryInfo: null,
   lastOrder: null,
+
+  setDeliveryModalOpen: (open: boolean) => set({ isDeliveryModalOpen: open }),
+  setDeliveryLogModalOpen: (open: boolean) => set({ isDeliveryLogModalOpen: open }),
+  setDeliveryInfo: (info: any | null) => {
+    const { tabs, activeTabId } = get();
+    const updatedTabs = tabs.map((t) => (t.id === activeTabId ? { ...t, deliveryInfo: info } : t));
+    set({ deliveryInfo: info, tabs: updatedTabs });
+  },
 
   // Tab Management
   addTab: () => {

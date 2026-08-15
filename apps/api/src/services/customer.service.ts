@@ -108,6 +108,15 @@ export class CustomerService {
     return newCust;
   }
 
+  static payDebt(id: string, amount: number) {
+    const cust = MOCK_CUSTOMERS.find((c) => c.id === id);
+    if (!cust) throw new Error('Không tìm thấy khách hàng');
+    if (amount <= 0) throw new Error('Số tiền thu nợ phải lớn hơn 0');
+
+    cust.debtAmount = Math.max(0, cust.debtAmount - amount);
+    return cust;
+  }
+
   // Pareto ABC Analysis (Top 20% spenders = Category A)
   static getAbcAnalysis() {
     const sorted = [...MOCK_CUSTOMERS].sort((a, b) => b.totalSpent - a.totalSpent);

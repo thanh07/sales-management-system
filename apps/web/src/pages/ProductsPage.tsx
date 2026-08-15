@@ -61,7 +61,7 @@ const PRESET_IMAGES = [
 export const ProductsPage: React.FC = () => {
   const { user } = useAuthStore();
   const { branches, selectedBranchId } = useBranchStore();
-  const isCashier = user?.role === 'CASHIER';
+  const isCashier = user?.role === 'CASHIER' || user?.role === 'SALE';
 
   const [products, setProducts] = useState<any[]>([]);
   const [branchStocksForm, setBranchStocksForm] = useState<Record<string, number>>({
@@ -1512,7 +1512,7 @@ export const ProductsPage: React.FC = () => {
                 </th>
                 <th className="p-3 font-bold text-center">Hiển thị POS</th>
                 <th className="p-3 font-bold text-center">Trạng thái</th>
-                <th className="p-3 text-right">{isCashier ? 'Chi Tiết' : 'Thao Tác'}</th>
+                {!isCashier && <th className="p-3 text-right">Thao Tác</th>}
               </tr>
 
               {/* Row 2: MISA Inline Filters */}
@@ -1616,17 +1616,19 @@ export const ProductsPage: React.FC = () => {
                 </th>
 
                 {/* Reset inline filter */}
-                <th className="p-1.5 text-right">
-                  {(filterSku || filterName || filterCategory || filterUnit || filterPriceMax || filterPosDisplay !== 'ALL' || filterStatus !== 'ALL') && (
-                    <button
-                      onClick={handleClearInlineFilters}
-                      className="text-[10px] text-blue-400 hover:text-white px-2 py-1 rounded bg-blue-600/20 hover:bg-blue-600 border border-blue-500/30"
-                      title="Xóa bộ lọc cột"
-                    >
-                      Xóa lọc
-                    </button>
-                  )}
-                </th>
+                {!isCashier && (
+                  <th className="p-1.5 text-right">
+                    {(filterSku || filterName || filterCategory || filterUnit || filterPriceMax || filterPosDisplay !== 'ALL' || filterStatus !== 'ALL') && (
+                      <button
+                        onClick={handleClearInlineFilters}
+                        className="text-[10px] text-blue-400 hover:text-white px-2 py-1 rounded bg-blue-600/20 hover:bg-blue-600 border border-blue-500/30"
+                        title="Xóa bộ lọc cột"
+                      >
+                        Xóa lọc
+                      </button>
+                    )}
+                  </th>
+                )}
               </tr>
             </thead>
 
@@ -1784,8 +1786,8 @@ export const ProductsPage: React.FC = () => {
                           )}
                         </td>
 
-                        <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
-                          {!isCashier ? (
+                        {!isCashier && (
+                          <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-end gap-1.5">
                               <button
                                 onClick={() => handleDuplicateSelectedProduct(p)}
@@ -1809,10 +1811,8 @@ export const ProductsPage: React.FC = () => {
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
-                          ) : (
-                            <span className="text-slate-500 text-[11px] italic">Chỉ xem</span>
-                          )}
-                        </td>
+                          </td>
+                        )}
                       </tr>
 
                       {/* Variant Sub-rows */}
@@ -1918,39 +1918,41 @@ export const ProductsPage: React.FC = () => {
                               </td>
 
                               {/* Action Edit Variant */}
-                              <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
-                                {isInlineEditing ? (
-                                  <div className="flex items-center justify-end gap-1">
+                              {!isCashier && (
+                                <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
+                                  {isInlineEditing ? (
+                                    <div className="flex items-center justify-end gap-1">
+                                      <button
+                                        onClick={() => handleSaveInlineVariant(p, variant.id)}
+                                        className="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded font-bold text-[10px] flex items-center gap-1 shadow"
+                                      >
+                                        <Check className="w-3 h-3" />
+                                        <span>Lưu</span>
+                                      </button>
+                                      <button
+                                        onClick={() => setInlineEditingVariantId(null)}
+                                        className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-semibold text-[10px]"
+                                      >
+                                        Hủy
+                                      </button>
+                                    </div>
+                                  ) : (
                                     <button
-                                      onClick={() => handleSaveInlineVariant(p, variant.id)}
-                                      className="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded font-bold text-[10px] flex items-center gap-1 shadow"
+                                      onClick={() => {
+                                        setInlineEditingVariantId(variant.id);
+                                        setInlineVariantPrice(variant.sellingPrice);
+                                        setInlineVariantStock(variant.stockQuantity);
+                                        setInlineVariantConversions(variant.variantConversions || {});
+                                      }}
+                                      className="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 text-blue-400 border border-slate-700/80 text-[10px] font-bold flex items-center gap-1 ml-auto"
+                                      title="Chỉnh sửa giá lẻ & giá quy đổi riêng cho biến thể này"
                                     >
-                                      <Check className="w-3 h-3" />
-                                      <span>Lưu</span>
+                                      <Edit3 className="w-3 h-3" />
+                                      <span>Sửa Giá</span>
                                     </button>
-                                    <button
-                                      onClick={() => setInlineEditingVariantId(null)}
-                                      className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-semibold text-[10px]"
-                                    >
-                                      Hủy
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <button
-                                    onClick={() => {
-                                      setInlineEditingVariantId(variant.id);
-                                      setInlineVariantPrice(variant.sellingPrice);
-                                      setInlineVariantStock(variant.stockQuantity);
-                                      setInlineVariantConversions(variant.variantConversions || {});
-                                    }}
-                                    className="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 text-blue-400 border border-slate-700/80 text-[10px] font-bold flex items-center gap-1 ml-auto"
-                                    title="Chỉnh sửa giá lẻ & giá quy đổi riêng cho biến thể này"
-                                  >
-                                    <Edit3 className="w-3 h-3" />
-                                    <span>Sửa Giá</span>
-                                  </button>
-                                )}
-                              </td>
+                                  )}
+                                </td>
+                              )}
                             </tr>
                           );
                         })
@@ -2255,9 +2257,14 @@ export const ProductsPage: React.FC = () => {
                               onChange={(e) => handleUpdateConversionRow(conv.id, 'unitName', e.target.value)}
                               className="w-full px-2.5 py-1.5 rounded-lg glass-input bg-slate-950 font-bold text-purple-300 text-xs"
                             >
-                              {units.filter((u) => u !== unit).map((u) => (
-                                <option key={u} value={u}>{u}</option>
-                              ))}
+                              {units.filter((u) => getItemName(u) !== unit).map((u) => {
+                                const uName = getItemName(u);
+                                return (
+                                  <option key={uName} value={uName}>
+                                    {uName}
+                                  </option>
+                                );
+                              })}
                             </select>
                           </div>
 
