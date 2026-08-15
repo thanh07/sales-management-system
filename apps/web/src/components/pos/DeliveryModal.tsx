@@ -15,10 +15,14 @@ export const DeliveryModal: React.FC = () => {
   const {
     isDeliveryModalOpen,
     setDeliveryModalOpen,
+    setDeliveryLogModalOpen,
+    setInvoiceModalOpen,
     deliveryInfo,
     setDeliveryInfo,
     customer,
-    calculateTotal
+    cart,
+    calculateTotal,
+    checkout,
   } = usePosStore();
 
   const totals = calculateTotal();
@@ -34,6 +38,12 @@ export const DeliveryModal: React.FC = () => {
   const [depositAmount, setDepositAmount] = useState<number>(0);
 
   useEffect(() => {
+    if (isDeliveryModalOpen && cart.length === 0) {
+      alert('Vui lòng chọn sản phẩm vào giỏ hàng trước khi khai báo giao hàng!');
+      setDeliveryModalOpen(false);
+      return;
+    }
+
     if (deliveryInfo) {
       setRecipientName(deliveryInfo.recipientName || '');
       setRecipientPhone(deliveryInfo.recipientPhone || '');
@@ -52,7 +62,7 @@ export const DeliveryModal: React.FC = () => {
     } else {
       setCodAmount(totals.total);
     }
-  }, [deliveryInfo, customer, totals.total, isDeliveryModalOpen]);
+  }, [deliveryInfo, customer, totals.total, isDeliveryModalOpen, cart.length]);
 
   if (!isDeliveryModalOpen) return null;
 
@@ -66,7 +76,7 @@ export const DeliveryModal: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!recipientPhone.trim()) {
       alert('Vui lòng nhập số điện thoại người nhận');
@@ -95,7 +105,21 @@ export const DeliveryModal: React.FC = () => {
     };
 
     setDeliveryInfo(info);
-    setDeliveryModalOpen(false);
+
+    try {
+      // Execute Checkout & Save Delivery Order into Database / Sổ Giao Hàng!
+      await checkout({
+        method: 'CASH',
+        paidAmount: isCod ? Number(depositAmount || 0) : totals.total,
+        notes: deliveryNotes.trim() ? `[GIAO HÀNG COD - ${partnerObj?.name}] ${deliveryNotes.trim()}` : `[GIAO HÀNG COD - ${partnerObj?.name}]`,
+      });
+
+      setDeliveryModalOpen(false);
+      setInvoiceModalOpen(false); // Close POS invoice modal, open Sổ Giao Hàng directly
+      setDeliveryLogModalOpen(true); // Open Sổ Giao Hàng immediately so cashier sees order in list
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi lưu đơn giao hàng');
+    }
   };
 
   const handleClearDelivery = () => {

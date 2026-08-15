@@ -122,6 +122,29 @@ export const ThermalInvoiceModal: React.FC<ThermalInvoiceModalProps> = ({
             </div>
           </div>
 
+          {/* Dedicated Delivery Voucher / Shipping Label Block */}
+          {currentOrder.deliveryInfo && (
+            <div className="border-t-2 border-dashed border-slate-400 pt-3 mt-3 text-xs space-y-1 bg-blue-50 p-2.5 rounded-lg text-slate-900 font-mono">
+              <div className="text-center font-bold text-sm uppercase text-blue-900 border-b border-blue-200 pb-1 mb-1.5">
+                🚚 PHIẾU GIAO HÀNG (VẬN ĐƠN)
+              </div>
+              <div className="flex justify-between font-bold">
+                <span>Đơn vị giao:</span>
+                <span className="text-blue-700">{currentOrder.deliveryInfo.partnerName}</span>
+              </div>
+              <div>Người nhận: <strong className="font-bold text-slate-900">{currentOrder.deliveryInfo.recipientName}</strong></div>
+              <div>Số điện thoại: <strong className="font-bold text-blue-800">{currentOrder.deliveryInfo.recipientPhone}</strong></div>
+              <div className="leading-tight">Địa chỉ: <strong>{currentOrder.deliveryInfo.recipientAddress}</strong></div>
+              {currentOrder.deliveryInfo.deliveryNotes && (
+                <div className="italic text-[11px] text-slate-600">Ghi chú: {currentOrder.deliveryInfo.deliveryNotes}</div>
+              )}
+              <div className="border-t border-blue-200 pt-1 mt-1 flex justify-between font-extrabold text-sm">
+                <span>TIỀN THU HỘ (COD):</span>
+                <span className="text-emerald-700">{formatVND(currentOrder.deliveryInfo.codAmount || 0)}</span>
+              </div>
+            </div>
+          )}
+
           <div className="text-center text-[11px] text-slate-500 border-t border-dashed border-slate-300 pt-3">
             <p className="font-semibold">{receiptFooter}</p>
             <p className="text-[9px] mt-0.5">Hệ thống quản trị bán lẻ Sales Manager Pro</p>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { usePosStore } from '../../store/posStore';
-import { X, CheckCircle2, DollarSign, QrCode, CreditCard, Layers, Copy, Check, Printer, AlertCircle } from 'lucide-react';
+import { X, CheckCircle2, DollarSign, QrCode, CreditCard, Layers, Copy, Check, Printer, AlertCircle, Truck, MapPin } from 'lucide-react';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -10,8 +10,9 @@ interface CheckoutModalProps {
 export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   const { cart, customer, calculateTotal, checkout, tabs, activeTabId, setDiscount } = usePosStore();
   const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
+  const deliveryInfo = activeTab?.cart?.length > 0 ? activeTab.deliveryInfo : null;
 
-  const { subtotal, discount, total } = calculateTotal();
+  const { subtotal, discount, shippingFee, total } = calculateTotal();
 
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK_TRANSFER' | 'CREDIT_CARD' | 'SPLIT'>('CASH');
   const [receivedAmount, setReceivedAmount] = useState<number>(total);
@@ -104,13 +105,40 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
               <span className="text-xs font-semibold text-blue-300 uppercase tracking-wider">Khách cần thanh toán</span>
               <div className="text-2xl font-black text-emerald-400 mt-0.5 tracking-tight">{formatVND(total)}</div>
             </div>
-            {discount > 0 && (
-              <div className="text-right text-xs">
-                <span className="text-slate-400">Tạm tính: {formatVND(subtotal)}</span>
-                <div className="text-amber-400 font-bold">Giảm giá: -{formatVND(discount)}</div>
-              </div>
-            )}
+            <div className="text-right text-xs space-y-0.5">
+              <span className="text-slate-400">Tạm tính: {formatVND(subtotal)}</span>
+              {shippingFee > 0 && <div className="text-amber-400 font-bold">Phí ship: +{formatVND(shippingFee)}</div>}
+              {discount > 0 && <div className="text-amber-400 font-bold">Giảm giá: -{formatVND(discount)}</div>}
+            </div>
           </div>
+
+          {/* Delivery Summary Banner */}
+          {deliveryInfo && (
+            <div className="bg-blue-500/10 border border-blue-500/30 p-3.5 rounded-2xl space-y-1 text-xs text-blue-200">
+              <div className="flex items-center justify-between font-bold text-blue-300">
+                <div className="flex items-center gap-1.5">
+                  <Truck className="w-4 h-4 text-blue-400" />
+                  <span>ĐƠN GIAO HÀNG ({deliveryInfo.partnerName})</span>
+                </div>
+                {deliveryInfo.codAmount > 0 ? (
+                  <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono text-[11px]">
+                    GIAO THU COD: {formatVND(deliveryInfo.codAmount)}
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 font-mono text-[11px]">
+                    KHÁCH ĐÃ TRẢ ĐỦ 100%
+                  </span>
+                )}
+              </div>
+              <div className="text-[11px] text-slate-300">
+                Người nhận: <strong>{deliveryInfo.recipientName}</strong> ({deliveryInfo.recipientPhone})
+              </div>
+              <div className="text-[11px] text-slate-400 flex items-center gap-1">
+                <MapPin className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                <span className="truncate">{deliveryInfo.recipientAddress}</span>
+              </div>
+            </div>
+          )}
 
           {/* Payment Method Selector Tabs */}
           <div className="grid grid-cols-4 gap-2">

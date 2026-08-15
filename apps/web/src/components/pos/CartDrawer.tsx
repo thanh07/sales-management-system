@@ -1,6 +1,6 @@
 import React from 'react';
 import { usePosStore } from '../../store/posStore';
-import { Trash2, Plus, Minus, CreditCard, User, Layers, Tag, Printer, Scale, ChevronDown, Percent, Truck } from 'lucide-react';
+import { Trash2, Plus, Minus, CreditCard, User, Layers, Tag, Printer, Scale, ChevronDown, Percent, Truck, X } from 'lucide-react';
 
 export const CartDrawer: React.FC = () => {
   const {
@@ -19,6 +19,7 @@ export const CartDrawer: React.FC = () => {
     setPriceListModalOpen,
     setCheckoutModalOpen,
     setDeliveryModalOpen,
+    setDeliveryInfo,
     tabs,
     activeTabId,
     setDiscount,
@@ -79,14 +80,23 @@ export const CartDrawer: React.FC = () => {
         </div>
 
         {/* Delivery Info Badge Banner */}
-        {deliveryInfo && (
-          <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/30 text-[11px] text-blue-300 flex items-center justify-between">
+        {deliveryInfo && currentCart.length > 0 && (
+          <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/30 text-[11px] text-blue-300 flex items-center justify-between gap-2">
             <div className="truncate">
               <strong>Giao: {deliveryInfo.recipientName}</strong> ({deliveryInfo.recipientPhone}) - {deliveryInfo.partnerName}
             </div>
-            <button onClick={() => setDeliveryModalOpen(true)} className="text-blue-400 font-bold hover:underline shrink-0">
-              Sửa
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button onClick={() => setDeliveryModalOpen(true)} className="text-blue-400 font-bold hover:underline">
+                Sửa
+              </button>
+              <button
+                onClick={() => setDeliveryInfo(null)}
+                className="text-red-400 hover:text-white p-0.5 rounded hover:bg-red-500/20"
+                title="Hủy thông tin giao hàng"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         )}
 

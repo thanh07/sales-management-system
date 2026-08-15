@@ -161,6 +161,7 @@ interface PosState {
   calculateTotal: () => {
     subtotal: number;
     discount: number;
+    shippingFee: number;
     total: number;
   };
 }
@@ -252,6 +253,7 @@ export const usePosStore = create<PosState>((set, get) => ({
       customer: activeTab ? activeTab.customer : null,
       selectedCustomer: activeTab ? activeTab.customer : null,
       activePriceList: activeTab ? activeTab.activePriceList : null,
+      deliveryInfo: activeTab ? (activeTab.cart.length > 0 ? activeTab.deliveryInfo : null) : null,
     });
   },
 
@@ -346,10 +348,12 @@ export const usePosStore = create<PosState>((set, get) => ({
     const { tabs, activeTabId } = get();
     const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
     const updatedCart = activeTab.cart.filter((item) => item.product.id !== productId);
-    const newTabs = tabs.map((t) => (t.id === activeTabId ? { ...t, cart: updatedCart } : t));
+    const updatedDeliveryInfo = updatedCart.length > 0 ? activeTab.deliveryInfo : null;
+    const newTabs = tabs.map((t) => (t.id === activeTabId ? { ...t, cart: updatedCart, deliveryInfo: updatedDeliveryInfo } : t));
     set({
       tabs: newTabs,
       cart: updatedCart,
+      deliveryInfo: updatedDeliveryInfo,
     });
   },
 
@@ -393,12 +397,13 @@ export const usePosStore = create<PosState>((set, get) => ({
 
   clearCart: () => {
     const { tabs, activeTabId } = get();
-    const newTabs = tabs.map((t) => (t.id === activeTabId ? { ...t, cart: [], customer: null, discount: 0 } : t));
+    const newTabs = tabs.map((t) => (t.id === activeTabId ? { ...t, cart: [], customer: null, discount: 0, deliveryInfo: null } : t));
     set({
       tabs: newTabs,
       cart: [],
       customer: null,
       selectedCustomer: null,
+      deliveryInfo: null,
     });
   },
 
@@ -480,6 +485,7 @@ export const usePosStore = create<PosState>((set, get) => ({
       paidAmount,
       paymentMethod: method,
       notes: paymentData?.notes || activeTab.notes,
+      deliveryInfo: activeTab.cart.length > 0 ? activeTab.deliveryInfo : null,
     };
 
     let serverOrder: any = null;
@@ -519,7 +525,8 @@ export const usePosStore = create<PosState>((set, get) => ({
   calculateTotal: () => {
     const { tabs, activeTabId } = get();
     const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
-    const subtotal = (activeTab?.cart || []).reduce((sum, item) => sum + item.selectedPrice * item.quantity, 0);
+    const cartItems = activeTab?.cart || [];
+    const subtotal = cartItems.reduce((sum, item) => sum + item.selectedPrice * item.quantity, 0);
 
     let discount = 0;
     if (activeTab?.discount > 0) {
@@ -530,10 +537,13 @@ export const usePosStore = create<PosState>((set, get) => ({
       }
     }
 
-    const total = Math.max(0, subtotal - discount);
+    const shippingFee = (cartItems.length > 0 && activeTab?.deliveryInfo?.isDelivery) ? (activeTab.deliveryInfo.shippingFee || 0) : 0;
+    const total = Math.max(0, subtotal - discount) + shippingFee;
+
     return {
       subtotal,
       discount,
+      shippingFee,
       total,
     };
   },
