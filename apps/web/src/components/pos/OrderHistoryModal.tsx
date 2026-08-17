@@ -180,7 +180,16 @@ export const OrderHistoryModal: React.FC<OrderHistoryModalProps> = ({ isOpen, on
   };
 
   // Summary stats
-  const totalRevenue = orders.reduce((sum, o) => sum + (o.status === 'COMPLETED' ? o.totalAmount : o.status === 'PARTIALLY_RETURNED' ? Math.max(0, o.totalAmount - (o.refundAmount || 0)) : 0), 0);
+  const totalRevenue = orders.reduce(
+    (sum, o) =>
+      sum +
+      (o.status === 'COMPLETED'
+        ? o.totalAmount
+        : o.status === 'PARTIALLY_RETURNED'
+        ? Math.max(0, o.totalAmount - (o.refundAmount || 0))
+        : (o.paidAmount || 0)),
+    0
+  );
   const totalRefunded = orders.reduce((sum, o) => sum + (o.refundAmount || 0), 0);
 
   return (
@@ -296,8 +305,10 @@ export const OrderHistoryModal: React.FC<OrderHistoryModalProps> = ({ isOpen, on
                 >
                   <option value="ALL">Tất cả trạng thái</option>
                   <option value="COMPLETED">✅ Hoàn thành</option>
+                  <option value="DELIVERING">🚚 Đang Giao Hàng (Chờ COD)</option>
                   <option value="PARTIALLY_RETURNED">⚠️ Trả 1 phần</option>
                   <option value="RETURNED">❌ Đã trả toàn bộ</option>
+                  <option value="CANCELLED">🔴 Đã hủy / Hoàn kho</option>
                 </select>
               </div>
             </div>
@@ -314,8 +325,10 @@ export const OrderHistoryModal: React.FC<OrderHistoryModalProps> = ({ isOpen, on
               ) : (
                 orders.map((order) => {
                   const isCompleted = order.status === 'COMPLETED';
+                  const isDelivering = order.status === 'DELIVERING';
                   const isPartiallyReturned = order.status === 'PARTIALLY_RETURNED';
                   const isReturned = order.status === 'RETURNED';
+                  const isCancelled = order.status === 'CANCELLED';
 
                   const timeString = new Date(order.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
                   const dateString = new Date(order.createdAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -344,6 +357,11 @@ export const OrderHistoryModal: React.FC<OrderHistoryModalProps> = ({ isOpen, on
                               ✅ Hoàn thành
                             </span>
                           )}
+                          {isDelivering && (
+                            <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 font-bold text-[10px] border border-amber-500/20 animate-pulse">
+                              🚚 Đang Giao Hàng (Chờ COD: {formatVND((order.totalAmount || 0) - (order.paidAmount || 0))})
+                            </span>
+                          )}
                           {isPartiallyReturned && (
                             <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 font-bold text-[10px] border border-amber-500/20">
                               ⚠️ Trả 1 phần (-{formatVND(order.refundAmount || 0)})
@@ -352,6 +370,11 @@ export const OrderHistoryModal: React.FC<OrderHistoryModalProps> = ({ isOpen, on
                           {isReturned && (
                             <span className="px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 font-bold text-[10px] border border-red-500/20">
                               ❌ Đã trả toàn bộ
+                            </span>
+                          )}
+                          {isCancelled && (
+                            <span className="px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 font-bold text-[10px] border border-red-500/20">
+                              🔴 Chuyển Hoàn / Đã Hủy
                             </span>
                           )}
                         </div>

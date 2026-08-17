@@ -85,6 +85,7 @@ export const ProductsPage: React.FC = () => {
   const [isAddDropdownOpen, setIsAddDropdownOpen] = useState(false);
   const [isUtilityDropdownOpen, setIsUtilityDropdownOpen] = useState(false);
   const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
+  const [barcodeTargetProducts, setBarcodeTargetProducts] = useState<any[] | null>(null);
   const [isCloneModalOpen, setIsCloneModalOpen] = useState(false);
   const [cloningSourceProduct, setCloningSourceProduct] = useState<any | null>(null);
 
@@ -288,6 +289,31 @@ export const ProductsPage: React.FC = () => {
     if (newProduct?.id) {
       setSelectedProductIds([newProduct.id]);
     }
+  };
+
+  const handleOpenBarcodeModal = () => {
+    if (selectedProductIds.length > 0) {
+      const selected = products.filter((p) => selectedProductIds.includes(p.id));
+      setBarcodeTargetProducts(selected);
+    } else {
+      setBarcodeTargetProducts(null);
+    }
+    setIsBarcodeModalOpen(true);
+  };
+
+  const handleOpenBarcodeModalForProduct = (product: any, variant?: any) => {
+    if (variant) {
+      setBarcodeTargetProducts([
+        {
+          ...product,
+          hasVariants: true,
+          variants: [variant],
+        },
+      ]);
+    } else {
+      setBarcodeTargetProducts([product]);
+    }
+    setIsBarcodeModalOpen(true);
   };
 
   const handleOpenFullAddModalFromDraft = (draft: any) => {
@@ -1344,12 +1370,12 @@ export const ProductsPage: React.FC = () => {
 
             {/* In tem mã */}
             <button
-              onClick={() => setIsBarcodeModalOpen(true)}
+              onClick={handleOpenBarcodeModal}
               className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-semibold flex items-center gap-1.5 transition-all shadow-sm shrink-0"
               title="In tem mã vạch sản phẩm"
             >
               <Barcode className="w-3.5 h-3.5 text-amber-400" />
-              <span>In tem mã</span>
+              <span>In tem mã {selectedProductIds.length > 0 ? `(${selectedProductIds.length})` : ''}</span>
             </button>
 
             {/* Tiện ích */}
@@ -1790,6 +1816,13 @@ export const ProductsPage: React.FC = () => {
                           <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-end gap-1.5">
                               <button
+                                onClick={() => handleOpenBarcodeModalForProduct(p)}
+                                className="p-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500 text-amber-400 hover:text-white border border-amber-500/40 text-[11px] transition-all"
+                                title="In tem mã vạch cho sản phẩm này"
+                              >
+                                <Barcode className="w-3.5 h-3.5" />
+                              </button>
+                              <button
                                 onClick={() => handleDuplicateSelectedProduct(p)}
                                 className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-blue-400 border border-slate-700/80 text-[11px] transition-all"
                                 title="Nhân bản sản phẩm này"
@@ -1937,19 +1970,29 @@ export const ProductsPage: React.FC = () => {
                                       </button>
                                     </div>
                                   ) : (
-                                    <button
-                                      onClick={() => {
-                                        setInlineEditingVariantId(variant.id);
-                                        setInlineVariantPrice(variant.sellingPrice);
-                                        setInlineVariantStock(variant.stockQuantity);
-                                        setInlineVariantConversions(variant.variantConversions || {});
-                                      }}
-                                      className="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 text-blue-400 border border-slate-700/80 text-[10px] font-bold flex items-center gap-1 ml-auto"
-                                      title="Chỉnh sửa giá lẻ & giá quy đổi riêng cho biến thể này"
-                                    >
-                                      <Edit3 className="w-3 h-3" />
-                                      <span>Sửa Giá</span>
-                                    </button>
+                                    <div className="flex items-center justify-end gap-1">
+                                      <button
+                                        onClick={() => handleOpenBarcodeModalForProduct(p, variant)}
+                                        className="px-2 py-1 rounded bg-amber-500/20 hover:bg-amber-500 text-amber-400 hover:text-white border border-amber-500/40 text-[10px] font-bold flex items-center gap-1 transition-all"
+                                        title="In tem mã vạch cho riêng size / biến thể này"
+                                      >
+                                        <Barcode className="w-3 h-3" />
+                                        <span>In Tem</span>
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setInlineEditingVariantId(variant.id);
+                                          setInlineVariantPrice(variant.sellingPrice);
+                                          setInlineVariantStock(variant.stockQuantity);
+                                          setInlineVariantConversions(variant.variantConversions || {});
+                                        }}
+                                        className="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 text-blue-400 border border-slate-700/80 text-[10px] font-bold flex items-center gap-1"
+                                        title="Chỉnh sửa giá lẻ & giá quy đổi riêng cho biến thể này"
+                                      >
+                                        <Edit3 className="w-3 h-3" />
+                                        <span>Sửa Giá</span>
+                                      </button>
+                                    </div>
                                   )}
                                 </td>
                               )}
@@ -3232,8 +3275,11 @@ export const ProductsPage: React.FC = () => {
       {/* Barcode / Price Label Print Modal (MISA Standard) */}
       <BarcodePrintModal
         isOpen={isBarcodeModalOpen}
-        onClose={() => setIsBarcodeModalOpen(false)}
-        selectedProducts={products.filter((p) => selectedProductIds.includes(p.id))}
+        onClose={() => {
+          setIsBarcodeModalOpen(false);
+          setBarcodeTargetProducts(null);
+        }}
+        selectedProducts={barcodeTargetProducts !== null ? barcodeTargetProducts : products.filter((p) => selectedProductIds.includes(p.id))}
         allProducts={products}
         selectedBranchName={branches.find((b) => b.id === selectedBranchId)?.name}
         selectedBranchId={selectedBranchId}

@@ -22,6 +22,73 @@ import {
   Sparkles
 } from 'lucide-react';
 
+const VIETNAM_PROVINCES_34 = [
+  'Đồng Tháp',
+  'TP. Hồ Chí Minh',
+  'Hà Nội',
+  'Đà Nẵng',
+  'Hải Phòng',
+  'Cần Thơ',
+  'An Giang',
+  'Bà Rịa - Vũng Tàu',
+  'Bắc Giang',
+  'Bắc Ninh',
+  'Bến Tre',
+  'Bình Định',
+  'Bình Dương',
+  'Bình Thuận',
+  'Cà Mau',
+  'Đắk Lắk',
+  'Đồng Nai',
+  'Gia Lai',
+  'Hải Dương',
+  'Khánh Hòa',
+  'Kiên Giang',
+  'Lâm Đồng',
+  'Long An',
+  'Nam Định',
+  'Nghệ An',
+  'Ninh Bình',
+  'Phú Thọ',
+  'Quảng Nam',
+  'Quảng Ninh',
+  'Sóc Trăng',
+  'Tây Ninh',
+  'Thái Nguyên',
+  'Thanh Hóa',
+  'Thừa Thiên Huế',
+];
+
+const VIETNAM_DISTRICTS_DATA: Record<string, string[]> = {
+  'Đồng Tháp': ['TP. Cao Lãnh', 'TP. Sa Đéc', 'TP. Hồng Ngự', 'Huyện Tháp Mười', 'Huyện Lấp Vò', 'Huyện Cao Lãnh', 'Huyện Châu Thành', 'Huyện Lai Vung', 'Huyện Thanh Bình', 'Huyện Tân Hồng', 'Huyện Tam Nông'],
+  'TP. Hồ Chí Minh': ['Quận 1', 'Quận 3', 'Quận 4', 'Quận 5', 'Quận 6', 'Quận 7', 'Quận 8', 'Quận 10', 'Quận 11', 'Quận 12', 'TP. Thủ Đức', 'Quận Bình Thạnh', 'Quận Gò Vấp', 'Quận Tân Bình', 'Quận Tân Phú', 'Quận Phú Nhuận', 'Huyện Bình Chánh', 'Huyện Củ Chi', 'Huyện Hóc Môn', 'Huyện Nhà Bè'],
+  'Hà Nội': ['Quận Ba Đình', 'Quận Hoàn Kiếm', 'Quận Tây Hồ', 'Quận Long Biên', 'Quận Cầu Giấy', 'Quận Đống Đa', 'Quận Hai Bà Trưng', 'Quận Hoàng Mai', 'Quận Thanh Xuân', 'Quận Hà Đông', 'Quận Nam Từ Liêm', 'Quận Bắc Từ Liêm', 'Thị xã Sơn Tây', 'Huyện Đông Anh', 'Huyện Gia Lâm', 'Huyện Hoài Đức', 'Huyện Thanh Trì'],
+  'Đà Nẵng': ['Quận Hải Châu', 'Quận Thanh Khê', 'Quận Sơn Trà', 'Quận Ngũ Hành Sơn', 'Quận Liên Chiểu', 'Quận Cẩm Lệ', 'Huyện Hòa Vàng'],
+  'Hải Phòng': ['Quận Hồng Bàng', 'Quận Ngô Quyền', 'Quận Lê Chân', 'Quận Hải An', 'Quận Kiến An', 'Quận Đồ Sơn', 'Quận Dương Kinh', 'TP. Thủy Nguyên'],
+  'Cần Thơ': ['Quận Ninh Kiều', 'Quận Bình Thủy', 'Quận Cái Răng', 'Quận Ô Môn', 'Quận Thốt Nốt', 'Huyện Phong Điền'],
+  'An Giang': ['TP. Long Xuyên', 'TP. Châu Đốc', 'Thị xã Tân Châu', 'Huyện Thoại Sơn', 'Huyện Chợ Mới'],
+  'Bình Dương': ['TP. Thủ Dầu Một', 'TP. Dĩ An', 'TP. Thuận An', 'TP. Tân Uyên', 'TP. Bến Cát', 'Huyện Bàu Bàng'],
+  'Đồng Nai': ['TP. Biên Hòa', 'TP. Long Khánh', 'Huyện Nhơn Trạch', 'Huyện Trảng Bom', 'Huyện Vĩnh Cửu'],
+  'Lâm Đồng': ['TP. Đà Lạt', 'TP. Bảo Lộc', 'Huyện Đức Trọng', 'Huyện Đơn Dương', 'Huyện Lạc Dương'],
+};
+
+const VIETNAM_WARDS_DATA: Record<string, string[]> = {
+  'TP. Cao Lãnh': ['Phường 1', 'Phường 2', 'Phường 3', 'Phường 4', 'Phường 6', 'Phường 11', 'Phường Hòa Thuận', 'Phường Mỹ Phú', 'Phường Tân Quy Đông'],
+  'TP. Sa Đéc': ['Phường 1', 'Phường 2', 'Phường 3', 'Phường 4', 'Phường An Hòa', 'Phường Tân Quy Đông'],
+  'TP. Hồng Ngự': ['Phường An Bình A', 'Phường An Bình B', 'Phường An Lạc', 'Phường An Lộc', 'Phường An Thạnh'],
+  'Huyện Tháp Mười': ['Phường Mỹ An', 'Phường Đốc Binh Kiều', 'Phường Trường Xuân'],
+  'Huyện Lấp Vò': ['Phường Lấp Vò', 'Phường Bình Thành', 'Phường Định Yên', 'Phường Tân Mỹ'],
+  'Quận 1': ['Phường Bến Nghé', 'Phường Bến Thành', 'Phường Cầu Kho', 'Phường Cầu Ông Lãnh', 'Phường Cô Giang', 'Phường Đa Kao', 'Phường Tân Định', 'Phường Nguyễn Cư Trinh'],
+  'Quận 7': ['Phường Tân Phong', 'Phường Tân Phú', 'Phường Tân Quy', 'Phường Tân Kiểng', 'Phường Bình Thuận', 'Phường Phú Mỹ', 'Phường Phú Thuận'],
+  'TP. Thủ Đức': ['Phường Thảo Điền', 'Phường An Phú', 'Phường Bình Trưng Tây', 'Phường Hiệp Phú', 'Phường Linh Trung', 'Phường Tam Bình'],
+  'Quận Ba Đình': ['Phường Điện Biên', 'Phường Đội Cấn', 'Phường Giảng Võ', 'Phường Kim Mã', 'Phường Liễu Giai', 'Phường Ngọc Hà'],
+  'Quận Hoàn Kiếm': ['Phường Cửa Đông', 'Phường Cửa Nam', 'Phường Hàng Bạc', 'Phường Hàng Bồ', 'Phường Tràng Tiền', 'Phường Hàng Đào'],
+  'Quận Hải Châu': ['Phường Hải Châu 1', 'Phường Hải Châu 2', 'Phường Thạch Thang', 'Phường Thanh Bình', 'Phường Thuận Phước', 'Phường Hòa Cường Bắc'],
+  'Quận Ninh Kiều': ['Phường Tân An', 'Phường An Cư', 'Phường An Nghiệp', 'Phường An Hòa', 'Phường Cái Khế', 'Phường Hưng Lợi', 'Phường Xuân Khánh'],
+  'TP. Long Xuyên': ['Phường Mỹ Bình', 'Phường Mỹ Long', 'Phường Mỹ Phước', 'Phường Mỹ Quý', 'Phường Mỹ Thới', 'Phường Bình Khánh'],
+  'TP. Đà Lạt': ['Phường 1', 'Phường 2', 'Phường 3', 'Phường 4', 'Phường 5', 'Phường 6', 'Phường 7', 'Phường 8', 'Phường 9', 'Phường 10'],
+};
+
 export const BranchesPage: React.FC = () => {
   const { user: currentUser } = useAuthStore();
   const isAdmin = currentUser?.role === 'ADMIN';
@@ -39,8 +106,9 @@ export const BranchesPage: React.FC = () => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
-  const [city, setCity] = useState('Hồ Chí Minh');
-  const [district, setDistrict] = useState('');
+  const [city, setCity] = useState('Đồng Tháp');
+  const [district, setDistrict] = useState('TP. Cao Lãnh');
+  const [ward, setWard] = useState('Phường 1');
   const [managerName, setManagerName] = useState('');
   const [isCentralWarehouse, setIsCentralWarehouse] = useState(false);
   const [isActive, setIsActive] = useState(true);
@@ -56,14 +124,31 @@ export const BranchesPage: React.FC = () => {
     fetchBranches();
   }, []);
 
+  const handleCityChange = (newCity: string) => {
+    setCity(newCity);
+    const districts = VIETNAM_DISTRICTS_DATA[newCity] || ['TP. Trung Tâm'];
+    const defaultDistrict = districts[0];
+    setDistrict(defaultDistrict);
+
+    const wards = VIETNAM_WARDS_DATA[defaultDistrict] || ['Phường 1', 'Phường 2', 'Phường Trung Tâm'];
+    setWard(wards[0]);
+  };
+
+  const handleDistrictChange = (newDistrict: string) => {
+    setDistrict(newDistrict);
+    const wards = VIETNAM_WARDS_DATA[newDistrict] || ['Phường 1', 'Phường 2', 'Phường Trung Tâm'];
+    setWard(wards[0]);
+  };
+
   const handleOpenAddModal = () => {
     setEditingBranch(null);
     setCode(`CN-0${branches.length + 1}`);
     setName('');
     setPhone('');
     setAddress('');
-    setCity('Hồ Chí Minh');
-    setDistrict('');
+    setCity('Đồng Tháp');
+    setDistrict('TP. Cao Lãnh');
+    setWard('Phường 1');
     setManagerName('');
     setIsCentralWarehouse(false);
     setIsActive(true);
@@ -76,8 +161,17 @@ export const BranchesPage: React.FC = () => {
     setName(b.name);
     setPhone(b.phone);
     setAddress(b.address);
-    setCity(b.city);
-    setDistrict(b.district);
+
+    const validCity = VIETNAM_PROVINCES_34.includes(b.city) ? b.city : 'Đồng Tháp';
+    setCity(validCity);
+
+    const districts = VIETNAM_DISTRICTS_DATA[validCity] || ['TP. Cao Lãnh'];
+    const validDistrict = districts.includes(b.district) ? b.district : districts[0];
+    setDistrict(validDistrict);
+
+    const wards = VIETNAM_WARDS_DATA[validDistrict] || ['Phường 1', 'Phường 2'];
+    setWard(wards[0]);
+
     setManagerName(b.managerName || '');
     setIsCentralWarehouse(!!b.isCentralWarehouse);
     setIsActive(b.isActive);
@@ -423,32 +517,79 @@ export const BranchesPage: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">Tỉnh / Thành phố</label>
+                  <label className="block text-slate-300 font-semibold mb-1">
+                    Tỉnh / Thành phố <span className="text-red-400">*</span>
+                  </label>
                   <select
                     value={city}
-                    onChange={(e) => setCity(e.target.value)}
+                    onChange={(e) => handleCityChange(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs font-semibold"
                   >
-                    <option value="Hồ Chí Minh">TP. Hồ Chí Minh</option>
-                    <option value="Hà Nội">Hà Nội</option>
-                    <option value="Đà Nẵng">Đà Nẵng</option>
-                    <option value="Cần Thơ">Cần Thơ</option>
-                    <option value="Bình Dương">Bình Dương</option>
-                    <option value="Đồng Nai">Đồng Nai</option>
+                    {VIETNAM_PROVINCES_34.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">Quận / Huyện</label>
-                  <input
-                    type="text"
+                  <label className="block text-slate-300 font-semibold mb-1">
+                    Quận / Huyện / Thành Phố <span className="text-red-400">*</span>
+                  </label>
+                  <select
                     value={district}
-                    onChange={(e) => setDistrict(e.target.value)}
-                    placeholder="Quận 1, Quận 7..."
-                    className="w-full px-3 py-2 rounded-xl glass-input text-xs"
-                  />
+                    onChange={(e) => handleDistrictChange(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs font-semibold"
+                  >
+                    {(VIETNAM_DISTRICTS_DATA[city] || [district || 'TP. Trung Tâm']).map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">
+                    Phường <span className="text-red-400">*</span>
+                  </label>
+                  <select
+                    value={ward}
+                    onChange={(e) => setWard(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs font-semibold"
+                  >
+                    {(VIETNAM_WARDS_DATA[district] || [ward || 'Phường 1', 'Phường 2', 'Phường Trung Tâm']).map((w) => (
+                      <option key={w} value={w}>
+                        {w}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  Địa chỉ chi tiết (Số nhà, tên đường) <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="VD: Số 8 Đường Nguyễn Huệ, Khóm 1"
+                  className="w-full px-3 py-2 rounded-xl glass-input text-xs"
+                />
+              </div>
+
+              {/* Live Address Preview Card */}
+              <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/30 text-xs text-blue-300 flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-red-400 shrink-0" />
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Địa chỉ hiển thị trên hóa đơn in K80:</span>
+                  <strong>{address || 'Số nhà, tên đường'}, {ward}, {district}, {city}</strong>
                 </div>
               </div>
 

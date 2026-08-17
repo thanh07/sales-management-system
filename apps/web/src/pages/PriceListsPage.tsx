@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
-import { Tag, Plus, Search, Calendar, Users, Calculator, X, Edit3, Save, Trash2, Copy, ToggleLeft, ToggleRight, Edit2, Columns, Download, ArrowUpRight, ArrowDownRight, ChevronUp, ChevronDown } from 'lucide-react';
+import { Tag, Plus, Search, Calendar, Users, Calculator, X, Edit3, Save, Trash2, Copy, ToggleLeft, ToggleRight, Edit2, Columns, Download, ArrowUpRight, ArrowDownRight, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
 // Formatted Price Input with Thousands Separator (Khoảng trắng phần ngàn) & 500đ Step Increments
 const FormattedPriceInput: React.FC<{
@@ -102,9 +102,11 @@ export const PriceListsPage: React.FC = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingPriceList, setEditingPriceList] = useState<any | null>(null);
 
-  // Editable Matrix State inside KiotViet Editor Modal
+  // Editable Matrix State inside KiotViet Editor Modal with Batch Scroll Pagination
   const [matrixItems, setMatrixItems] = useState<any[]>([]);
   const [matrixSearch, setMatrixSearch] = useState('');
+  const [matrixPage, setMatrixPage] = useState(1);
+  const [matrixPageSize, setMatrixPageSize] = useState(10);
   const [bulkFormulaMethod, setBulkFormulaMethod] = useState<'PERCENT_BASE' | 'PERCENT_COST' | 'FIXED_OFFSET'>('PERCENT_BASE');
   const [bulkFormulaValue, setBulkFormulaValue] = useState<number>(10);
 
@@ -282,6 +284,8 @@ export const PriceListsPage: React.FC = () => {
       const res: any = await api.get(`/pricelists/${id}`);
       setEditingPriceList(res.data);
       setMatrixItems(res.data.items || []);
+      setMatrixPage(1);
+      setMatrixSearch('');
     } catch (err) {
       console.error(err);
     }
@@ -389,6 +393,9 @@ export const PriceListsPage: React.FC = () => {
       item.barcode.includes(matrixSearch)
   );
 
+  const totalMatrixPages = matrixPageSize === 0 ? 1 : Math.ceil(filteredMatrixItems.length / matrixPageSize) || 1;
+  const paginatedMatrixItems = matrixPageSize === 0 ? filteredMatrixItems : filteredMatrixItems.slice((matrixPage - 1) * matrixPageSize, matrixPage * matrixPageSize);
+
   const filteredComparisonRows = comparisonMatrix?.rows?.filter(
     (r: any) =>
       r.product.name.toLowerCase().includes(comparisonSearch.toLowerCase()) ||
@@ -457,9 +464,9 @@ export const PriceListsPage: React.FC = () => {
       {/* VIEW MODE 1: CATALOG VIEW */}
       {viewMode === 'CATALOG' && (
         <div className="space-y-6">
-          {/* Filter Tabs & Search */}
+          {/* Search Bar */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="relative w-full sm:w-80">
+            <div className="relative w-full sm:w-96">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
@@ -468,28 +475,6 @@ export const PriceListsPage: React.FC = () => {
                 placeholder="Tìm theo tên bảng giá, mã BG..."
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl glass-input text-xs"
               />
-            </div>
-
-            <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
-              {[
-                { label: 'Tất cả', val: 'Tất cả' },
-                { label: 'Giá chung', val: 'STANDARD' },
-                { label: 'Bán sỉ', val: 'WHOLESALE' },
-                { label: 'Khách VIP', val: 'CUSTOMER_GROUP' },
-                { label: 'Khuyến mãi', val: 'PROMOTION' },
-              ].map((t) => (
-                <button
-                  key={t.val}
-                  onClick={() => setSelectedType(t.val)}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
-                    selectedType === t.val
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-slate-800/60 text-slate-400 hover:text-white border border-slate-700/50'
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
             </div>
           </div>
 
@@ -792,6 +777,110 @@ export const PriceListsPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Top Pagination & Search Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400 font-medium">
+                  Hiển thị:{' '}
+                  <strong className="text-white">
+                    {filteredMatrixItems.length === 0
+                      ? 0
+                      : (matrixPage - 1) * (matrixPageSize || filteredMatrixItems.length) + 1}
+                    {' - '}
+                    {matrixPageSize === 0
+                      ? filteredMatrixItems.length
+                      : Math.min(matrixPage * matrixPageSize, filteredMatrixItems.length)}
+                  </strong>{' '}
+                  / Tổng <strong className="text-blue-400">{filteredMatrixItems.length}</strong> sản phẩm
+                </span>
+
+                <select
+                  value={matrixPageSize}
+                  onChange={(e) => {
+                    setMatrixPageSize(Number(e.target.value));
+                    setMatrixPage(1);
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-white font-bold text-xs focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value={10}>10 SP / Trang</option>
+                  <option value={15}>15 SP / Trang</option>
+                  <option value={25}>25 SP / Trang</option>
+                  <option value={50}>50 SP / Trang</option>
+                  <option value={0}>Xem Tất Cả ({filteredMatrixItems.length})</option>
+                </select>
+              </div>
+
+              {matrixPageSize > 0 && totalMatrixPages > 1 && (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setMatrixPage(1)}
+                    disabled={matrixPage === 1}
+                    className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-slate-300 border border-slate-800 transition-all"
+                    title="Về trang đầu tiên"
+                  >
+                    <ChevronsLeft className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setMatrixPage((prev) => Math.max(1, prev - 1))}
+                    disabled={matrixPage === 1}
+                    className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-slate-300 font-bold border border-slate-800 flex items-center gap-1 transition-all"
+                    title="Cuộn về trang trước"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    <span>Trước</span>
+                  </button>
+
+                  <div className="flex items-center gap-1 mx-1">
+                    {Array.from({ length: totalMatrixPages }, (_, idx) => idx + 1)
+                      .filter((p) => p === 1 || p === totalMatrixPages || Math.abs(p - matrixPage) <= 1)
+                      .map((p, i, arr) => {
+                        const prev = arr[i - 1];
+                        return (
+                          <React.Fragment key={p}>
+                            {prev && p - prev > 1 && <span className="text-slate-600 px-1">...</span>}
+                            <button
+                              type="button"
+                              onClick={() => setMatrixPage(p)}
+                              className={`min-w-[28px] h-7 px-1.5 rounded-lg font-bold text-xs transition-all ${
+                                matrixPage === p
+                                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                                  : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800'
+                              }`}
+                            >
+                              {p}
+                            </button>
+                          </React.Fragment>
+                        );
+                      })}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setMatrixPage((prev) => Math.min(totalMatrixPages, prev + 1))}
+                    disabled={matrixPage === totalMatrixPages}
+                    className="px-2.5 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 disabled:opacity-40 text-blue-300 hover:text-white font-bold border border-blue-500/30 flex items-center gap-1 transition-all"
+                    title="Cuộn sang trang sau"
+                  >
+                    <span>Sau</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setMatrixPage(totalMatrixPages)}
+                    disabled={matrixPage === totalMatrixPages}
+                    className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-slate-300 border border-slate-800 transition-all"
+                    title="Đến trang cuối cùng"
+                  >
+                    <ChevronsRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+
             <div className="overflow-x-auto border border-slate-800 rounded-xl">
               <table className="w-full text-left text-xs text-slate-300">
                 <thead className="bg-slate-950 font-bold border-b border-slate-800 text-slate-400 uppercase">
@@ -805,7 +894,7 @@ export const PriceListsPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
-                  {filteredMatrixItems.map((item) => (
+                  {paginatedMatrixItems.map((item) => (
                     <tr key={item.productId} className="hover:bg-slate-800/40">
                       <td className="p-3">
                         <div className="font-bold text-white text-xs">{item.productName}</div>
@@ -866,8 +955,38 @@ export const PriceListsPage: React.FC = () => {
               </table>
             </div>
 
-            <div className="flex items-center justify-between pt-3 border-t border-slate-800">
-              <span className="text-xs text-slate-400">Đang hiển thị {filteredMatrixItems.length} sản phẩm trong bảng giá</span>
+            {/* Bottom Pagination & Action Bar */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-800">
+              {matrixPageSize > 0 && totalMatrixPages > 1 ? (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setMatrixPage((prev) => Math.max(1, prev - 1))}
+                    disabled={matrixPage === 1}
+                    className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-300 font-bold text-xs flex items-center gap-1"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    <span>Trang Trước</span>
+                  </button>
+
+                  <span className="text-xs text-slate-400 px-2 font-mono">
+                    Trang <b>{matrixPage}</b> / {totalMatrixPages}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => setMatrixPage((prev) => Math.min(totalMatrixPages, prev + 1))}
+                    disabled={matrixPage === totalMatrixPages}
+                    className="px-3 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600 disabled:opacity-40 text-blue-300 hover:text-white font-bold text-xs flex items-center gap-1"
+                  >
+                    <span>Trang Sau</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <span className="text-xs text-slate-400">Đang hiển thị {filteredMatrixItems.length} sản phẩm trong bảng giá</span>
+              )}
+
               <div className="flex gap-2">
                 <button
                   onClick={() => setEditingPriceList(null)}

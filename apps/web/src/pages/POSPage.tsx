@@ -44,9 +44,9 @@ export const POSPage: React.FC<POSPageProps> = ({ onOpenMobileMenu }) => {
       if (e.key === 'F3') {
         e.preventDefault();
         setPriceListModalOpen(true);
-      } else if (e.key === 'F4') {
+      } else if (e.key === 'F6') {
         e.preventDefault();
-        setCustomerModalOpen(true);
+        setDeliveryModalOpen(true);
       } else if (e.key === 'F7') {
         e.preventDefault();
         setOrderHistoryModalOpen(true);
@@ -58,7 +58,7 @@ export const POSPage: React.FC<POSPageProps> = ({ onOpenMobileMenu }) => {
         setCheckoutModalOpen(true);
       } else if (e.key === 'F10') {
         e.preventDefault();
-        setDeliveryModalOpen(true);
+        clearCart();
       } else if (e.key === 'F12') {
         e.preventDefault();
         setInvoiceModalOpen(true);

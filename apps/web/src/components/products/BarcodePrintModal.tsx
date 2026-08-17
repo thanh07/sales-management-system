@@ -26,12 +26,75 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
   const [includePrice, setIncludePrice] = useState(true);
   const [includeStoreName, setIncludeStoreName] = useState(true);
   const [customStoreName, setCustomStoreName] = useState('SALES MANAGER PRO');
-  const [activeBranchId, setActiveBranchId] = useState(selectedBranchId);
+  const [activeBranchId, setActiveBranchId] = useState(selectedBranchId || 'branch-01');
+  const [modalSearch, setModalSearch] = useState('');
 
-  if (!isOpen) return null;
+  React.useEffect(() => {
+    if (selectedBranchId) {
+      setActiveBranchId(selectedBranchId);
+    }
+  }, [selectedBranchId, isOpen]);
 
-  // If no specific product is selected, use all products
-  const targetProducts = selectedProducts.length > 0 ? selectedProducts : allProducts;
+  // Flatten target products safely to include all variants so each variant has its own printable barcode tag!
+  const targetProducts = React.useMemo(() => {
+    const rawList = selectedProducts && selectedProducts.length > 0 ? selectedProducts : allProducts || [];
+    const result: any[] = [];
+
+    (rawList || []).forEach((p: any) => {
+      if (!p) return;
+      if (p.hasVariants && Array.isArray(p.variants) && p.variants.length > 0) {
+        p.variants.forEach((v: any, vIdx: number) => {
+          if (!v) return;
+          const vName = v.variantName || v.name || (v.attributeValues ? Object.values(v.attributeValues).join(' - ') : '') || `Size #${vIdx + 1}`;
+          const cleanName = vName && p.name && String(vName).includes(String(p.name)) ? vName : `${p.name} - ${vName}`;
+
+          result.push({
+            id: v.id || `${p.id}-${v.sku || vIdx}`,
+            productId: p.id,
+            name: cleanName,
+            sku: v.sku || p.sku || 'SKU',
+            barcode: v.barcode || v.sku || p.barcode || '000000',
+            unit: p.unit || 'Cái',
+            category: p.category || '',
+            sellingPrice: v.sellingPrice ?? p.sellingPrice ?? 0,
+            stockQuantity: v.stockQuantity ?? (v.branchStocks?.[activeBranchId] ?? p.stockQuantity ?? 0),
+            branchStocks: v.branchStocks || p.branchStocks || {},
+            isVariant: true,
+            parentName: p.name,
+            variantName: vName,
+          });
+        });
+      } else {
+        result.push({
+          ...p,
+          id: p.id || `p-${Math.random()}`,
+          name: p.name || 'Sản phẩm',
+          sku: p.sku || '',
+          barcode: p.barcode || p.sku || '',
+          unit: p.unit || 'Cái',
+          category: p.category || '',
+          sellingPrice: p.sellingPrice || 0,
+          stockQuantity: p.stockQuantity ?? (p.branchStocks?.[activeBranchId] ?? 0),
+          branchStocks: p.branchStocks || {},
+          isVariant: false,
+        });
+      }
+    });
+
+    return result;
+  }, [selectedProducts, allProducts, activeBranchId]);
+
+  const displayedProducts = React.useMemo(() => {
+    if (!modalSearch.trim()) return targetProducts;
+    const q = modalSearch.toLowerCase().trim();
+    return targetProducts.filter(
+      (p) =>
+        (p.name && p.name.toLowerCase().includes(q)) ||
+        (p.sku && p.sku.toLowerCase().includes(q)) ||
+        (p.barcode && p.barcode.includes(q)) ||
+        (p.category && p.category.toLowerCase().includes(q))
+    );
+  }, [targetProducts, modalSearch]);
 
   const getPrintCount = (pId: string) => printCounts[pId] ?? 2;
 
@@ -64,6 +127,8 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
 
   const totalLabels = targetProducts.reduce((sum, p) => sum + getPrintCount(p.id), 0);
 
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150">
@@ -75,7 +140,11 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
             </div>
             <div>
               <h2 className="font-bold text-base sm:text-lg text-white">In Tem Mã Vạch & Bảng Giá Kệ Hàng (Barcode Studio)</h2>
-              <p className="text-[11px] text-slate-400">Xuất bản in decal nhiệt cho {targetProducts.length} mặt hàng</p>
+              <p className="text-[11px] text-slate-400">
+                {selectedProducts && selectedProducts.length > 0
+                  ? `Đang chọn in tem cho ${selectedProducts.length} sản phẩm (${targetProducts.length} biến thể/mã barcode)`
+                  : `Đang hiển thị toàn bộ kho (${targetProducts.length} mặt hàng/biến thể)`}
+              </p>
             </div>
           </div>
           <button
@@ -157,7 +226,7 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
           <div className="flex items-center gap-2">
             <span className="text-slate-400 font-semibold flex items-center gap-1">
               <Zap className="w-3.5 h-3.5 text-amber-400" />
-              <span>Gán nhanh số lượng:</span>
+              <span>Gán nhanh:</span>
             </span>
             <button
               onClick={() => handleBatchSetCount(1)}
@@ -186,8 +255,17 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
             </button>
           </div>
 
-          <div className="font-mono text-xs">
-            Tổng cộng: <strong className="text-amber-400 text-sm">{totalLabels}</strong> tem in
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              placeholder="🔍 Lọc nhanh theo tên / SKU / barcode..."
+              value={modalSearch}
+              onChange={(e) => setModalSearch(e.target.value)}
+              className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs w-60 focus:outline-none focus:border-amber-500"
+            />
+            <div className="font-mono text-xs">
+              Tổng: <strong className="text-amber-400 text-sm">{totalLabels}</strong> tem
+            </div>
           </div>
         </div>
 
@@ -207,33 +285,48 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800 bg-slate-900/50">
-                {targetProducts.map((p) => {
-                  const stock = p.branchStocks?.[activeBranchId] ?? p.stockQuantity ?? 0;
-                  const theme = getSmartProductIcon(p.name, p.category);
+                {displayedProducts.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="p-6 text-center text-slate-400 italic">
+                      Không tìm thấy sản phẩm nào để in tem. Vui lòng kiểm tra lại bộ lọc hoặc tích chọn sản phẩm.
+                    </td>
+                  </tr>
+                ) : (
+                  displayedProducts.map((p) => {
+                    const stock = p.branchStocks?.[activeBranchId] ?? p.stockQuantity ?? 0;
+                    const theme = getSmartProductIcon(p.name, p.category);
 
-                  return (
-                    <tr key={p.id} className="hover:bg-slate-800/40">
-                      <td className="p-2.5 font-bold text-white max-w-[220px] truncate flex items-center gap-2">
-                        <span className="text-base">{theme.icon}</span>
-                        <span className="truncate">{p.name}</span>
-                      </td>
-                      <td className="p-2.5 font-mono text-blue-400 font-bold">{p.barcode || p.sku}</td>
-                      <td className="p-2.5 text-slate-300">{p.unit}</td>
-                      <td className="p-2.5 text-emerald-400 font-bold font-mono">{formatVND(p.sellingPrice)}</td>
-                      <td className="p-2.5 text-center font-mono text-slate-400">{stock}</td>
-                      <td className="p-2.5 text-center">
-                        <input
-                          type="number"
-                          min="0"
-                          max="999"
-                          value={getPrintCount(p.id)}
-                          onChange={(e) => handleSetCount(p.id, Number(e.target.value))}
-                          className="w-16 px-2 py-1 rounded-lg bg-slate-950 border border-slate-700 text-center font-bold text-white text-xs font-mono"
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
+                    return (
+                      <tr key={p.id} className={`hover:bg-slate-800/40 ${p.isVariant ? 'bg-blue-950/20' : ''}`}>
+                        <td className="p-2.5 font-bold text-white max-w-[250px] truncate flex items-center gap-2">
+                          <span className="text-base">{theme.icon}</span>
+                          <div className="truncate">
+                            <div className="truncate">{p.name}</div>
+                            {p.isVariant && (
+                              <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 font-normal border border-blue-500/30">
+                                🏷️ Biến thể / Size: {p.variantName}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-2.5 font-mono text-blue-400 font-bold">{p.barcode || p.sku}</td>
+                        <td className="p-2.5 text-slate-300">{p.unit}</td>
+                        <td className="p-2.5 text-emerald-400 font-bold font-mono">{formatVND(p.sellingPrice)}</td>
+                        <td className="p-2.5 text-center font-mono text-slate-400">{stock}</td>
+                        <td className="p-2.5 text-center">
+                          <input
+                            type="number"
+                            min="0"
+                            max="999"
+                            value={getPrintCount(p.id)}
+                            onChange={(e) => handleSetCount(p.id, Number(e.target.value))}
+                            className="w-16 px-2 py-1 rounded-lg bg-slate-950 border border-slate-700 text-center font-bold text-white text-xs font-mono"
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -245,11 +338,11 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
                 <Sliders className="w-3.5 h-3.5" />
                 <span>Xem trước mẫu tem in nhiệt thực tế (Khổ {printPaperSize}):</span>
               </div>
-              <span className="text-[11px] text-slate-400">Hiển thị mẫu 6 sản phẩm đầu tiên</span>
+              <span className="text-[11px] text-slate-400">Hiển thị mẫu {Math.min(6, displayedProducts.length)} sản phẩm đầu tiên</span>
             </div>
 
             <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-              {targetProducts.slice(0, 6).map((p) => (
+              {displayedProducts.slice(0, 6).map((p) => (
                 <div
                   key={p.id}
                   className="bg-white text-black p-2 rounded-lg border border-slate-300 shadow-md flex flex-col items-center justify-between text-center select-none"

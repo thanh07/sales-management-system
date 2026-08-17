@@ -71,6 +71,14 @@ const VIETNAM_BANKS = [
   { code: 'VBA', name: 'Agribank - Nông nghiệp VN' },
   { code: 'TPB', name: 'TPBank - Tiên Phong' },
   { code: 'STB', name: 'Sacombank - Sài Gòn Thương Tín' },
+  { code: 'VIB', name: 'VIB - Quốc Tế VN' },
+  { code: 'OCB', name: 'OCB - Phương Đông' },
+  { code: 'SHB', name: 'SHB - Sài Gòn - Hà Nội' },
+  { code: 'HDB', name: 'HDBank - Phát Triển TP.HCM' },
+  { code: 'MSB', name: 'MSB - Hàng Hải VN' },
+  { code: 'LPB', name: 'LPBank - Lộc Phát VN' },
+  { code: 'SEAB', name: 'SeABank - Đông Nam Á' },
+  { code: 'MOMO', name: 'Ví MoMo - QR Tài khoản' },
 ];
 
 const EMOJI_LIST = ['🥤', '🥛', '🍜', '🧂', '🍪', '🧼', '📦', '🥩', '🥬', '🍞', '🍦', '☕', '🍺', '📱', '👕', '🎁', '🍎', '🧴', '🥚', '🥫', '🏷️'];
@@ -144,6 +152,8 @@ export const SettingsPage: React.FC = () => {
     bankAccountNo: '999988886666',
     bankAccountName: 'NGUYEN VAN THANH',
     enableVietQR: true,
+    printVietQRReceipt: true,
+    vietQrTemplate: 'compact2',
 
     // POS Rules
     allowNegativeStock: false,
@@ -1185,83 +1195,194 @@ export const SettingsPage: React.FC = () => {
       {/* HUB CONTENT 3: MẪU IN HÓA ĐƠN & VIETQR */}
       {activeTab === 'PRINT_PAYMENTS' && (
         <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-6 animate-in fade-in duration-200">
-          <div className="flex items-center gap-2.5 pb-4 border-b border-slate-800">
-            <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
-              <Printer className="w-5 h-5" />
+          <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                <Printer className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="font-bold text-base text-white">Cấu Hình Mẫu In Hóa Đơn K80 & Mã VietQR Chuyển Khoản</h2>
+                <p className="text-xs text-slate-400">Tùy chỉnh khổ in, tiêu đề hóa đơn và cài đặt tài khoản ngân hàng sinh VietQR tự động in lên Bill</p>
+              </div>
             </div>
-            <div>
-              <h2 className="font-bold text-base text-white">Cấu Hình Mẫu In Hóa Đơn K80 & Mã VietQR Chuyển Khoản</h2>
-              <p className="text-xs text-slate-400">Tùy chỉnh khổ in, tiêu đề hóa đơn và cài đặt tài khoản ngân hàng sinh VietQR động</p>
-            </div>
+            {isAdmin && (
+              <button
+                onClick={handleSaveGlobalSettings}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-600/30 transition-all"
+              >
+                <Save className="w-4 h-4" />
+                <span>Lưu Cấu Hình</span>
+              </button>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
-            <div>
-              <label className="block text-slate-300 font-semibold mb-1.5">Khổ giấy in Hóa đơn mặc định</label>
-              <select
-                disabled={!isAdmin}
-                value={settings.paperSize}
-                onChange={(e: any) => setSettings({ ...settings, paperSize: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold text-xs"
-              >
-                <option value="K80">Khổ Giấy K80 (80mm - Siêu thị / Tạp hóa phổ biến nhất)</option>
-                <option value="K58">Khổ Giấy K58 (58mm - Máy in bill cầm tay Bluetooth)</option>
-                <option value="A4">Khổ Giấy A4 / A5 (Hóa đơn GTGT / Bán buôn)</option>
-              </select>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left Column: Configuration Form */}
+            <div className="lg:col-span-7 space-y-5 text-xs">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1.5">Khổ giấy in Hóa đơn mặc định</label>
+                  <select
+                    disabled={!isAdmin}
+                    value={settings.paperSize}
+                    onChange={(e: any) => setSettings({ ...settings, paperSize: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold text-xs"
+                  >
+                    <option value="K80">Khổ Giấy K80 (80mm - Siêu thị / Tạp hóa phổ biến nhất)</option>
+                    <option value="K58">Khổ Giấy K58 (58mm - Máy in bill cầm tay Bluetooth)</option>
+                    <option value="A4">Khổ Giấy A4 / A5 (Hóa đơn GTGT / Bán buôn)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1.5">Ngân Hàng Nhận Tiền Chuyển Khoản VietQR (*)</label>
+                  <select
+                    disabled={!isAdmin}
+                    value={settings.bankCode}
+                    onChange={(e) => {
+                      const bObj = VIETNAM_BANKS.find((x) => x.code === e.target.value);
+                      setSettings({
+                        ...settings,
+                        bankCode: e.target.value,
+                        bankName: bObj?.name || e.target.value,
+                      });
+                    }}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold text-xs"
+                  >
+                    {VIETNAM_BANKS.map((b) => (
+                      <option key={b.code} value={b.code}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-blue-400 font-semibold mb-1.5">Số Tài Khoản Ngân Hàng (*)</label>
+                  <input
+                    type="text"
+                    disabled={!isAdmin}
+                    value={settings.bankAccountNo}
+                    onChange={(e) => setSettings({ ...settings, bankAccountNo: e.target.value.replace(/\s+/g, '') })}
+                    placeholder="VD: 999988886666"
+                    className="w-full px-3.5 py-2.5 rounded-xl glass-input font-mono font-bold text-blue-300 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-emerald-400 font-semibold mb-1.5">Tên Chủ Tài Khoản Ngân Hàng (*)</label>
+                  <input
+                    type="text"
+                    disabled={!isAdmin}
+                    value={settings.bankAccountName}
+                    onChange={(e) => setSettings({ ...settings, bankAccountName: e.target.value.toUpperCase() })}
+                    placeholder="VD: NGUYEN VAN THANH"
+                    className="w-full px-3.5 py-2.5 rounded-xl glass-input font-mono font-bold text-emerald-400 uppercase text-sm"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-slate-300 font-semibold mb-1.5">Tiêu đề Hóa Đơn In</label>
+                  <input
+                    type="text"
+                    disabled={!isAdmin}
+                    value={settings.receiptHeader}
+                    onChange={(e) => setSettings({ ...settings, receiptHeader: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl glass-input text-xs font-semibold text-slate-200"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-slate-300 font-semibold mb-1.5">Lời Cảm Ơn In Chân Hóa Đơn</label>
+                  <input
+                    type="text"
+                    disabled={!isAdmin}
+                    value={settings.receiptFooter}
+                    onChange={(e) => setSettings({ ...settings, receiptFooter: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl glass-input text-xs font-semibold text-slate-200"
+                  />
+                </div>
+              </div>
+
+              {/* VietQR Features Toggles */}
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-bold text-white text-xs flex items-center gap-1.5">
+                      <QrCode className="w-4 h-4 text-blue-400" />
+                      <span>1. Kích hoạt tính năng thanh toán Chuyển Khoản VietQR</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Hiển thị tab Chuyển khoản QR tại màn hình thanh toán POS thu ngân.
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    disabled={!isAdmin}
+                    checked={settings.enableVietQR !== false}
+                    onChange={(e) => setSettings({ ...settings, enableVietQR: e.target.checked })}
+                    className="w-5 h-5 rounded text-blue-600 focus:ring-blue-500 bg-slate-900 border-slate-700"
+                  />
+                </div>
+
+                <div className="border-t border-slate-800/80 pt-3 flex items-center justify-between">
+                  <div>
+                    <div className="font-bold text-emerald-400 text-xs flex items-center gap-1.5">
+                      <Printer className="w-4 h-4 text-emerald-400" />
+                      <span>2. Tự động in mã QR chuyển khoản lên Hóa đơn (Bill K80/K58)</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Tự động tính tiền và in mã VietQR kèm mã đơn hàng vào bill để khách quét trả tiền.
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    disabled={!isAdmin}
+                    checked={settings.printVietQRReceipt !== false}
+                    onChange={(e) => setSettings({ ...settings, printVietQRReceipt: e.target.checked })}
+                    className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 bg-slate-900 border-slate-700"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-slate-300 font-semibold mb-1.5">Ngân Hàng Nhận Tiền Chuyển Khoản VietQR</label>
-              <select
-                disabled={!isAdmin}
-                value={settings.bankCode}
-                onChange={(e) => {
-                  const bObj = VIETNAM_BANKS.find((x) => x.code === e.target.value);
-                  setSettings({
-                    ...settings,
-                    bankCode: e.target.value,
-                    bankName: bObj?.name || e.target.value,
-                  });
-                }}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold text-xs"
-              >
-                {VIETNAM_BANKS.map((b) => (
-                  <option key={b.code} value={b.code}>{b.name}</option>
-                ))}
-              </select>
-            </div>
+            {/* Right Column: Live VietQR & Thermal Invoice Preview */}
+            <div className="lg:col-span-5 space-y-4">
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-xs text-amber-400 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4" />
+                    <span>Xem Trước Mã VietQR Động</span>
+                  </span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">
+                    Chuẩn Napas 247
+                  </span>
+                </div>
 
-            <div>
-              <label className="block text-blue-400 font-semibold mb-1.5">Số Tài Khoản Ngân Hàng (*)</label>
-              <input
-                type="text"
-                disabled={!isAdmin}
-                value={settings.bankAccountNo}
-                onChange={(e) => setSettings({ ...settings, bankAccountNo: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl glass-input font-mono font-bold text-blue-300 text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-emerald-400 font-semibold mb-1.5">Tên Chủ Tài Khoản Ngân Hàng (*)</label>
-              <input
-                type="text"
-                disabled={!isAdmin}
-                value={settings.bankAccountName}
-                onChange={(e) => setSettings({ ...settings, bankAccountName: e.target.value.toUpperCase() })}
-                className="w-full px-3.5 py-2.5 rounded-xl glass-input font-mono font-bold text-emerald-400 uppercase text-sm"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-slate-300 font-semibold mb-1.5">Lời Cảm Ơn In Chân Hóa Đơn</label>
-              <input
-                type="text"
-                disabled={!isAdmin}
-                value={settings.receiptFooter}
-                onChange={(e) => setSettings({ ...settings, receiptFooter: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl glass-input text-xs font-semibold text-slate-200"
-              />
+                {settings.bankAccountNo ? (
+                  <div className="bg-white text-slate-900 p-5 rounded-2xl border border-slate-300 shadow-xl flex flex-col items-center text-center">
+                    <div className="font-extrabold text-xs uppercase text-blue-900 tracking-wider mb-2">
+                      {settings.bankName || settings.bankCode}
+                    </div>
+                    {/* Pure Large High-Resolution QR Code (qr_only) without extra clutter */}
+                    <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm flex items-center justify-center">
+                      <img
+                        src={`https://img.vietqr.io/image/${settings.bankCode || 'MB'}-${settings.bankAccountNo}-qr_only.png?amount=50000&addInfo=HD99999&accountName=${encodeURIComponent(settings.bankAccountName || '')}`}
+                        alt="VietQR Preview"
+                        className="w-56 h-56 object-contain"
+                      />
+                    </div>
+                    <div className="text-sm font-mono font-black text-blue-800 mt-2.5">
+                      STK: {settings.bankAccountNo}
+                    </div>
+                    <div className="text-xs font-bold uppercase text-slate-800">
+                      {settings.bankAccountName || 'CHỦ TÀI KHOẢN'}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-8 text-center text-slate-500 text-xs border border-dashed border-slate-800 rounded-xl">
+                    Vui lòng chọn ngân hàng và nhập số tài khoản để hiển thị mã QR xem trước.
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

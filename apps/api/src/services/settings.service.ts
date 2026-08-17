@@ -33,6 +33,8 @@ export interface StoreSettings {
   bankAccountNo: string;
   bankAccountName: string;
   enableVietQR: boolean;
+  printVietQRReceipt: boolean;
+  vietQrTemplate: string;
 
   // 5. Quy tắc bán hàng POS & Quản lý Thu ngân
   allowNegativeStock: boolean;
@@ -75,6 +77,8 @@ let STORE_SETTINGS: StoreSettings = {
   bankAccountNo: '999988886666',
   bankAccountName: 'NGUYEN VAN THANH',
   enableVietQR: true,
+  printVietQRReceipt: true,
+  vietQrTemplate: 'compact2',
 
   allowNegativeStock: false,
   allowCustomerDebt: true,

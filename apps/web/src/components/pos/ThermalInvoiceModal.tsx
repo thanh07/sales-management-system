@@ -145,6 +145,28 @@ export const ThermalInvoiceModal: React.FC<ThermalInvoiceModalProps> = ({
             </div>
           )}
 
+          {/* Dynamic VietQR Payment Code for Customer Scan (Large & Clean) */}
+          {storeSettings?.printVietQRReceipt !== false && storeSettings?.bankAccountNo && (
+            <div className="border-t-2 border-dashed border-slate-400 pt-3 text-center space-y-2 bg-slate-50 p-3 rounded-xl print:bg-white print:border-black print:p-1">
+              <div className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                📱 Quét mã VietQR chuyển khoản
+              </div>
+              <div className="flex justify-center my-1">
+                <img
+                  src={`https://img.vietqr.io/image/${storeSettings.bankCode || 'MB'}-${storeSettings.bankAccountNo}-qr_only.png?amount=${currentOrder.totalAmount || 0}&addInfo=${encodeURIComponent(currentOrder.orderNumber || 'HD')}&accountName=${encodeURIComponent(storeSettings.bankAccountName || '')}`}
+                  alt="VietQR Payment Code"
+                  className="w-48 h-48 object-contain rounded-lg border border-slate-300 bg-white p-1 print:w-44 print:h-44 print:border-black shadow-sm"
+                  crossOrigin="anonymous"
+                />
+              </div>
+              <div className="text-xs text-slate-800 leading-snug font-medium space-y-0.5">
+                <div>Ngân hàng: <strong className="font-bold">{storeSettings.bankName || storeSettings.bankCode}</strong></div>
+                <div>STK: <strong className="font-mono font-bold text-blue-700">{storeSettings.bankAccountNo}</strong> - <span className="font-bold uppercase">{storeSettings.bankAccountName}</span></div>
+                <div>Nội dung CK: <strong className="font-mono font-bold text-slate-900">{currentOrder.orderNumber}</strong></div>
+              </div>
+            </div>
+          )}
+
           <div className="text-center text-[11px] text-slate-500 border-t border-dashed border-slate-300 pt-3">
             <p className="font-semibold">{receiptFooter}</p>
             <p className="text-[9px] mt-0.5">Hệ thống quản trị bán lẻ Sales Manager Pro</p>

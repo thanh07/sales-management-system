@@ -72,10 +72,10 @@ export const CartDrawer: React.FC = () => {
                 ? 'bg-blue-600 text-white border-blue-500 shadow-md animate-pulse'
                 : 'bg-slate-800 hover:bg-slate-700 text-blue-400 border-slate-700'
             }`}
-            title="Khai báo thông tin giao hàng (F10)"
+            title="Khai báo thông tin giao hàng (F6)"
           >
             <Truck className="w-4 h-4" />
-            <span>{deliveryInfo ? 'Đã Giao Hàng' : 'Giao Hàng (F10)'}</span>
+            <span>{deliveryInfo ? 'Đã Giao Hàng' : 'Giao Hàng (F6)'}</span>
           </button>
         </div>
 

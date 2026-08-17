@@ -72,7 +72,7 @@ export interface OrderRecord extends CheckoutInput {
   id: string;
   orderNumber: string;
   changeAmount: number;
-  status: 'COMPLETED' | 'PARTIALLY_RETURNED' | 'RETURNED' | 'CANCELLED';
+  status: 'COMPLETED' | 'DELIVERING' | 'PARTIALLY_RETURNED' | 'RETURNED' | 'CANCELLED';
   returnedItems?: ReturnItemInput[];
   refundAmount?: number;
   returns?: ReturnRecord[];
@@ -174,14 +174,19 @@ export class PosService {
     const randomSeq = Math.floor(1000 + Math.random() * 9000);
     const orderNumber = `HD${dateStr}${randomSeq}`;
 
-    const changeAmount = Math.max(0, input.paidAmount - input.totalAmount);
+    const isDelivery = input.deliveryInfo?.isDelivery;
+    const isDelivered = input.deliveryInfo?.deliveryStatus === 'DELIVERED';
+    const initialStatus = isDelivery && !isDelivered ? 'DELIVERING' : 'COMPLETED';
+    const effectivePaidAmount = isDelivery && !isDelivered ? (input.deliveryInfo?.depositAmount || 0) : input.paidAmount;
+    const changeAmount = Math.max(0, effectivePaidAmount - input.totalAmount);
 
     const newOrder: OrderRecord = {
       ...input,
       id: `ord-${Date.now()}`,
       orderNumber,
+      paidAmount: effectivePaidAmount,
       changeAmount,
-      status: 'COMPLETED',
+      status: initialStatus,
       createdAt: now.toISOString(),
       returns: [],
       returnedItems: [],
@@ -347,8 +352,11 @@ export class PosService {
       order.deliveryInfo.failureReason = failureReason;
     }
 
-    // If returned (chuyển hoàn kho), restock all items back to branch
-    if (status === 'RETURNED') {
+    if (status === 'DELIVERED') {
+      order.status = 'COMPLETED';
+      order.paidAmount = order.totalAmount;
+      order.deliveryInfo.codStatus = 'COLLECTED';
+    } else if (status === 'RETURNED') {
       const branchId = order.branchId || 'branch-01';
       order.items.forEach((item) => {
         const factor = item.conversionFactor || 1;
@@ -356,6 +364,7 @@ export class PosService {
         ProductService.updateStock(item.productId, totalSmallestUnitsRestocked, branchId);
       });
       order.status = 'CANCELLED';
+      order.paidAmount = order.deliveryInfo.depositAmount || 0;
     }
 
     return order;
@@ -367,6 +376,9 @@ export class PosService {
     if (!order.deliveryInfo) throw new Error('Đơn hàng này không có thông tin giao hàng');
 
     order.deliveryInfo.codStatus = 'COLLECTED';
+    order.deliveryInfo.deliveryStatus = 'DELIVERED';
+    order.status = 'COMPLETED';
+    order.paidAmount = order.totalAmount;
     return order;
   }
 

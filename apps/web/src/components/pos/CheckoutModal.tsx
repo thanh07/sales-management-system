@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { usePosStore } from '../../store/posStore';
+import api from '../../services/api';
 import { X, CheckCircle2, DollarSign, QrCode, CreditCard, Layers, Copy, Check, Printer, AlertCircle, Truck, MapPin } from 'lucide-react';
 
 interface CheckoutModalProps {
@@ -19,13 +20,29 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
   const [splitCashAmount, setSplitCashAmount] = useState<number>(0);
   const [splitBankAmount, setSplitBankAmount] = useState<number>(total);
   const [selectedBank, setSelectedBank] = useState({
-    bin: '970422', // MB Bank
-    shortName: 'MBBank',
-    accountNo: '0988888888',
-    accountName: 'CONG TY TNHH SALES MANAGER',
+    bin: 'MB',
+    shortName: 'MB',
+    accountNo: '999988886666',
+    accountName: 'NGUYEN VAN THANH',
   });
   const [isCopied, setIsCopied] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Sync settings for dynamic VietQR
+  useEffect(() => {
+    if (isOpen) {
+      api.get('/settings').then((res: any) => {
+        if (res.data && res.data.bankAccountNo) {
+          setSelectedBank({
+            bin: res.data.bankCode || 'MB',
+            shortName: res.data.bankCode || 'MB',
+            accountNo: res.data.bankAccountNo,
+            accountName: res.data.bankAccountName || 'CHỦ TÀI KHOẢN',
+          });
+        }
+      }).catch(() => {});
+    }
+  }, [isOpen]);
 
   // Sync received amount when total changes
   useEffect(() => {
@@ -42,9 +59,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
 
   const orderCode = `HD${new Date().toISOString().slice(0, 10).replace(/-/g, '')}${Math.floor(1000 + Math.random() * 9000)}`;
 
-  // Dynamic VietQR generator URL
+  // Dynamic VietQR generator URL (Pure High-Resolution QR)
   const qrTransferAmount = paymentMethod === 'SPLIT' ? splitBankAmount : total;
-  const qrUrl = `https://img.vietqr.io/image/${selectedBank.shortName}-${selectedBank.accountNo}-compact2.png?amount=${qrTransferAmount}&addInfo=${orderCode}&accountName=${encodeURIComponent(selectedBank.accountName)}`;
+  const qrUrl = `https://img.vietqr.io/image/${selectedBank.shortName}-${selectedBank.accountNo}-qr_only.png?amount=${qrTransferAmount}&addInfo=${orderCode}&accountName=${encodeURIComponent(selectedBank.accountName)}`;
 
   const changeAmount = paymentMethod === 'CASH' ? Math.max(0, receivedAmount - total) : 0;
   const isSufficient = paymentMethod === 'CASH' ? receivedAmount >= total : true;

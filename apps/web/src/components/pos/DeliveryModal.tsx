@@ -343,7 +343,7 @@ export const DeliveryModal: React.FC = () => {
                 className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-600/30 flex items-center gap-1.5"
               >
                 <Check className="w-4 h-4" />
-                <span>Lưu Đơn Giao Hàng (F10)</span>
+                <span>🚚 Khai Báo & Lưu Đơn Giao Hàng</span>
               </button>
             </div>
           </div>

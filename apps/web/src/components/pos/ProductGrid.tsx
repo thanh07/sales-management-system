@@ -121,15 +121,6 @@ export const ProductGrid: React.FC = () => {
           </button>
 
           <button
-            onClick={() => usePosStore.getState().setOrderHistoryModalOpen(true)}
-            className="px-3.5 py-2.5 bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white font-bold rounded-xl border border-purple-500/40 text-xs flex items-center gap-1.5 shrink-0 transition-all shadow-md"
-            title="Tra cứu lịch sử đơn hàng & Phiếu đổi trả hàng (F7)"
-          >
-            <History className="w-4 h-4 text-purple-400" />
-            <span className="hidden sm:inline">Lịch sử (F7)</span>
-          </button>
-
-          <button
             onClick={() => usePosStore.getState().setDeliveryLogModalOpen(true)}
             className="px-3.5 py-2.5 bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white font-bold rounded-xl border border-blue-500/40 text-xs flex items-center gap-1.5 shrink-0 transition-all shadow-md"
             title="Sổ Giao Hàng & Theo Dõi Vận Chuyển MISA eShop"
