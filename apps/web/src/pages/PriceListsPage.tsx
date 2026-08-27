@@ -105,6 +105,8 @@ export const PriceListsPage: React.FC = () => {
   // Editable Matrix State inside KiotViet Editor Modal with Batch Scroll Pagination
   const [matrixItems, setMatrixItems] = useState<any[]>([]);
   const [matrixSearch, setMatrixSearch] = useState('');
+  const [matrixCategoryFilter, setMatrixCategoryFilter] = useState('Tất cả');
+  const [matrixBrandFilter, setMatrixBrandFilter] = useState('Tất cả');
   const [matrixPage, setMatrixPage] = useState(1);
   const [matrixPageSize, setMatrixPageSize] = useState(10);
   const [bulkFormulaMethod, setBulkFormulaMethod] = useState<'PERCENT_BASE' | 'PERCENT_COST' | 'FIXED_OFFSET'>('PERCENT_BASE');
@@ -386,12 +388,22 @@ export const PriceListsPage: React.FC = () => {
     }
   };
 
-  const filteredMatrixItems = matrixItems.filter(
-    (item) =>
-      item.productName.toLowerCase().includes(matrixSearch.toLowerCase()) ||
-      item.sku.toLowerCase().includes(matrixSearch.toLowerCase()) ||
-      item.barcode.includes(matrixSearch)
-  );
+  const filteredMatrixItems = matrixItems.filter((item) => {
+    const q = matrixSearch.toLowerCase().trim();
+    const matchesSearch =
+      !q ||
+      item.productName.toLowerCase().includes(q) ||
+      item.sku.toLowerCase().includes(q) ||
+      item.barcode.includes(q);
+
+    const matchesCategory =
+      matrixCategoryFilter === 'Tất cả' || item.category === matrixCategoryFilter;
+
+    const matchesBrand =
+      matrixBrandFilter === 'Tất cả' || item.brand === matrixBrandFilter;
+
+    return matchesSearch && matchesCategory && matchesBrand;
+  });
 
   const totalMatrixPages = matrixPageSize === 0 ? 1 : Math.ceil(filteredMatrixItems.length / matrixPageSize) || 1;
   const paginatedMatrixItems = matrixPageSize === 0 ? filteredMatrixItems : filteredMatrixItems.slice((matrixPage - 1) * matrixPageSize, matrixPage * matrixPageSize);
@@ -739,8 +751,8 @@ export const PriceListsPage: React.FC = () => {
             </div>
 
             <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-blue-400 shrink-0">⚡ Áp dụng công thức chung hàng loạt:</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-bold text-blue-400 shrink-0">⚡ Áp dụng công thức chung:</span>
                 <select
                   value={bulkFormulaMethod}
                   onChange={(e: any) => setBulkFormulaMethod(e.target.value)}
@@ -761,19 +773,54 @@ export const PriceListsPage: React.FC = () => {
                   onClick={handleApplyBulkFormula}
                   className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold shrink-0 shadow-md shadow-blue-600/30"
                 >
-                  Áp Dụng Tất Cả
+                  Áp Dụng
                 </button>
               </div>
 
-              <div className="relative w-full md:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="text"
-                  value={matrixSearch}
-                  onChange={(e) => setMatrixSearch(e.target.value)}
-                  placeholder="Lọc theo tên, SKU, Barcode..."
-                  className="w-full pl-9 pr-3 py-2 rounded-lg glass-input text-xs"
-                />
+              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                {/* Category Filter */}
+                <select
+                  value={matrixCategoryFilter}
+                  onChange={(e) => {
+                    setMatrixCategoryFilter(e.target.value);
+                    setMatrixPage(1);
+                  }}
+                  className="px-3 py-2 rounded-lg glass-input bg-slate-900 text-xs font-semibold"
+                >
+                  <option value="Tất cả">📁 Tất cả Nhóm Hàng</option>
+                  <option value="Chậu Trồng Cây">🪴 Chậu Trồng Cây</option>
+                  <option value="Bình Bông & Lọ Hoa">🏺 Bình Bông & Lọ Hoa</option>
+                  <option value="Dụng Cụ Chì & Vật Tư Lan">🌿 Dụng Cụ Chì & Vật Tư Lan</option>
+                  <option value="Đĩa & Khay Lót">🍽️ Đĩa & Khay Lót</option>
+                  <option value="Khay & Chậu Rau">🥬 Khay & Chậu Rau</option>
+                </select>
+
+                {/* Brand Filter */}
+                <select
+                  value={matrixBrandFilter}
+                  onChange={(e) => {
+                    setMatrixBrandFilter(e.target.value);
+                    setMatrixPage(1);
+                  }}
+                  className="px-3 py-2 rounded-lg glass-input bg-slate-900 text-xs font-semibold"
+                >
+                  <option value="Tất cả">🏷️ Tất cả Thương Hiệu</option>
+                  <option value="Đức Minh">Đức Minh</option>
+                  <option value="Á Đông">Á Đông</option>
+                  <option value="Chì Lan">Chì Lan</option>
+                  <option value="VM">VM</option>
+                </select>
+
+                <div className="relative w-full sm:w-48">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    value={matrixSearch}
+                    onChange={(e) => setMatrixSearch(e.target.value)}
+                    placeholder="Lọc theo tên, SKU..."
+                    className="w-full pl-9 pr-3 py-2 rounded-lg glass-input text-xs"
+                  />
+                </div>
               </div>
             </div>
 
@@ -887,9 +934,10 @@ export const PriceListsPage: React.FC = () => {
                   <tr>
                     <th className="p-3">Sản phẩm / Mã SKU</th>
                     <th className="p-3">Đơn Vị Tính</th>
-                    <th className="p-3">Giá Nhập</th>
+                    <th className="p-3">Giá Nhập (Vốn)</th>
                     <th className="p-3">Giá Bán Niêm Yết</th>
-                    <th className="p-3">GIÁ TRONG BẢNG GIÁ (TÙY CHỈNH TRỰC TIẾP)</th>
+                    <th className="p-3">GIÁ TRONG BẢNG GIÁ SỈ (SỬA TRỰC TIẾP)</th>
+                    <th className="p-3">% LÃI GỘP SỈ</th>
                     <th className="p-3">Trạng Thái</th>
                   </tr>
                 </thead>
@@ -938,14 +986,52 @@ export const PriceListsPage: React.FC = () => {
                         </div>
                       </td>
 
+                      {/* Profit Margin % Badge */}
+                      <td className="p-3 font-mono font-bold">
+                        {(() => {
+                          const cost = Number(item.costPrice || 0);
+                          const sell = Number(item.customPrice || 0);
+                          if (sell <= 0) return <span className="text-slate-600">0%</span>;
+                          const margin = Math.round(((sell - cost) / sell) * 100);
+                          const isLoss = sell < cost;
+
+                          if (isLoss) {
+                            return (
+                              <span className="px-2 py-0.5 rounded bg-red-500/20 text-red-400 text-[10px] border border-red-500/30 font-extrabold flex items-center gap-1">
+                                🚨 Lỗ ({margin}%)
+                              </span>
+                            );
+                          }
+                          if (margin >= 15) {
+                            return (
+                              <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] border border-emerald-500/30">
+                                +{margin}% Lãi tốt
+                              </span>
+                            );
+                          }
+                          if (margin >= 5) {
+                            return (
+                              <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] border border-amber-500/30">
+                                +{margin}% Lãi vừa
+                              </span>
+                            );
+                          }
+                          return (
+                            <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px]">
+                              +{margin}% Lãi mỏng
+                            </span>
+                          );
+                        })()}
+                      </td>
+
                       <td className="p-3">
                         {item.isOverridden ? (
                           <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold text-[10px] border border-amber-500/30">
-                            ✏️ Giá Tùy Chỉnh Lẻ
+                            ✏️ Tùy Chỉnh Sỉ
                           </span>
                         ) : (
                           <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[10px]">
-                            ⚡ Theo Công Thức
+                            ⚡ Tự Động
                           </span>
                         )}
                       </td>

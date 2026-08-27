@@ -127,4 +127,11 @@ export class BranchService {
     BRANCHES_DB.splice(idx, 1);
     return true;
   }
+
+  static setBranches(newBranches: Branch[]): Branch[] {
+    if (Array.isArray(newBranches) && newBranches.length > 0) {
+      BRANCHES_DB = [...newBranches];
+    }
+    return [...BRANCHES_DB];
+  }
 }

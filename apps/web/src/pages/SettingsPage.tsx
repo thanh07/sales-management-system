@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { 
@@ -35,7 +35,14 @@ import {
   Zap,
   CreditCard,
   Building,
-  AlertTriangle
+  AlertTriangle,
+  Image as ImageIcon,
+  Database,
+  Download,
+  Upload,
+  FileCode,
+  PackageCheck,
+  RefreshCw
 } from 'lucide-react';
 
 const VIETNAM_PROVINCES = [
@@ -87,18 +94,24 @@ export const SettingsPage: React.FC = () => {
   const { user } = useAuthStore();
   const isAdmin = user?.role === 'ADMIN';
 
-  const [activeTab, setActiveTab] = useState<'POS_RULES' | 'RBAC_MATRIX' | 'STORE_PROFILE' | 'PRINT_PAYMENTS' | 'MASTER_CATALOGS'>('POS_RULES');
-  const [catalogSubTab, setCatalogSubTab] = useState<'CATEGORIES' | 'BRANDS' | 'LOCATIONS' | 'UNITS'>('CATEGORIES');
+  const [activeTab, setActiveTab] = useState<'POS_RULES' | 'RBAC_MATRIX' | 'STORE_PROFILE' | 'PRINT_PAYMENTS' | 'MASTER_CATALOGS' | 'BACKUP_RESTORE'>('POS_RULES');
+  const [catalogSubTab, setCatalogSubTab] = useState<'CATEGORIES' | 'BRANDS' | 'LOCATIONS' | 'UNITS' | 'IMAGE_PRESETS'>('CATEGORIES');
 
   const [isLoading, setIsLoading] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Backup & Restore States
+  const configFileInputRef = useRef<HTMLInputElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   // Catalogs State
   const [categories, setCategories] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
   const [units, setUnits] = useState<any[]>([]);
+  const [imagePresets, setImagePresets] = useState<any[]>([]);
   const [catalogSearch, setCatalogSearch] = useState('');
 
   // Catalog Modals
@@ -119,6 +132,11 @@ export const SettingsPage: React.FC = () => {
   const [isUnitModalOpen, setIsUnitModalOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState<any | null>(null);
   const [unitNameInput, setUnitNameInput] = useState('');
+
+  const [isImagePresetModalOpen, setIsImagePresetModalOpen] = useState(false);
+  const [editingImagePreset, setEditingImagePreset] = useState<any | null>(null);
+  const [presetLabelInput, setPresetLabelInput] = useState('');
+  const [presetUrlInput, setPresetUrlInput] = useState('');
 
   // Form State
   const [settings, setSettings] = useState({
@@ -184,16 +202,18 @@ export const SettingsPage: React.FC = () => {
 
   const fetchCatalogs = async () => {
     try {
-      const [catRes, brandRes, locRes, unitRes]: any[] = await Promise.all([
+      const [catRes, brandRes, locRes, unitRes, presetRes]: any[] = await Promise.all([
         api.get('/products/categories'),
         api.get('/products/brands'),
         api.get('/products/locations'),
         api.get('/products/units'),
+        api.get('/settings/image-presets'),
       ]);
       setCategories(catRes.data || []);
       setBrands(brandRes.data || []);
       setLocations(locRes.data || []);
       setUnits(unitRes.data || []);
+      setImagePresets(presetRes.data || []);
     } catch (err) {
       console.error('Fetch catalogs error:', err);
     }
@@ -233,17 +253,90 @@ export const SettingsPage: React.FC = () => {
   };
 
   const handleResetAllData = async () => {
-    if (confirm('⚠️ BẠN CÓ CHẮC CHẮN MUỐN XÓA TOÀN BỘ DỮ LIỆU ĐƠN HÀNG VÀ NẠP LẠI 100 SẢN PHẨM MỚI CHO TẤT CẢ CÁC CHI NHÁNH KHÔNG?')) {
+    if (confirm('BẠN CÓ CHẮC CHẮN MUỐN RESET TOÀN BỘ? Hệ thống sẽ xóa toàn bộ đơn hàng và nạp lại 100 sản phẩm với tồn kho đầy đủ cho tất cả chi nhánh!')) {
       try {
         setIsLoading(true);
-        await api.post('/settings/reset-data');
-        alert('✅ Đã xóa sạch dữ liệu ứng dụng và tái nạp 100 sản phẩm với đầy đủ số lượng tồn kho cho tất cả 3 chi nhánh!');
+        const res: any = await api.post('/settings/reset-data');
+        alert(res.message || 'Đã nạp lại 100 sản phẩm và tồn kho đầy đủ');
         window.location.reload();
       } catch (err: any) {
         alert(err.message || 'Lỗi khi xóa và nạp lại dữ liệu');
       } finally {
         setIsLoading(false);
       }
+    }
+  };
+
+  // --- Backup & Restore Handlers ---
+  const handleExportSystemBundle = async () => {
+    try {
+      setIsExporting(true);
+      const res: any = await api.get('/settings/export-bundle');
+      const bundleData = res.data;
+      const jsonStr = JSON.stringify(bundleData, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      link.href = url;
+      link.download = `system_config_backup_${dateStr}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showToast('Xuất gói cấu hình hệ thống thành công (.json)!');
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi xuất gói cấu hình hệ thống');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImportConfigFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        setIsImporting(true);
+        const content = event.target?.result as string;
+        const parsedBundle = JSON.parse(content);
+
+        if (!parsedBundle || typeof parsedBundle !== 'object') {
+          throw new Error('Định dạng file JSON không hợp lệ!');
+        }
+
+        const res: any = await api.post('/settings/import-bundle', parsedBundle);
+        showToast(res.message || 'Đã nạp gói cấu hình hệ thống thành công!');
+        fetchSettings();
+        fetchCatalogs();
+      } catch (err: any) {
+        alert('Lỗi nạp cấu hình: ' + (err.message || 'File không đúng định dạng JSON chuẩn'));
+      } finally {
+        setIsImporting(false);
+        if (configFileInputRef.current) {
+          configFileInputRef.current.value = '';
+        }
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleLoadDefaultTemplate = async () => {
+    if (!confirm('Bạn có chắc chắn muốn nạp lại Cấu Hình Chuẩn Siêu Thị & Tạp Hóa Mặc Định? Cấu hình hiện tại sẽ được ghi đè.')) {
+      return;
+    }
+    try {
+      setIsLoading(true);
+      const res: any = await api.post('/settings/load-default-config');
+      showToast(res.message || 'Đã nạp cấu hình hệ thống chuẩn mặc định!');
+      fetchSettings();
+      fetchCatalogs();
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi nạp cấu hình mặc định');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -453,6 +546,57 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
+  // --- Image Preset Actions ---
+  const handleOpenAddImagePreset = () => {
+    setEditingImagePreset(null);
+    setPresetLabelInput('');
+    setPresetUrlInput('https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400&q=80');
+    setIsImagePresetModalOpen(true);
+  };
+
+  const handleOpenEditImagePreset = (preset: any) => {
+    setEditingImagePreset(preset);
+    setPresetLabelInput(preset.label);
+    setPresetUrlInput(preset.url);
+    setIsImagePresetModalOpen(true);
+  };
+
+  const handleSaveImagePreset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!presetLabelInput.trim() || !presetUrlInput.trim()) return;
+    try {
+      if (editingImagePreset) {
+        const res: any = await api.put(`/settings/image-presets/${editingImagePreset.id}`, {
+          label: presetLabelInput.trim(),
+          url: presetUrlInput.trim(),
+        });
+        setImagePresets(res.data || []);
+        showToast('Cập nhật gợi ý hình ảnh thành công!');
+      } else {
+        const res: any = await api.post('/settings/image-presets', {
+          label: presetLabelInput.trim(),
+          url: presetUrlInput.trim(),
+        });
+        setImagePresets(res.data || []);
+        showToast('Thêm gợi ý hình ảnh mới thành công!');
+      }
+      setIsImagePresetModalOpen(false);
+    } catch (err: any) {
+      alert(err.message || 'Lỗi lưu gợi ý hình ảnh');
+    }
+  };
+
+  const handleDeleteImagePreset = async (id: string) => {
+    if (!confirm('Bạn có chắc chắn muốn xóa gợi ý hình ảnh này?')) return;
+    try {
+      const res: any = await api.delete(`/settings/image-presets/${id}`);
+      setImagePresets(res.data || []);
+      showToast('Đã xóa gợi ý hình ảnh!');
+    } catch (err: any) {
+      alert(err.message || 'Lỗi xóa gợi ý hình ảnh');
+    }
+  };
+
   const formatVND = (n: number) => new Intl.NumberFormat('vi-VN').format(n || 0) + ' đ';
 
   return (
@@ -488,18 +632,47 @@ export const SettingsPage: React.FC = () => {
 
         {/* Header Actions */}
         {isAdmin && (
-          <div className="flex items-center gap-2.5 w-full md:w-auto">
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            {/* Hidden File Input for Config Import */}
+            <input
+              type="file"
+              ref={configFileInputRef}
+              accept=".json"
+              onChange={handleImportConfigFile}
+              className="hidden"
+            />
+
+            <button
+              onClick={handleExportSystemBundle}
+              disabled={isExporting}
+              className="px-3.5 py-2.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all border border-emerald-500/40 shadow"
+              title="Tải toàn bộ cấu hình hệ thống về 1 file JSON duy nhất"
+            >
+              <Download className="w-4 h-4 text-emerald-400" />
+              <span>{isExporting ? 'Đang xuất...' : 'Xuất File Cấu Hình'}</span>
+            </button>
+
+            <button
+              onClick={() => configFileInputRef.current?.click()}
+              disabled={isImporting}
+              className="px-3.5 py-2.5 rounded-xl bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all border border-purple-500/40 shadow"
+              title="Nạp file JSON cấu hình để khôi phục nhanh"
+            >
+              <Upload className="w-4 h-4 text-purple-400" />
+              <span>{isImporting ? 'Đang nạp...' : 'Nạp File Cấu Hình'}</span>
+            </button>
+
             <button
               onClick={handleResetAllData}
-              className="flex-1 md:flex-initial px-4 py-2.5 rounded-xl bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all border border-red-500/40 shadow"
+              className="px-3.5 py-2.5 rounded-xl bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all border border-red-500/40 shadow"
               title="Xóa toàn bộ dữ liệu đơn hàng và nạp lại 100 sản phẩm với tồn kho đầy đủ cho tất cả chi nhánh"
             >
               <Trash2 className="w-4 h-4 text-red-400" />
-              <span>Reset & Nạp 100 SP/Chi Nhánh</span>
+              <span>Reset Dữ Liệu</span>
             </button>
             <button
               onClick={handleResetToOriginal}
-              className="flex-1 md:flex-initial px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all border border-slate-700"
+              className="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all border border-slate-700"
             >
               <RotateCcw className="w-4 h-4" />
               <span>Hoàn tác</span>
@@ -507,10 +680,10 @@ export const SettingsPage: React.FC = () => {
             <button
               onClick={handleSaveGlobalSettings}
               disabled={isLoading}
-              className="flex-1 md:flex-initial px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
             >
               <Save className="w-4 h-4" />
-              <span>{isLoading ? 'Đang lưu...' : 'Lưu Toàn Bộ Cấu Hình'}</span>
+              <span>{isLoading ? 'Đang lưu...' : 'Lưu Cấu Hình'}</span>
             </button>
           </div>
         )}
@@ -596,6 +769,18 @@ export const SettingsPage: React.FC = () => {
         >
           <FolderTree className="w-4 h-4 text-purple-400" />
           <span>5. Danh Mục Dùng Chung ({categories.length + brands.length + locations.length + units.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('BACKUP_RESTORE')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
+            activeTab === 'BACKUP_RESTORE'
+              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
+              : 'bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
+          }`}
+        >
+          <Database className="w-4 h-4 text-emerald-400" />
+          <span>6. Sao Lưu & Khôi Phục Cấu Hình</span>
         </button>
       </div>
 
@@ -1427,34 +1612,46 @@ export const SettingsPage: React.FC = () => {
                   <span>Thêm ĐVT</span>
                 </button>
               )}
+              {catalogSubTab === 'IMAGE_PRESETS' && (
+                <button onClick={handleOpenAddImagePreset} className="px-3.5 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold flex items-center gap-1.5 shadow-lg shadow-pink-600/30">
+                  <Plus className="w-4 h-4" />
+                  <span>Thêm Gợi Ý Ảnh</span>
+                </button>
+              )}
             </div>
           </div>
 
           {/* Catalog Sub Tabs */}
-          <div className="flex items-center gap-2 border-b border-slate-800 pb-2 text-xs">
+          <div className="flex items-center gap-2 border-b border-slate-800 pb-2 text-xs overflow-x-auto">
             <button
               onClick={() => setCatalogSubTab('CATEGORIES')}
-              className={`px-3.5 py-2 rounded-xl font-bold transition-all ${catalogSubTab === 'CATEGORIES' ? 'bg-blue-600/20 text-blue-400 border border-blue-500/40' : 'text-slate-400 hover:text-white'}`}
+              className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap ${catalogSubTab === 'CATEGORIES' ? 'bg-blue-600/20 text-blue-400 border border-blue-500/40' : 'text-slate-400 hover:text-white'}`}
             >
               📁 Nhóm Hàng ({categories.length})
             </button>
             <button
               onClick={() => setCatalogSubTab('BRANDS')}
-              className={`px-3.5 py-2 rounded-xl font-bold transition-all ${catalogSubTab === 'BRANDS' ? 'bg-purple-600/20 text-purple-400 border border-purple-500/40' : 'text-slate-400 hover:text-white'}`}
+              className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap ${catalogSubTab === 'BRANDS' ? 'bg-purple-600/20 text-purple-400 border border-purple-500/40' : 'text-slate-400 hover:text-white'}`}
             >
               🏷️ Thương Hiệu ({brands.length})
             </button>
             <button
               onClick={() => setCatalogSubTab('LOCATIONS')}
-              className={`px-3.5 py-2 rounded-xl font-bold transition-all ${catalogSubTab === 'LOCATIONS' ? 'bg-amber-600/20 text-amber-400 border border-amber-500/40' : 'text-slate-400 hover:text-white'}`}
+              className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap ${catalogSubTab === 'LOCATIONS' ? 'bg-amber-600/20 text-amber-400 border border-amber-500/40' : 'text-slate-400 hover:text-white'}`}
             >
               📍 Vị Trí Kho ({locations.length})
             </button>
             <button
               onClick={() => setCatalogSubTab('UNITS')}
-              className={`px-3.5 py-2 rounded-xl font-bold transition-all ${catalogSubTab === 'UNITS' ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/40' : 'text-slate-400 hover:text-white'}`}
+              className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap ${catalogSubTab === 'UNITS' ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/40' : 'text-slate-400 hover:text-white'}`}
             >
               ⚖️ Đơn Vị Tính ({units.length})
+            </button>
+            <button
+              onClick={() => setCatalogSubTab('IMAGE_PRESETS')}
+              className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap ${catalogSubTab === 'IMAGE_PRESETS' ? 'bg-pink-600/20 text-pink-400 border border-pink-500/40' : 'text-slate-400 hover:text-white'}`}
+            >
+              🖼️ Gợi Ý Ảnh Sản Phẩm ({imagePresets.length})
             </button>
           </div>
 
@@ -1521,6 +1718,191 @@ export const SettingsPage: React.FC = () => {
                 </div>
               </div>
             ))}
+
+            {catalogSubTab === 'IMAGE_PRESETS' && imagePresets.map((p) => (
+              <div key={p.id} className="p-3 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-3 group hover:border-slate-700 transition-all">
+                <div className="flex items-center gap-3 min-w-0">
+                  <img src={p.url} alt={p.label} className="w-12 h-12 rounded-xl object-cover bg-slate-950 border border-slate-800 shrink-0" />
+                  <div className="min-w-0">
+                    <div className="font-bold text-white text-xs truncate">{p.label}</div>
+                    <div className="text-[10px] text-slate-500 font-mono truncate max-w-[150px]">{p.url}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={() => handleOpenEditImagePreset(p)} className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-blue-400 hover:text-white transition-colors" title="Sửa gợi ý ảnh">
+                    <Edit3 className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => handleDeleteImagePreset(p.id)} className="p-1.5 rounded-lg bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors" title="Xóa gợi ý ảnh">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* HUB CONTENT 6: SAO LƯU & KHÔI PHỤC CẤU HÌNH HỆ THỐNG */}
+      {activeTab === 'BACKUP_RESTORE' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          {/* Header Description */}
+          <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
+            <div className="flex items-center gap-2.5 pb-3 border-b border-slate-800">
+              <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                <Database className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                  <span>Quản Lý Gói Cấu Hình Hệ Thống (System Config Snapshot)</span>
+                  <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-mono">
+                    .json bundle
+                  </span>
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Lưu trữ và khôi phục toàn bộ cài đặt (Cửa hàng, Chi nhánh, Danh mục gốc, Mẫu VietQR, Quy tắc POS) chỉ trong 1 file duy nhất.
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                <div className="text-slate-400 text-[11px]">Cửa hàng & Chi nhánh</div>
+                <div className="text-sm font-bold text-white mt-1 flex items-center gap-1.5">
+                  <Store className="w-4 h-4 text-cyan-400" />
+                  <span>{settings.storeType === 'CHAIN' ? 'Mô hình Chuỗi' : 'Cửa hàng Đơn'}</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                <div className="text-slate-400 text-[11px]">Danh mục dùng chung</div>
+                <div className="text-sm font-bold text-purple-400 mt-1 flex items-center gap-1.5">
+                  <FolderTree className="w-4 h-4" />
+                  <span>{categories.length} Nhóm | {brands.length} Hiệu</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                <div className="text-slate-400 text-[11px]">ĐVT & Vị trí kho</div>
+                <div className="text-sm font-bold text-emerald-400 mt-1 flex items-center gap-1.5">
+                  <Scale className="w-4 h-4" />
+                  <span>{units.length} ĐVT | {locations.length} Vị trí</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                <div className="text-slate-400 text-[11px]">Thanh toán VietQR</div>
+                <div className="text-sm font-bold text-amber-400 mt-1 flex items-center gap-1.5">
+                  <QrCode className="w-4 h-4" />
+                  <span>{settings.bankCode || 'Chưa chọn'} ({settings.bankAccountNo ? 'Đã gán STK' : 'Chưa có'})</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {/* Card 1: Export Snapshot */}
+            <div className="glass-panel p-6 rounded-2xl border border-slate-800 flex flex-col justify-between space-y-4 hover:border-emerald-500/40 transition-all shadow-lg">
+              <div className="space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
+                  <Download className="w-6 h-6" />
+                </div>
+                <h3 className="text-sm font-bold text-white">1. Xuất File Cấu Hình (.json)</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Đóng gói toàn bộ thiết lập hiện tại thành 1 file JSON nhẹ để sao lưu về máy tính hoặc chuyển sang môi trường khác.
+                </p>
+                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-400 space-y-1">
+                  <div className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Gồm Profile cửa hàng + 3 Chi nhánh</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Toàn bộ 4 Danh mục + 9 Mẫu ảnh</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Cấu hình VietQR & Quy tắc bán hàng POS</span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={handleExportSystemBundle}
+                disabled={isExporting}
+                className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all"
+              >
+                <Download className="w-4 h-4" />
+                <span>{isExporting ? 'Đang xuất gói...' : 'Tải File Cấu Hình (.json)'}</span>
+              </button>
+            </div>
+
+            {/* Card 2: Import Snapshot */}
+            <div className="glass-panel p-6 rounded-2xl border border-slate-800 flex flex-col justify-between space-y-4 hover:border-purple-500/40 transition-all shadow-lg">
+              <div className="space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-purple-500/20 text-purple-400 border border-purple-500/30 flex items-center justify-center">
+                  <Upload className="w-6 h-6" />
+                </div>
+                <h3 className="text-sm font-bold text-white">2. Nạp File Cấu Hình (.json)</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Chọn file `.json` đã sao lưu trước đó từ máy tính để khôi phục lại toàn bộ cấu hình hệ thống ngay lập tức.
+                </p>
+                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-400 space-y-1">
+                  <div className="flex items-center gap-1.5 text-purple-300 font-semibold">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Tự động kiểm tra tính hợp lệ của file</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-purple-300 font-semibold">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Áp dụng đồng bộ mà không cần khởi động lại</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-amber-400 font-semibold">
+                    <ShieldAlert className="w-3.5 h-3.5" />
+                    <span>Không làm mất đơn hàng hay lịch sử bán</span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => configFileInputRef.current?.click()}
+                disabled={isImporting}
+                className="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-600/30 transition-all"
+              >
+                <Upload className="w-4 h-4" />
+                <span>{isImporting ? 'Đang nạp dữ liệu...' : 'Chọn File JSON Để Nạp'}</span>
+              </button>
+            </div>
+
+            {/* Card 3: Default Standard Preset */}
+            <div className="glass-panel p-6 rounded-2xl border border-slate-800 flex flex-col justify-between space-y-4 hover:border-blue-500/40 transition-all shadow-lg">
+              <div className="space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center justify-center">
+                  <PackageCheck className="w-6 h-6" />
+                </div>
+                <h3 className="text-sm font-bold text-white">3. Mẫu Chuẩn Siêu Thị & Tạp Hóa</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Khôi phục về bộ mẫu chuẩn mặc định gốc của hệ thống, chuẩn bị sẵn sàng cho ngành hàng bán lẻ tạp hóa & siêu thị.
+                </p>
+                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-400 space-y-1">
+                  <div className="text-blue-300 font-semibold">
+                    🏢 Chuỗi Siêu Thị Tiện Lợi Thành Đạt
+                  </div>
+                  <div>• 9 Nhóm hàng tiêu dùng thiết yếu</div>
+                  <div>• 15 Thương hiệu phổ biến (Coca, Vinamilk, Hảo Hảo...)</div>
+                  <div>• Đầy đủ 3 Chi nhánh TP.HCM + VietQR MBBank</div>
+                </div>
+              </div>
+
+              <button
+                onClick={handleLoadDefaultTemplate}
+                disabled={isLoading}
+                className="w-full py-3 rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/40 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span>Nạp Mẫu Cấu Hình Chuẩn Gốc</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1659,6 +2041,94 @@ export const SettingsPage: React.FC = () => {
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
                 <button type="button" onClick={() => setIsUnitModalOpen(false)} className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold">Hủy</button>
                 <button type="submit" className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-lg shadow-emerald-600/30">Lưu</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Image Preset Modal */}
+      {isImagePresetModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-5 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-pink-500/20 text-pink-400 border border-pink-500/30">
+                  <ImageIcon className="w-4 h-4" />
+                </div>
+                <h3 className="font-bold text-base text-white">
+                  {editingImagePreset ? 'Sửa Gợi Ý Hình Ảnh Mẫu' : 'Thêm Gợi Ý Hình Ảnh Mới'}
+                </h3>
+              </div>
+              <button onClick={() => setIsImagePresetModalOpen(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveImagePreset} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">Tên Nhãn Gợi Ý (Kèm Icon) (*)</label>
+                <input
+                  type="text"
+                  required
+                  value={presetLabelInput}
+                  onChange={(e) => setPresetLabelInput(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl glass-input text-xs font-bold text-white"
+                  placeholder="VD: 🥤 Nước ngọt / Đồ uống, 🍎 Trái cây tươi..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">Đường Link Hình Ảnh (URL CDN / Unsplash) (*)</label>
+                <input
+                  type="url"
+                  required
+                  value={presetUrlInput}
+                  onChange={(e) => setPresetUrlInput(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl glass-input text-xs font-mono text-pink-300"
+                  placeholder="https://images.unsplash.com/..."
+                />
+              </div>
+
+              {/* Live Preview */}
+              <div>
+                <label className="block text-slate-400 font-semibold mb-1.5">Xem trước hình ảnh hiển thị:</label>
+                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-3">
+                  {presetUrlInput ? (
+                    <img
+                      src={presetUrlInput}
+                      alt="Preview"
+                      className="w-16 h-16 rounded-xl object-cover bg-slate-900 border border-slate-700 shadow-md"
+                      onError={(e: any) => { e.target.src = 'https://via.placeholder.com/150?text=Invalid+Image'; }}
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-600">
+                      <ImageIcon className="w-6 h-6" />
+                    </div>
+                  )}
+                  <div>
+                    <div className="font-bold text-white text-xs">{presetLabelInput || 'Tên nhãn gợi ý'}</div>
+                    <div className="text-[10px] text-slate-400 mt-1">
+                      Nút này sẽ xuất hiện tại phần "Gợi ý mẫu" khi nhân viên bấm Thêm/Sửa sản phẩm.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsImagePresetModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold shadow-lg shadow-pink-600/30 transition-all"
+                >
+                  Lưu Gợi Ý
+                </button>
               </div>
             </form>
           </div>

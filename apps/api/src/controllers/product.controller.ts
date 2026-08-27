@@ -301,4 +301,33 @@ export class ProductController {
       return sendError(res, err.message, 400);
     }
   };
+
+  // Branch-specific settings
+  static updateBranchStatus = async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { branchId, isActive } = req.body;
+      if (!branchId || typeof isActive !== 'boolean') {
+        return sendError(res, 'Vui lòng cung cấp branchId và trạng thái isActive', 400);
+      }
+      const product = ProductService.toggleBranchActiveStatus(id, branchId, isActive);
+      return sendSuccess(res, product, `Đã ${isActive ? 'bật bán' : 'ngừng bán'} sản phẩm tại chi nhánh!`);
+    } catch (err: any) {
+      return sendError(res, err.message, 400);
+    }
+  };
+
+  static updateBranchMinStock = async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { branchId, minStock } = req.body;
+      if (!branchId || minStock === undefined) {
+        return sendError(res, 'Vui lòng cung cấp branchId và ngưỡng minStock', 400);
+      }
+      const product = ProductService.updateBranchMinStock(id, branchId, Number(minStock));
+      return sendSuccess(res, product, 'Cập nhật định mức tồn kho tối thiểu tại chi nhánh thành công!');
+    } catch (err: any) {
+      return sendError(res, err.message, 400);
+    }
+  };
 }

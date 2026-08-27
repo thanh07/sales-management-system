@@ -40,7 +40,13 @@ import {
   SlidersHorizontal,
   Store,
   CheckSquare,
-  Square
+  Square,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Settings2,
+  Sliders,
+  Info
 } from 'lucide-react';
 import { ImportExcelModal, downloadProductExcelTemplate } from '../components/products/ImportExcelModal';
 import { BarcodePrintModal } from '../components/products/BarcodePrintModal';
@@ -69,10 +75,21 @@ export const ProductsPage: React.FC = () => {
     'branch-02': 50,
     'branch-03': 140,
   });
+  const [branchMinStocksForm, setBranchMinStocksForm] = useState<Record<string, number>>({
+    'branch-01': 10,
+    'branch-02': 10,
+    'branch-03': 20,
+  });
+  const [branchActiveStatusForm, setBranchActiveStatusForm] = useState<Record<string, boolean>>({
+    'branch-01': true,
+    'branch-02': true,
+    'branch-03': true,
+  });
   const [categories, setCategories] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
   const [units, setUnits] = useState<any[]>([]);
+  const [imagePresets, setImagePresets] = useState<any[]>(PRESET_IMAGES);
 
   // Filter States
   const [searchQuery, setSearchQuery] = useState('');
@@ -101,6 +118,62 @@ export const ProductsPage: React.FC = () => {
   // MISA Pagination States
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+
+  // Proposal 1: Column Sorting States
+  const [sortColumn, setSortColumn] = useState<'name' | 'sku' | 'sellingPrice' | 'stock' | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const handleSort = (col: 'name' | 'sku' | 'sellingPrice' | 'stock') => {
+    if (sortColumn === col) {
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else {
+        setSortColumn(null);
+        setSortDirection('asc');
+      }
+    } else {
+      setSortColumn(col);
+      setSortDirection('asc');
+    }
+  };
+
+  // Proposal 3: Column Visibility Customizer States
+  const DEFAULT_COLUMNS = {
+    sku: true,
+    category: true,
+    unit: true,
+    price: true,
+    stock: true,
+    posDisplay: true,
+    branchStatus: true,
+  };
+
+  const [visibleColumns, setVisibleColumns] = useState<typeof DEFAULT_COLUMNS>(() => {
+    try {
+      const saved = localStorage.getItem('products_table_visible_columns');
+      return saved ? { ...DEFAULT_COLUMNS, ...JSON.parse(saved) } : DEFAULT_COLUMNS;
+    } catch {
+      return DEFAULT_COLUMNS;
+    }
+  });
+  const [isColumnCustomizerOpen, setIsColumnCustomizerOpen] = useState(false);
+
+  const toggleColumnVisibility = (col: keyof typeof DEFAULT_COLUMNS) => {
+    setVisibleColumns((prev) => {
+      const updated = { ...prev, [col]: !prev[col] };
+      try {
+        localStorage.setItem('products_table_visible_columns', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const resetColumnVisibility = () => {
+    setVisibleColumns(DEFAULT_COLUMNS);
+    try {
+      localStorage.setItem('products_table_visible_columns', JSON.stringify(DEFAULT_COLUMNS));
+    } catch {}
+  };
 
   // Modals States
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -156,6 +229,7 @@ export const ProductsPage: React.FC = () => {
 
   const [costPrice, setCostPrice] = useState<number>(11000);
   const [sellingPrice, setSellingPrice] = useState<number>(15000);
+  const [wholesalePrice, setWholesalePrice] = useState<number>(13000);
   const [stockQuantity, setStockQuantity] = useState<number>(240);
   const [minStock, setMinStock] = useState<number>(24);
   const [image, setImage] = useState('');
@@ -191,6 +265,13 @@ export const ProductsPage: React.FC = () => {
       setLocations(res.data.locations || []);
       const fetchedUnits = res.data.units || [];
       setUnits(fetchedUnits);
+
+      // Fetch dynamic image presets configured in Settings
+      api.get('/settings/image-presets').then((presRes: any) => {
+        if (presRes.data && presRes.data.length > 0) {
+          setImagePresets(presRes.data);
+        }
+      }).catch(() => {});
 
       // Auto-expand all products that have variants so user sees all variants by default
       const variantProductIds = fetchedProducts
@@ -240,11 +321,37 @@ export const ProductsPage: React.FC = () => {
     return true;
   });
 
+  // Sorted & Filtered Products
+  const sortedAndFilteredProducts = [...filteredProducts].sort((a, b) => {
+    if (!sortColumn) return 0;
+    let valA: any;
+    let valB: any;
+
+    if (sortColumn === 'name') {
+      valA = (a.name || '').toLowerCase();
+      valB = (b.name || '').toLowerCase();
+      return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    } else if (sortColumn === 'sku') {
+      valA = (a.sku || '').toLowerCase();
+      valB = (b.sku || '').toLowerCase();
+      return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    } else if (sortColumn === 'sellingPrice') {
+      valA = Number(a.sellingPrice || 0);
+      valB = Number(b.sellingPrice || 0);
+      return sortDirection === 'asc' ? valA - valB : valB - valA;
+    } else if (sortColumn === 'stock') {
+      valA = a.branchStocks && a.branchStocks[selectedBranchId] !== undefined ? a.branchStocks[selectedBranchId] : (a.stockQuantity || 0);
+      valB = b.branchStocks && b.branchStocks[selectedBranchId] !== undefined ? b.branchStocks[selectedBranchId] : (b.stockQuantity || 0);
+      return sortDirection === 'asc' ? valA - valB : valB - valA;
+    }
+    return 0;
+  });
+
   // MISA Pagination Calculations
-  const totalPages = Math.ceil(filteredProducts.length / pageSize) || 1;
-  const paginatedProducts = filteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-  const startIndex = filteredProducts.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-  const endIndex = Math.min(currentPage * pageSize, filteredProducts.length);
+  const totalPages = Math.ceil(sortedAndFilteredProducts.length / pageSize) || 1;
+  const paginatedProducts = sortedAndFilteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const startIndex = sortedAndFilteredProducts.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endIndex = Math.min(currentPage * pageSize, sortedAndFilteredProducts.length);
 
   // MISA Action Handlers
   const handleSelectAll = (checked: boolean) => {
@@ -330,11 +437,13 @@ export const ProductsPage: React.FC = () => {
     setSellingPrice(draft.sellingPrice || 0);
     setStockQuantity(draft.stockQuantity || 0);
     setMinStock(draft.minStock || 10);
-    setImage(draft.image || PRESET_IMAGES[0].url);
+    setImage(draft.image || (imagePresets[0]?.url || PRESET_IMAGES[0].url));
     setHasVariants(draft.hasVariants || false);
     setAttributes(draft.attributes || []);
     setVariantMatrix(draft.variants || []);
     setBranchStocksForm(draft.branchStocks || { 'branch-01': 50, 'branch-02': 50, 'branch-03': 140 });
+    setBranchMinStocksForm(draft.branchMinStocks || { 'branch-01': 10, 'branch-02': 10, 'branch-03': 20 });
+    setBranchActiveStatusForm(draft.branchActiveStatus || { 'branch-01': true, 'branch-02': true, 'branch-03': true });
 
     setIsAddModalOpen(true);
   };
@@ -509,6 +618,9 @@ export const ProductsPage: React.FC = () => {
     setHasVariants(false);
     setAttributes([{ name: 'Hương vị', values: ['Truyền Thống', 'Ít Đường'] }]);
     setVariantMatrix([]);
+    setBranchStocksForm({ 'branch-01': 50, 'branch-02': 50, 'branch-03': 140 });
+    setBranchMinStocksForm({ 'branch-01': 10, 'branch-02': 10, 'branch-03': 20 });
+    setBranchActiveStatusForm({ 'branch-01': true, 'branch-02': true, 'branch-03': true });
     setIsAddModalOpen(true);
   };
 
@@ -523,6 +635,7 @@ export const ProductsPage: React.FC = () => {
     setUnit(p.unit || getItemName(units[0]) || 'Lon');
     setCostPrice(p.costPrice || 0);
     setSellingPrice(p.sellingPrice || 0);
+    setWholesalePrice(p.wholesalePrice || (p.sellingPrice ? Math.round((p.sellingPrice * 0.85) / 500) * 500 : 0));
     setStockQuantity(p.stockQuantity || 0);
     setMinStock(p.minStock || 10);
     setImage(p.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80');
@@ -539,6 +652,22 @@ export const ProductsPage: React.FC = () => {
         'branch-03': b3,
       });
     }
+
+    setBranchMinStocksForm(
+      p.branchMinStocks || {
+        'branch-01': p.minStock || 10,
+        'branch-02': p.minStock || 10,
+        'branch-03': (p.minStock || 10) * 2,
+      }
+    );
+
+    setBranchActiveStatusForm(
+      p.branchActiveStatus || {
+        'branch-01': p.isActive !== false,
+        'branch-02': p.isActive !== false,
+        'branch-03': p.isActive !== false,
+      }
+    );
 
     const convList = p.conversions && p.conversions.length > 0
       ? p.conversions
@@ -584,8 +713,11 @@ export const ProductsPage: React.FC = () => {
         conversionSellingPrice: hasConversion && conversions.length > 0 ? Number(conversions[0].sellingPrice) : undefined,
         costPrice: Number(costPrice),
         sellingPrice: Number(sellingPrice),
+        wholesalePrice: Number(wholesalePrice),
         stockQuantity: hasVariants ? variantMatrix.reduce((sum, v) => sum + Number(v.stockQuantity), 0) : Number(stockQuantity),
         branchStocks: branchStocksForm,
+        branchMinStocks: branchMinStocksForm,
+        branchActiveStatus: branchActiveStatusForm,
         minStock: Number(minStock),
         image: image || editingProduct.image,
         hasVariants,
@@ -627,6 +759,24 @@ export const ProductsPage: React.FC = () => {
       fetchProducts();
     } catch (err: any) {
       alert(err.message || 'Lỗi cập nhật giá biến thể');
+    }
+  };
+
+  const handleToggleBranchStatusInline = async (productId: string, branchId: string, currentStatus: boolean) => {
+    try {
+      const newStatus = !currentStatus;
+      await api.patch(`/products/${productId}/branch-status`, { branchId, isActive: newStatus });
+      setProducts((prev) =>
+        prev.map((p) => {
+          if (p.id === productId) {
+            const statusMap = { ...(p.branchActiveStatus || {}), [branchId]: newStatus };
+            return { ...p, branchActiveStatus: statusMap };
+          }
+          return p;
+        })
+      );
+    } catch (err: any) {
+      alert(err.message || 'Lỗi cập nhật trạng thái kinh doanh tại chi nhánh');
     }
   };
 
@@ -774,8 +924,11 @@ export const ProductsPage: React.FC = () => {
         conversionSellingPrice: hasConversion && conversions.length > 0 ? Number(conversions[0].sellingPrice) : undefined,
         costPrice: Number(costPrice),
         sellingPrice: Number(sellingPrice),
+        wholesalePrice: Number(wholesalePrice),
         stockQuantity: hasVariants ? variantMatrix.reduce((s, v) => s + Number(v.stockQuantity), 0) : Number(stockQuantity),
         branchStocks: branchStocksForm,
+        branchMinStocks: branchMinStocksForm,
+        branchActiveStatus: branchActiveStatusForm,
         minStock: Number(minStock),
         image: defaultImg,
         isActive: true,
@@ -1507,6 +1660,116 @@ export const ProductsPage: React.FC = () => {
             <Layers className="w-3 h-3 text-blue-400" />
             <span>{expandedProductIds.length > 0 ? 'Thu Gọn Biến Thể' : 'Mở Rộng Tất Cả Biến Thể'}</span>
           </button>
+
+          {/* Proposal 3: Column Visibility Customizer Button */}
+          <div className="relative">
+            <button
+              onClick={() => setIsColumnCustomizerOpen(!isColumnCustomizerOpen)}
+              className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-[11px] font-semibold flex items-center gap-1.5 transition-all shadow-sm"
+              title="Tùy chỉnh ẩn / hiện các cột trên bảng hàng hóa"
+            >
+              <Settings2 className="w-3.5 h-3.5 text-blue-400" />
+              <span>Tùy Chỉnh Cột</span>
+            </button>
+
+            {isColumnCustomizerOpen && (
+              <div className="absolute right-0 top-full mt-2 w-64 p-3.5 bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-slate-800">
+                  <span className="font-bold text-white text-xs flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Hiển Thị Cột Dữ Liệu</span>
+                  </span>
+                  <button
+                    onClick={() => setIsColumnCustomizerOpen(false)}
+                    className="text-slate-400 hover:text-white p-0.5"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="space-y-2 text-xs">
+                  <label className="flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-800/60 cursor-pointer">
+                    <span className="text-slate-300">Mã SKU & Barcode</span>
+                    <input
+                      type="checkbox"
+                      checked={visibleColumns.sku}
+                      onChange={() => toggleColumnVisibility('sku')}
+                      className="w-4 h-4 rounded text-blue-600 bg-slate-950 border-slate-700"
+                    />
+                  </label>
+                  <label className="flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-800/60 cursor-pointer">
+                    <span className="text-slate-300">Nhóm hàng hóa</span>
+                    <input
+                      type="checkbox"
+                      checked={visibleColumns.category}
+                      onChange={() => toggleColumnVisibility('category')}
+                      className="w-4 h-4 rounded text-blue-600 bg-slate-950 border-slate-700"
+                    />
+                  </label>
+                  <label className="flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-800/60 cursor-pointer">
+                    <span className="text-slate-300">Đơn vị tính & Quy đổi</span>
+                    <input
+                      type="checkbox"
+                      checked={visibleColumns.unit}
+                      onChange={() => toggleColumnVisibility('unit')}
+                      className="w-4 h-4 rounded text-blue-600 bg-slate-950 border-slate-700"
+                    />
+                  </label>
+                  <label className="flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-800/60 cursor-pointer">
+                    <span className="text-slate-300">Giá bán & Giá vốn</span>
+                    <input
+                      type="checkbox"
+                      checked={visibleColumns.price}
+                      onChange={() => toggleColumnVisibility('price')}
+                      className="w-4 h-4 rounded text-blue-600 bg-slate-950 border-slate-700"
+                    />
+                  </label>
+                  <label className="flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-800/60 cursor-pointer">
+                    <span className="text-slate-300">Tồn kho & Cảnh báo</span>
+                    <input
+                      type="checkbox"
+                      checked={visibleColumns.stock}
+                      onChange={() => toggleColumnVisibility('stock')}
+                      className="w-4 h-4 rounded text-blue-600 bg-slate-950 border-slate-700"
+                    />
+                  </label>
+                  <label className="flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-800/60 cursor-pointer">
+                    <span className="text-slate-300">Hiển thị POS</span>
+                    <input
+                      type="checkbox"
+                      checked={visibleColumns.posDisplay}
+                      onChange={() => toggleColumnVisibility('posDisplay')}
+                      className="w-4 h-4 rounded text-blue-600 bg-slate-950 border-slate-700"
+                    />
+                  </label>
+                  <label className="flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-800/60 cursor-pointer">
+                    <span className="text-slate-300">Trạng thái bán tại CN</span>
+                    <input
+                      type="checkbox"
+                      checked={visibleColumns.branchStatus}
+                      onChange={() => toggleColumnVisibility('branchStatus')}
+                      className="w-4 h-4 rounded text-blue-600 bg-slate-950 border-slate-700"
+                    />
+                  </label>
+                </div>
+
+                <div className="pt-2.5 mt-2 border-t border-slate-800 flex justify-between items-center text-[10px]">
+                  <button
+                    onClick={resetColumnVisibility}
+                    className="text-slate-400 hover:text-blue-400 font-semibold"
+                  >
+                    Khôi phục mặc định
+                  </button>
+                  <button
+                    onClick={() => setIsColumnCustomizerOpen(false)}
+                    className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold"
+                  >
+                    Đóng
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1514,30 +1777,94 @@ export const ProductsPage: React.FC = () => {
       <div className="glass-panel rounded-2xl border border-slate-800 overflow-hidden shadow-xl flex flex-col">
         <div className="overflow-x-auto flex-1">
           <table className="w-full min-w-[1050px] text-left text-xs text-slate-300">
-            <thead className="bg-slate-900 text-slate-300 text-xs border-b border-slate-800 sticky top-0 z-20 select-none">
-              {/* Row 1: Column Titles */}
-              <tr className="border-b border-slate-800/80">
+            <thead className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 text-slate-300 text-xs">
+              {/* Row 1: Column Headers with Sorting */}
+              <tr>
                 <th className="p-3 w-10 text-center">
                   <input
                     type="checkbox"
-                    checked={paginatedProducts.length > 0 && paginatedProducts.every((p) => selectedProductIds.includes(p.id))}
+                    checked={paginatedProducts.length > 0 && selectedProductIds.length === paginatedProducts.length}
                     onChange={(e) => handleSelectAll(e.target.checked)}
-                    className="w-3.5 h-3.5 rounded text-blue-600 bg-slate-950 border-slate-700"
+                    className="w-4 h-4 rounded text-blue-600 bg-slate-950 border-slate-700"
                   />
                 </th>
-                <th className="p-3 font-bold">Mã hàng hóa</th>
-                <th className="p-3 font-bold min-w-[200px]">Tên hàng hóa</th>
-                <th className="p-3 font-bold">Nhóm hàng hóa</th>
-                <th className="p-3 font-bold">Đơn vị tính</th>
-                <th className="p-3 font-bold text-right">Giá bán lẻ (VNĐ)</th>
-                <th className="p-3 font-bold text-center">
-                  {(() => {
-                    const activeBranchObj = branches.find((b) => b.id === selectedBranchId) || branches[0];
-                    return `Tồn kho (${activeBranchObj?.code || 'CN-01'})`;
-                  })()}
+
+                {visibleColumns.sku && (
+                  <th
+                    className="p-3 font-bold cursor-pointer select-none hover:text-blue-300 transition-colors"
+                    onClick={() => handleSort('sku')}
+                    title="Bấm để sắp xếp theo Mã SKU"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Mã SKU / Barcode</span>
+                      {sortColumn === 'sku' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-400" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-400" />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-slate-500 opacity-50 hover:opacity-100" />
+                      )}
+                    </div>
+                  </th>
+                )}
+
+                <th
+                  className="p-3 font-bold min-w-[200px] cursor-pointer select-none hover:text-blue-300 transition-colors"
+                  onClick={() => handleSort('name')}
+                  title="Bấm để sắp xếp theo Tên sản phẩm"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Tên hàng hóa</span>
+                    {sortColumn === 'name' ? (
+                      sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-400" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-400" />
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 text-slate-500 opacity-50 hover:opacity-100" />
+                    )}
+                  </div>
                 </th>
-                <th className="p-3 font-bold text-center">Hiển thị POS</th>
-                <th className="p-3 font-bold text-center">Trạng thái</th>
+
+                {visibleColumns.category && <th className="p-3 font-bold">Nhóm hàng hóa</th>}
+                {visibleColumns.unit && <th className="p-3 font-bold">Đơn vị tính</th>}
+
+                {visibleColumns.price && (
+                  <th
+                    className="p-3 font-bold text-right cursor-pointer select-none hover:text-blue-300 transition-colors"
+                    onClick={() => handleSort('sellingPrice')}
+                    title="Bấm để sắp xếp theo Giá bán"
+                  >
+                    <div className="flex items-center justify-end gap-1">
+                      <span>Giá bán lẻ (VNĐ)</span>
+                      {sortColumn === 'sellingPrice' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-400" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-400" />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-slate-500 opacity-50 hover:opacity-100" />
+                      )}
+                    </div>
+                  </th>
+                )}
+
+                {visibleColumns.stock && (
+                  <th
+                    className="p-3 font-bold text-center cursor-pointer select-none hover:text-blue-300 transition-colors"
+                    onClick={() => handleSort('stock')}
+                    title="Bấm để sắp xếp theo Tồn kho chi nhánh"
+                  >
+                    {(() => {
+                      const activeBranchObj = branches.find((b) => b.id === selectedBranchId) || branches[0];
+                      return (
+                        <div className="flex items-center justify-center gap-1">
+                          <span>Tồn kho ({activeBranchObj?.code || 'CN-01'})</span>
+                          {sortColumn === 'stock' ? (
+                            sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-400" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-400" />
+                          ) : (
+                            <ArrowUpDown className="w-3 h-3 text-slate-500 opacity-50 hover:opacity-100" />
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </th>
+                )}
+
+                {visibleColumns.posDisplay && <th className="p-3 font-bold text-center">Hiển thị POS</th>}
+                {visibleColumns.branchStatus && <th className="p-3 font-bold text-center">Trạng thái</th>}
                 {!isCashier && <th className="p-3 text-right">Thao Tác</th>}
               </tr>
 
@@ -1546,15 +1873,17 @@ export const ProductsPage: React.FC = () => {
                 <th className="p-2 text-center text-slate-500">*</th>
                 
                 {/* Filter Mã SKU */}
-                <th className="p-1.5">
-                  <input
-                    type="text"
-                    value={filterSku}
-                    onChange={(e) => { setFilterSku(e.target.value); setCurrentPage(1); }}
-                    placeholder="* Lọc mã..."
-                    className="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-blue-300 text-xs font-mono"
-                  />
-                </th>
+                {visibleColumns.sku && (
+                  <th className="p-1.5">
+                    <input
+                      type="text"
+                      value={filterSku}
+                      onChange={(e) => { setFilterSku(e.target.value); setCurrentPage(1); }}
+                      placeholder="* Lọc mã..."
+                      className="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-blue-300 text-xs font-mono"
+                    />
+                  </th>
+                )}
 
                 {/* Filter Tên hàng */}
                 <th className="p-1.5">
@@ -1568,78 +1897,90 @@ export const ProductsPage: React.FC = () => {
                 </th>
 
                 {/* Filter Nhóm hàng */}
-                <th className="p-1.5">
-                  <select
-                    value={filterCategory}
-                    onChange={(e) => { setFilterCategory(e.target.value); setCurrentPage(1); }}
-                    className="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-slate-300 text-xs"
-                  >
-                    <option value="">* Tất cả nhóm</option>
-                    {categories.map((c) => (
-                      <option key={getItemName(c)} value={getItemName(c)}>
-                        {getItemName(c)}
-                      </option>
-                    ))}
-                  </select>
-                </th>
+                {visibleColumns.category && (
+                  <th className="p-1.5">
+                    <select
+                      value={filterCategory}
+                      onChange={(e) => { setFilterCategory(e.target.value); setCurrentPage(1); }}
+                      className="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-slate-300 text-xs"
+                    >
+                      <option value="">* Tất cả nhóm</option>
+                      {categories.map((c) => (
+                        <option key={getItemName(c)} value={getItemName(c)}>
+                          {getItemName(c)}
+                        </option>
+                      ))}
+                    </select>
+                  </th>
+                )}
 
                 {/* Filter ĐVT */}
-                <th className="p-1.5">
-                  <select
-                    value={filterUnit}
-                    onChange={(e) => { setFilterUnit(e.target.value); setCurrentPage(1); }}
-                    className="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-slate-300 text-xs"
-                  >
-                    <option value="">* Tất cả ĐVT</option>
-                    {units.map((u) => (
-                      <option key={getItemName(u)} value={getItemName(u)}>
-                        {getItemName(u)}
-                      </option>
-                    ))}
-                  </select>
-                </th>
+                {visibleColumns.unit && (
+                  <th className="p-1.5">
+                    <select
+                      value={filterUnit}
+                      onChange={(e) => { setFilterUnit(e.target.value); setCurrentPage(1); }}
+                      className="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-slate-300 text-xs"
+                    >
+                      <option value="">* Tất cả ĐVT</option>
+                      {units.map((u) => (
+                        <option key={getItemName(u)} value={getItemName(u)}>
+                          {getItemName(u)}
+                        </option>
+                      ))}
+                    </select>
+                  </th>
+                )}
 
                 {/* Filter Giá */}
-                <th className="p-1.5 text-right">
-                  <input
-                    type="number"
-                    value={filterPriceMax}
-                    onChange={(e) => { setFilterPriceMax(e.target.value); setCurrentPage(1); }}
-                    placeholder="≤ Giá max..."
-                    className="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-emerald-400 text-xs text-right font-mono"
-                  />
-                </th>
+                {visibleColumns.price && (
+                  <th className="p-1.5 text-right">
+                    <input
+                      type="number"
+                      value={filterPriceMax}
+                      onChange={(e) => { setFilterPriceMax(e.target.value); setCurrentPage(1); }}
+                      placeholder="≤ Giá max..."
+                      className="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-emerald-400 text-xs text-right font-mono"
+                    />
+                  </th>
+                )}
 
                 {/* Filter Tồn kho */}
-                <th className="p-1.5 text-center">
-                  <span className="text-[10px] text-slate-500 font-mono">*</span>
-                </th>
+                {visibleColumns.stock && (
+                  <th className="p-1.5 text-center">
+                    <span className="text-[10px] text-slate-500 font-mono">*</span>
+                  </th>
+                )}
 
                 {/* Filter Hiển thị POS */}
-                <th className="p-1.5 text-center">
-                  <select
-                    value={filterPosDisplay}
-                    onChange={(e: any) => { setFilterPosDisplay(e.target.value); setCurrentPage(1); }}
-                    className="w-full px-1.5 py-1 rounded bg-slate-900 border border-slate-700 text-slate-300 text-xs text-center"
-                  >
-                    <option value="ALL">Tất cả</option>
-                    <option value="YES">Có</option>
-                    <option value="NO">Không</option>
-                  </select>
-                </th>
+                {visibleColumns.posDisplay && (
+                  <th className="p-1.5 text-center">
+                    <select
+                      value={filterPosDisplay}
+                      onChange={(e: any) => { setFilterPosDisplay(e.target.value); setCurrentPage(1); }}
+                      className="w-full px-1.5 py-1 rounded bg-slate-900 border border-slate-700 text-slate-300 text-xs text-center"
+                    >
+                      <option value="ALL">Tất cả</option>
+                      <option value="YES">Có</option>
+                      <option value="NO">Không</option>
+                    </select>
+                  </th>
+                )}
 
                 {/* Filter Trạng thái */}
-                <th className="p-1.5 text-center">
-                  <select
-                    value={filterStatus}
-                    onChange={(e: any) => { setFilterStatus(e.target.value); setCurrentPage(1); }}
-                    className="w-full px-1.5 py-1 rounded bg-slate-900 border border-slate-700 text-slate-300 text-xs text-center"
-                  >
-                    <option value="ALL">Tất cả</option>
-                    <option value="ACTIVE">Kinh doanh</option>
-                    <option value="INACTIVE">Ngừng bán</option>
-                  </select>
-                </th>
+                {visibleColumns.branchStatus && (
+                  <th className="p-1.5 text-center">
+                    <select
+                      value={filterStatus}
+                      onChange={(e: any) => { setFilterStatus(e.target.value); setCurrentPage(1); }}
+                      className="w-full px-1.5 py-1 rounded bg-slate-900 border border-slate-700 text-slate-300 text-xs text-center"
+                    >
+                      <option value="ALL">Tất cả</option>
+                      <option value="ACTIVE">Kinh doanh</option>
+                      <option value="INACTIVE">Ngừng bán</option>
+                    </select>
+                  </th>
+                )}
 
                 {/* Reset inline filter */}
                 {!isCashier && (
@@ -1693,41 +2034,42 @@ export const ProductsPage: React.FC = () => {
                           />
                         </td>
 
-                        <td className="p-3 font-mono text-[11px]">
-                          <div className="text-blue-400 font-bold">{p.sku}</div>
-                          {p.barcode && (
-                            <div className="flex items-center gap-1 text-amber-400 text-[10px]">
-                              <Barcode className="w-3 h-3" />
-                              <span>{p.barcode}</span>
-                            </div>
-                          )}
-                        </td>
-
-                        <td className="p-3">
-                          <div className="flex items-center gap-2.5">
-                            <div className="relative shrink-0">
-                              <img src={p.image} alt={p.name} className="w-8 h-8 rounded-lg object-cover bg-slate-950 border border-slate-800" />
-                              {hasChildren && (
+                        {/* SKU Column */}
+                        {visibleColumns.sku && (
+                          <td className="p-3 font-mono text-xs font-semibold text-blue-300">
+                            <div className="flex items-center gap-1.5">
+                              <span className="bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+                                {p.sku}
+                              </span>
+                              {p.barcode && (
                                 <button
-                                  type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    toggleExpandProduct(p.id);
+                                    navigator.clipboard.writeText(p.barcode);
+                                    alert(`Đã copy mã Barcode: ${p.barcode}`);
                                   }}
-                                  className={`absolute -bottom-1 -right-1 p-0.5 rounded-full border shadow text-[9px] transition-all ${
-                                    isExpanded
-                                      ? 'bg-blue-600 text-white border-blue-400'
-                                      : 'bg-slate-900 text-blue-400 border-slate-700 hover:bg-blue-600 hover:text-white'
-                                  }`}
-                                  title={isExpanded ? 'Thu gọn danh sách biến thể' : 'Bấm để mở danh sách biến thể'}
+                                  className="text-slate-500 hover:text-amber-400 transition-colors p-1"
+                                  title={`Mã Barcode: ${p.barcode} (Bấm để copy)`}
                                 >
-                                  {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                                  <Barcode className="w-3.5 h-3.5" />
                                 </button>
                               )}
                             </div>
+                          </td>
+                        )}
 
+                        {/* Name & Thumbnail */}
+                        <td className="p-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center shrink-0 overflow-hidden shadow-inner">
+                              {p.image ? (
+                                <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-base">{getSmartProductIcon(p.name, p.category).icon}</span>
+                              )}
+                            </div>
                             <div>
-                              <div className="font-bold text-white text-xs flex flex-wrap items-center gap-1.5 group-hover/row:text-blue-400 transition-colors">
+                              <div className="font-bold text-white text-xs flex items-center gap-2">
                                 <span>{p.name}</span>
                                 {hasChildren && (
                                   <button
@@ -1753,64 +2095,159 @@ export const ProductsPage: React.FC = () => {
                           </div>
                         </td>
 
-                        <td className="p-3">
-                          <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-medium border border-slate-700/60 text-[11px]">
-                            {p.category}
-                          </span>
-                        </td>
+                        {/* Category */}
+                        {visibleColumns.category && (
+                          <td className="p-3">
+                            <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-medium border border-slate-700/60 text-[11px]">
+                              {p.category}
+                            </span>
+                          </td>
+                        )}
 
-                        <td className="p-3 font-medium text-slate-200">
-                          <div>{p.unit}</div>
-                          {convList.length > 0 && (
-                            <div className="text-[10px] text-purple-300 font-mono mt-0.5">
-                              (+{convList.map((c: any) => c.unitName).join(', ')})
-                            </div>
-                          )}
-                        </td>
-
-                        <td className="p-3 text-right">
-                          <div className="font-bold text-blue-400 text-xs font-mono">{formatVND(p.sellingPrice)}</div>
-                          {!isCashier && p.costPrice !== undefined && (
-                            <div className="text-slate-500 text-[10px] font-mono">Vốn: {formatVND(p.costPrice)}</div>
-                          )}
-                        </td>
-
-                        <td className="p-3 text-center">
-                          {(() => {
-                            const activeBranchObj = branches.find((b) => b.id === selectedBranchId) || branches[0];
-                            const currentBranchStock = p.branchStocks && p.branchStocks[selectedBranchId] !== undefined ? p.branchStocks[selectedBranchId] : p.stockQuantity;
-                            return (
-                              <div>
-                                <div className="font-bold text-emerald-400 text-xs font-mono">
-                                  {currentBranchStock} {p.unit}
-                                </div>
-                                <div className="text-[9px] text-slate-400 font-mono">
-                                  Chuỗi: {p.stockQuantity}
-                                </div>
+                        {/* Unit */}
+                        {visibleColumns.unit && (
+                          <td className="p-3 font-medium text-slate-200">
+                            <div>{p.unit}</div>
+                            {convList.length > 0 && (
+                              <div className="text-[10px] text-purple-300 font-mono mt-0.5">
+                                (+{convList.map((c: any) => c.unitName).join(', ')})
                               </div>
-                            );
-                          })()}
-                        </td>
+                            )}
+                          </td>
+                        )}
 
-                        <td className="p-3 text-center">
-                          {p.showOnPos !== false ? (
-                            <span className="text-emerald-400 text-[11px] font-bold">Có</span>
-                          ) : (
-                            <span className="text-slate-500 text-[11px]">Không</span>
-                          )}
-                        </td>
+                        {/* Price */}
+                        {visibleColumns.price && (
+                          <td className="p-3 text-right">
+                            <div className="font-bold text-blue-400 text-xs font-mono">
+                              Lẻ: {formatVND(p.sellingPrice)}
+                            </div>
+                            {p.wholesalePrice && p.wholesalePrice > 0 && (
+                              <div className="font-bold text-purple-400 text-[11px] font-mono">
+                                Sỉ: {formatVND(p.wholesalePrice)}
+                              </div>
+                            )}
+                            {!isCashier && p.costPrice !== undefined && (
+                              <div className="text-slate-500 text-[10px] font-mono">
+                                Vốn: {formatVND(p.costPrice)}
+                              </div>
+                            )}
+                          </td>
+                        )}
 
-                        <td className="p-3 text-center">
-                          {p.isActive !== false ? (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                              Kinh doanh
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-500">
-                              Ngừng bán
-                            </span>
-                          )}
-                        </td>
+                        {/* Proposal 2: Stock with Multi-branch Hover Tooltip */}
+                        {visibleColumns.stock && (
+                          <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                            {(() => {
+                              const activeBranchObj = branches.find((b) => b.id === selectedBranchId) || branches[0];
+                              const currentBranchStock = p.branchStocks && p.branchStocks[selectedBranchId] !== undefined ? p.branchStocks[selectedBranchId] : p.stockQuantity;
+                              const branchMin = p.branchMinStocks && p.branchMinStocks[selectedBranchId] !== undefined ? p.branchMinStocks[selectedBranchId] : (p.minStock || 10);
+                              const isLowStock = currentBranchStock <= branchMin;
+
+                              return (
+                                <div className="relative group/stock-tooltip inline-block">
+                                  {/* Main Stock Badge */}
+                                  <div className="flex flex-col items-center cursor-help p-1 rounded-xl hover:bg-slate-800/80 transition-all">
+                                    <div className={`font-bold text-xs font-mono flex items-center gap-1 ${isLowStock ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                      <span>{currentBranchStock}</span>
+                                      <span className="text-[10px] text-slate-400 font-normal">{p.unit}</span>
+                                      <Info className="w-3 h-3 text-slate-500 opacity-60 group-hover/stock-tooltip:opacity-100 transition-opacity" />
+                                    </div>
+                                    {isLowStock && (
+                                      <span className="mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-0.5" title={`Ngưỡng tối thiểu của chi nhánh: ${branchMin}`}>
+                                        ⚠️ Min: {branchMin}
+                                      </span>
+                                    )}
+                                    <div className="text-[9px] text-slate-500 font-mono mt-0.5">
+                                      Chuỗi: {p.stockQuantity}
+                                    </div>
+                                  </div>
+
+                                  {/* Floating Hover Tooltip: Multi-Branch Breakdown */}
+                                  <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover/stock-tooltip:block z-50 w-72 p-3 bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-700/80 shadow-2xl text-left pointer-events-none animate-in fade-in zoom-in-95 duration-150">
+                                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800">
+                                      <span className="font-bold text-white text-xs flex items-center gap-1.5">
+                                        <Building2 className="w-3.5 h-3.5 text-blue-400" />
+                                        <span>Tồn Kho Theo Chi Nhánh</span>
+                                      </span>
+                                      <span className="text-[10px] font-mono text-emerald-400 font-bold">
+                                        Tổng: {p.stockQuantity} {p.unit}
+                                      </span>
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                      {branches.map((b) => {
+                                        const bStock = p.branchStocks && p.branchStocks[b.id] !== undefined ? p.branchStocks[b.id] : 0;
+                                        const bMin = p.branchMinStocks && p.branchMinStocks[b.id] !== undefined ? p.branchMinStocks[b.id] : (p.minStock || 10);
+                                        const bActive = p.branchActiveStatus && p.branchActiveStatus[b.id] !== undefined ? p.branchActiveStatus[b.id] : true;
+                                        const percent = p.stockQuantity > 0 ? Math.min(100, Math.round((bStock / p.stockQuantity) * 100)) : 0;
+                                        const isBSelected = b.id === selectedBranchId;
+
+                                        return (
+                                          <div key={b.id} className={`p-1.5 rounded-lg transition-colors ${isBSelected ? 'bg-blue-600/15 border border-blue-500/30' : 'bg-slate-950/60'}`}>
+                                            <div className="flex items-center justify-between text-[11px]">
+                                              <div className="flex items-center gap-1.5 truncate max-w-[150px]">
+                                                <span className={`w-1.5 h-1.5 rounded-full ${bActive ? 'bg-emerald-400' : 'bg-rose-400'}`}></span>
+                                                <span className={`truncate ${isBSelected ? 'text-blue-300 font-bold' : 'text-slate-300'}`}>{b.name}</span>
+                                              </div>
+                                              <div className="flex items-center gap-1.5 shrink-0">
+                                                <span className={`font-mono font-bold text-xs ${bStock <= bMin ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                                  {bStock}
+                                                </span>
+                                                <span className="text-[9px] text-slate-500 font-mono">(Min: {bMin})</span>
+                                              </div>
+                                            </div>
+                                            {/* Progress Bar */}
+                                            <div className="w-full h-1 bg-slate-800 rounded-full mt-1 overflow-hidden">
+                                              <div className={`h-full rounded-full ${isBSelected ? 'bg-blue-500' : 'bg-slate-600'}`} style={{ width: `${percent}%` }}></div>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                    {/* Tooltip Arrow */}
+                                    <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-slate-700"></div>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </td>
+                        )}
+
+                        {/* POS Display */}
+                        {visibleColumns.posDisplay && (
+                          <td className="p-3 text-center">
+                            {p.showOnPos !== false ? (
+                              <span className="text-emerald-400 text-[11px] font-bold">Có</span>
+                            ) : (
+                              <span className="text-slate-500 text-[11px]">Không</span>
+                            )}
+                          </td>
+                        )}
+
+                        {/* Branch Status */}
+                        {visibleColumns.branchStatus && (
+                          <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                            {(() => {
+                              const isBranchActive = p.branchActiveStatus && p.branchActiveStatus[selectedBranchId] !== undefined ? p.branchActiveStatus[selectedBranchId] : (p.isActive !== false);
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleBranchStatusInline(p.id, selectedBranchId, isBranchActive)}
+                                  className={`px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all flex items-center justify-center gap-1 mx-auto ${
+                                    isBranchActive
+                                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
+                                      : 'bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20'
+                                  }`}
+                                  title={`Bấm để ${isBranchActive ? 'ngừng bán' : 'bật bán'} tại chi nhánh ${branches.find((b) => b.id === selectedBranchId)?.name || ''}`}
+                                >
+                                  <span className={`w-1.5 h-1.5 rounded-full ${isBranchActive ? 'bg-emerald-400' : 'bg-rose-400'}`}></span>
+                                  <span>{isBranchActive ? 'Bán tại CN' : 'Ngừng bán CN'}</span>
+                                </button>
+                              );
+                            })()}
+                          </td>
+                        )}
 
                         {!isCashier && (
                           <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
@@ -1856,7 +2293,9 @@ export const ProductsPage: React.FC = () => {
                           return (
                             <tr key={variant.id} className="bg-slate-950/70 border-l-4 border-blue-500 hover:bg-slate-950/90 text-xs">
                               <td></td>
-                              <td className="p-2.5 font-mono text-[11px] text-blue-300 font-bold">{variant.sku}</td>
+                              {visibleColumns.sku && (
+                                <td className="p-2.5 font-mono text-[11px] text-blue-300 font-bold">{variant.sku}</td>
+                              )}
                               <td className="p-2.5 pl-6 font-bold text-slate-200">
                                 <div className="flex items-center gap-1.5">
                                   <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
@@ -1864,91 +2303,99 @@ export const ProductsPage: React.FC = () => {
                                 </div>
                               </td>
 
-                              <td className="p-3 text-slate-400 font-medium">{p.category}</td>
-                              <td className="p-3 text-slate-300">{p.unit}</td>
+                              {visibleColumns.category && <td className="p-3 text-slate-400 font-medium">{p.category}</td>}
+                              {visibleColumns.unit && <td className="p-3 text-slate-300">{p.unit}</td>}
 
                               {/* Variant Prices Display & Inline Editor */}
-                              <td className="p-3 text-right">
-                                {isInlineEditing ? (
-                                  <div className="space-y-1.5">
-                                    <div className="flex items-center justify-end gap-1">
-                                      <span className="text-[10px] text-blue-300 w-12 font-semibold">Bán lẻ:</span>
-                                      <input
-                                        type="number"
-                                        value={inlineVariantPrice}
-                                        onChange={(e) => setInlineVariantPrice(Number(e.target.value))}
-                                        className="w-24 px-2 py-0.5 rounded bg-slate-900 border border-blue-500 text-blue-400 font-bold text-xs focus:outline-none"
-                                      />
+                              {visibleColumns.price && (
+                                <td className="p-3 text-right">
+                                  {isInlineEditing ? (
+                                    <div className="space-y-1.5">
+                                      <div className="flex items-center justify-end gap-1">
+                                        <span className="text-[10px] text-blue-300 w-12 font-semibold">Bán lẻ:</span>
+                                        <input
+                                          type="number"
+                                          value={inlineVariantPrice}
+                                          onChange={(e) => setInlineVariantPrice(Number(e.target.value))}
+                                          className="w-24 px-2 py-0.5 rounded bg-slate-900 border border-blue-500 text-blue-400 font-bold text-xs focus:outline-none"
+                                        />
+                                      </div>
+
+                                      {convList.map((c: any) => {
+                                        const convPrice = inlineVariantConversions[c.unitName] !== undefined
+                                          ? inlineVariantConversions[c.unitName]
+                                          : inlineVariantPrice * c.conversionFactor;
+
+                                        return (
+                                          <div key={c.id || c.unitName} className="flex items-center justify-end gap-1">
+                                            <span className="text-[10px] text-purple-300 w-12 font-semibold">{c.unitName}:</span>
+                                            <input
+                                              type="number"
+                                              value={convPrice}
+                                              onChange={(e) =>
+                                                setInlineVariantConversions({
+                                                  ...inlineVariantConversions,
+                                                  [c.unitName]: Number(e.target.value),
+                                                })
+                                              }
+                                              className="w-24 px-2 py-0.5 rounded bg-slate-900 border border-purple-500 text-purple-300 font-bold text-xs focus:outline-none"
+                                            />
+                                          </div>
+                                        );
+                                      })}
                                     </div>
+                                  ) : (
+                                    <div className="space-y-0.5 text-xs font-mono">
+                                      <div className="font-bold text-blue-400">
+                                        {formatVND(variant.sellingPrice)}
+                                      </div>
+                                      {convList.map((c: any) => {
+                                        const variantConvPrice = variant.variantConversions?.[c.unitName] !== undefined
+                                          ? variant.variantConversions[c.unitName]
+                                          : variant.sellingPrice * c.conversionFactor;
 
-                                    {convList.map((c: any) => {
-                                      const convPrice = inlineVariantConversions[c.unitName] !== undefined
-                                        ? inlineVariantConversions[c.unitName]
-                                        : inlineVariantPrice * c.conversionFactor;
-
-                                      return (
-                                        <div key={c.id || c.unitName} className="flex items-center justify-end gap-1">
-                                          <span className="text-[10px] text-purple-300 w-12 font-semibold">{c.unitName}:</span>
-                                          <input
-                                            type="number"
-                                            value={convPrice}
-                                            onChange={(e) =>
-                                              setInlineVariantConversions({
-                                                ...inlineVariantConversions,
-                                                [c.unitName]: Number(e.target.value),
-                                              })
-                                            }
-                                            className="w-24 px-2 py-0.5 rounded bg-slate-900 border border-purple-500 text-purple-300 font-bold text-xs focus:outline-none"
-                                          />
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                ) : (
-                                  <div className="space-y-0.5 text-xs font-mono">
-                                    <div className="font-bold text-blue-400">
-                                      {formatVND(variant.sellingPrice)}
+                                        return (
+                                          <div key={c.id || c.unitName} className="font-bold text-purple-300 text-[10px]">
+                                            {formatVND(variantConvPrice)} / {c.unitName}
+                                          </div>
+                                        );
+                                      })}
                                     </div>
-                                    {convList.map((c: any) => {
-                                      const variantConvPrice = variant.variantConversions?.[c.unitName] !== undefined
-                                        ? variant.variantConversions[c.unitName]
-                                        : variant.sellingPrice * c.conversionFactor;
-
-                                      return (
-                                        <div key={c.id || c.unitName} className="font-bold text-purple-300 text-[10px]">
-                                          {formatVND(variantConvPrice)} / {c.unitName}
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                              </td>
+                                  )}
+                                </td>
+                              )}
 
                               {/* Variant Stock */}
-                              <td className="p-3 text-center">
-                                {isInlineEditing ? (
-                                  <div className="flex items-center justify-center gap-1">
-                                    <input
-                                      type="number"
-                                      value={inlineVariantStock}
-                                      onChange={(e) => setInlineVariantStock(Number(e.target.value))}
-                                      className="w-16 px-2 py-1 rounded bg-slate-900 border border-emerald-500 text-emerald-400 font-bold text-xs focus:outline-none text-center"
-                                    />
-                                    <span className="text-[11px] text-slate-400">{p.unit}</span>
-                                  </div>
-                                ) : (
-                                  <div className="font-bold text-emerald-400 text-xs font-mono">
-                                    {variant.stockQuantity} {p.unit}
-                                  </div>
-                                )}
-                              </td>
+                              {visibleColumns.stock && (
+                                <td className="p-3 text-center">
+                                  {isInlineEditing ? (
+                                    <div className="flex items-center justify-center gap-1">
+                                      <input
+                                        type="number"
+                                        value={inlineVariantStock}
+                                        onChange={(e) => setInlineVariantStock(Number(e.target.value))}
+                                        className="w-16 px-2 py-1 rounded bg-slate-900 border border-emerald-500 text-emerald-400 font-bold text-xs focus:outline-none text-center"
+                                      />
+                                      <span className="text-[11px] text-slate-400">{p.unit}</span>
+                                    </div>
+                                  ) : (
+                                    <div className="font-bold text-emerald-400 text-xs font-mono">
+                                      {variant.stockQuantity} {p.unit}
+                                    </div>
+                                  )}
+                                </td>
+                              )}
 
-                              <td className="p-3 text-center text-emerald-400 text-[11px] font-bold">Có</td>
-                              <td className="p-3 text-center">
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-400">
-                                  Kinh doanh
-                                </span>
-                              </td>
+                              {visibleColumns.posDisplay && (
+                                <td className="p-3 text-center text-emerald-400 text-[11px] font-bold">Có</td>
+                              )}
+                              {visibleColumns.branchStatus && (
+                                <td className="p-3 text-center">
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-400">
+                                    Kinh doanh
+                                  </span>
+                                </td>
+                              )}
 
                               {/* Action Edit Variant */}
                               {!isCashier && (
@@ -2103,9 +2550,9 @@ export const ProductsPage: React.FC = () => {
 
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="text-[10px] text-slate-400 font-medium">Gợi ý mẫu:</span>
-                      {PRESET_IMAGES.map((preset) => (
+                      {imagePresets.map((preset) => (
                         <button
-                          key={preset.label}
+                          key={preset.id || preset.label}
                           type="button"
                           onClick={() => setImage(preset.url)}
                           className="px-2 py-0.5 rounded-md bg-slate-900 hover:bg-blue-600/20 text-slate-300 hover:text-blue-300 text-[10px] border border-slate-800 transition-all"
@@ -2253,6 +2700,16 @@ export const ProductsPage: React.FC = () => {
                       className="w-full px-3 py-2.5 rounded-xl glass-input font-bold text-blue-400 text-xs"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-purple-400 text-[11px] mb-1 font-semibold">Giá bán sỉ / {unit} (VNĐ)</label>
+                    <input
+                      type="number"
+                      value={wholesalePrice}
+                      onChange={(e) => setWholesalePrice(Number(e.target.value))}
+                      className="w-full px-3 py-2.5 rounded-xl glass-input font-bold text-purple-400 text-xs border border-purple-500/50"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -2351,38 +2808,80 @@ export const ProductsPage: React.FC = () => {
 
               {!hasVariants && (
                 <div className="space-y-3">
-                  <div className="p-3.5 rounded-xl bg-slate-950/90 border border-blue-500/30 space-y-2.5">
-                    <div className="flex items-center justify-between text-xs">
+                  <div className="p-4 rounded-xl bg-slate-950/90 border border-blue-500/30 space-y-3">
+                    <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-800">
                       <span className="font-bold text-blue-400 flex items-center gap-1.5">
-                        <Building2 className="w-3.5 h-3.5" />
-                        <span>Phân Bổ Tồn Kho Theo Chi Nhánh (Chuỗi Bán Lẻ)</span>
+                        <Building2 className="w-4 h-4" />
+                        <span>Phân Bổ Tồn Kho, Định Mức & Trạng Thái Kinh Doanh Theo Chi Nhánh</span>
                       </span>
                       <span className="text-slate-400 text-[11px]">
-                        Tổng chuỗi: <strong className="text-emerald-400 font-mono text-xs">{stockQuantity} {unit}</strong>
+                        Tổng tồn toàn chuỗi: <strong className="text-emerald-400 font-mono text-xs">{stockQuantity} {unit}</strong>
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
-                      {branches.map((b) => (
-                        <div key={b.id} className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
-                          <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-slate-300 font-semibold truncate max-w-[120px]">{b.name}</span>
-                            <span className="font-mono text-blue-400 text-[10px] bg-blue-500/10 px-1 rounded">{b.code}</span>
-                          </div>
-                          <input
-                            type="number"
-                            min="0"
-                            value={branchStocksForm[b.id] ?? 0}
-                            onChange={(e) => {
-                              const val = Math.max(0, Number(e.target.value));
-                              const updated = { ...branchStocksForm, [b.id]: val };
-                              setBranchStocksForm(updated);
-                              setStockQuantity(Object.values(updated).reduce((sum, q) => sum + Number(q), 0));
-                            }}
-                            className="w-full px-2.5 py-1.5 rounded-lg glass-input text-xs font-mono font-bold text-emerald-400"
-                          />
-                        </div>
-                      ))}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-slate-800 text-slate-400 text-[11px]">
+                            <th className="pb-2 font-semibold">Chi Nhánh</th>
+                            <th className="pb-2 font-semibold text-center w-32">Tồn Kho Ban Đầu</th>
+                            <th className="pb-2 font-semibold text-center w-36">Min Cảnh Báo</th>
+                            <th className="pb-2 font-semibold text-center w-32">Trạng Thái Bán</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/60">
+                          {branches.map((b) => (
+                            <tr key={b.id} className="hover:bg-slate-900/50">
+                              <td className="py-2.5">
+                                <div className="font-bold text-white text-xs">{b.name}</div>
+                                <div className="text-[10px] font-mono text-blue-400">{b.code} • {b.address || 'Hồ Chí Minh'}</div>
+                              </td>
+                              <td className="py-2.5 text-center px-2">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={branchStocksForm[b.id] ?? 0}
+                                  onChange={(e) => {
+                                    const val = Math.max(0, Number(e.target.value));
+                                    const updated = { ...branchStocksForm, [b.id]: val };
+                                    setBranchStocksForm(updated);
+                                    setStockQuantity(Object.values(updated).reduce((sum, q) => sum + Number(q), 0));
+                                  }}
+                                  className="w-full px-2.5 py-1.5 rounded-lg glass-input text-xs font-mono font-bold text-emerald-400 text-center"
+                                />
+                              </td>
+                              <td className="py-2.5 text-center px-2">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={branchMinStocksForm[b.id] ?? 10}
+                                  onChange={(e) => {
+                                    const val = Math.max(0, Number(e.target.value));
+                                    setBranchMinStocksForm({ ...branchMinStocksForm, [b.id]: val });
+                                  }}
+                                  className="w-full px-2.5 py-1.5 rounded-lg glass-input text-xs font-mono font-bold text-amber-400 text-center"
+                                  placeholder="Min"
+                                />
+                              </td>
+                              <td className="py-2.5 text-center px-2">
+                                <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={branchActiveStatusForm[b.id] !== false}
+                                    onChange={(e) => {
+                                      setBranchActiveStatusForm({ ...branchActiveStatusForm, [b.id]: e.target.checked });
+                                    }}
+                                    className="w-4 h-4 rounded text-blue-600 bg-slate-950 border-slate-700"
+                                  />
+                                  <span className={`text-[10px] font-bold ${branchActiveStatusForm[b.id] !== false ? 'text-emerald-400' : 'text-slate-500'}`}>
+                                    {branchActiveStatusForm[b.id] !== false ? 'Bật bán' : 'Tắt bán'}
+                                  </span>
+                                </label>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
 
@@ -2962,9 +3461,9 @@ export const ProductsPage: React.FC = () => {
 
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="text-[10px] text-slate-400 font-medium">Gợi ý mẫu:</span>
-                      {PRESET_IMAGES.map((preset) => (
+                      {imagePresets.map((preset) => (
                         <button
-                          key={preset.label}
+                          key={preset.id || preset.label}
                           type="button"
                           onClick={() => setImage(preset.url)}
                           className="px-2 py-0.5 rounded-md bg-slate-900 hover:bg-blue-600/20 text-slate-300 hover:text-blue-300 text-[10px] border border-slate-800 transition-all"
@@ -3206,38 +3705,80 @@ export const ProductsPage: React.FC = () => {
 
               {!hasVariants && (
                 <div className="space-y-3">
-                  <div className="p-3.5 rounded-xl bg-slate-950/90 border border-blue-500/30 space-y-2.5">
-                    <div className="flex items-center justify-between text-xs">
+                  <div className="p-4 rounded-xl bg-slate-950/90 border border-blue-500/30 space-y-3">
+                    <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-800">
                       <span className="font-bold text-blue-400 flex items-center gap-1.5">
-                        <Building2 className="w-3.5 h-3.5" />
-                        <span>Phân Bổ Tồn Kho Theo Chi Nhánh (Chuỗi Bán Lẻ)</span>
+                        <Building2 className="w-4 h-4" />
+                        <span>Phân Bổ Tồn Kho, Định Mức & Trạng Thái Kinh Doanh Theo Chi Nhánh</span>
                       </span>
                       <span className="text-slate-400 text-[11px]">
-                        Tổng chuỗi: <strong className="text-emerald-400 font-mono text-xs">{stockQuantity} {unit}</strong>
+                        Tổng tồn toàn chuỗi: <strong className="text-emerald-400 font-mono text-xs">{stockQuantity} {unit}</strong>
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
-                      {branches.map((b) => (
-                        <div key={b.id} className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
-                          <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-slate-300 font-semibold truncate max-w-[120px]">{b.name}</span>
-                            <span className="font-mono text-blue-400 text-[10px] bg-blue-500/10 px-1 rounded">{b.code}</span>
-                          </div>
-                          <input
-                            type="number"
-                            min="0"
-                            value={branchStocksForm[b.id] ?? 0}
-                            onChange={(e) => {
-                              const val = Math.max(0, Number(e.target.value));
-                              const updated = { ...branchStocksForm, [b.id]: val };
-                              setBranchStocksForm(updated);
-                              setStockQuantity(Object.values(updated).reduce((sum, q) => sum + Number(q), 0));
-                            }}
-                            className="w-full px-2.5 py-1.5 rounded-lg glass-input text-xs font-mono font-bold text-emerald-400"
-                          />
-                        </div>
-                      ))}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-slate-800 text-slate-400 text-[11px]">
+                            <th className="pb-2 font-semibold">Chi Nhánh</th>
+                            <th className="pb-2 font-semibold text-center w-32">Tồn Kho Ban Đầu</th>
+                            <th className="pb-2 font-semibold text-center w-36">Min Cảnh Báo</th>
+                            <th className="pb-2 font-semibold text-center w-32">Trạng Thái Bán</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/60">
+                          {branches.map((b) => (
+                            <tr key={b.id} className="hover:bg-slate-900/50">
+                              <td className="py-2.5">
+                                <div className="font-bold text-white text-xs">{b.name}</div>
+                                <div className="text-[10px] font-mono text-blue-400">{b.code} • {b.address || 'Hồ Chí Minh'}</div>
+                              </td>
+                              <td className="py-2.5 text-center px-2">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={branchStocksForm[b.id] ?? 0}
+                                  onChange={(e) => {
+                                    const val = Math.max(0, Number(e.target.value));
+                                    const updated = { ...branchStocksForm, [b.id]: val };
+                                    setBranchStocksForm(updated);
+                                    setStockQuantity(Object.values(updated).reduce((sum, q) => sum + Number(q), 0));
+                                  }}
+                                  className="w-full px-2.5 py-1.5 rounded-lg glass-input text-xs font-mono font-bold text-emerald-400 text-center"
+                                />
+                              </td>
+                              <td className="py-2.5 text-center px-2">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={branchMinStocksForm[b.id] ?? 10}
+                                  onChange={(e) => {
+                                    const val = Math.max(0, Number(e.target.value));
+                                    setBranchMinStocksForm({ ...branchMinStocksForm, [b.id]: val });
+                                  }}
+                                  className="w-full px-2.5 py-1.5 rounded-lg glass-input text-xs font-mono font-bold text-amber-400 text-center"
+                                  placeholder="Min"
+                                />
+                              </td>
+                              <td className="py-2.5 text-center px-2">
+                                <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={branchActiveStatusForm[b.id] !== false}
+                                    onChange={(e) => {
+                                      setBranchActiveStatusForm({ ...branchActiveStatusForm, [b.id]: e.target.checked });
+                                    }}
+                                    className="w-4 h-4 rounded text-blue-600 bg-slate-950 border-slate-700"
+                                  />
+                                  <span className={`text-[10px] font-bold ${branchActiveStatusForm[b.id] !== false ? 'text-emerald-400' : 'text-slate-500'}`}>
+                                    {branchActiveStatusForm[b.id] !== false ? 'Bật bán' : 'Tắt bán'}
+                                  </span>
+                                </label>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
 

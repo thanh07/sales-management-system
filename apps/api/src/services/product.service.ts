@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+
 export interface ProductAttribute {
   name: string;
   values: string[];
@@ -15,6 +18,8 @@ export interface ProductVariant {
   stockQuantity: number;
   minStock: number;
   branchStocks?: Record<string, number>; // e.g. { 'branch-01': 20, 'branch-02': 15, 'branch-03': 40 }
+  branchMinStocks?: Record<string, number>; // Ngưỡng min riêng cho từng chi nhánh
+  branchActiveStatus?: Record<string, boolean>; // Trạng thái bật/tắt kinh doanh riêng theo chi nhánh
 }
 
 export interface ProductUnitConversion {
@@ -40,12 +45,15 @@ export interface Product {
   conversions?: ProductUnitConversion[]; // Multiple conversion levels (Lốc, Thùng, Két...)
   costPrice: number;
   sellingPrice: number;
+  wholesalePrice?: number;
   promoPrice?: number;
   stockQuantity: number; // Total across all branches
   minStock: number;
   image: string;
   isActive: boolean;
   branchStocks?: Record<string, number>; // e.g. { 'branch-01': 50, 'branch-02': 120, 'branch-03': 500 }
+  branchMinStocks?: Record<string, number>; // Ngưỡng tồn kho tối thiểu độc lập theo chi nhánh
+  branchActiveStatus?: Record<string, boolean>; // Bật/Tắt kinh doanh độc lập theo từng chi nhánh
   hasVariants?: boolean;
   attributes?: ProductAttribute[];
   variants?: ProductVariant[];
@@ -58,54 +66,26 @@ export interface CategoryData {
 }
 
 let CATEGORIES_DB: CategoryData[] = [
-  { name: 'Chậu & Khay Trồng', icon: '🪴', showOnPos: true },
-  { name: 'Đất Trồng & Giá Thể', icon: '🪵', showOnPos: true },
-  { name: 'Phân Bón & Dinh Dưỡng', icon: '🧪', showOnPos: true },
-  { name: 'Hạt Giống & Cây Con', icon: '🌾', showOnPos: true },
-  { name: 'Thuốc & Bảo Vệ Thực Vật', icon: '🛡️', showOnPos: true },
-  { name: 'Dụng Cụ Làm Vườn', icon: '✂️', showOnPos: true },
-  { name: 'Lưới, Bạt & Dây Tưới', icon: '🕸️', showOnPos: true },
+  { name: 'Chậu Trồng Cây', icon: '🪴', showOnPos: true },
+  { name: 'Bình Bông & Lọ Hoa', icon: '🏺', showOnPos: true },
+  { name: 'Dụng Cụ Chì & Vật Tư Lan', icon: '🌿', showOnPos: true },
+  { name: 'Đĩa & Khay Lót', icon: '🍽️', showOnPos: true },
+  { name: 'Khay & Chậu Rau', icon: '🥬', showOnPos: true },
   { name: 'Vật Tư & Hàng Tổng Hợp', icon: '📦', showOnPos: true },
 ];
 
-let BRANDS_DB: string[] = [
-  'Tribat',
-  'Đầu Trâu',
-  'Trang Nông',
-  'Monrovia',
-  'Bát Tràng',
-  'Dudaco',
-  'Mỹ Tiến',
-  'Syngenta',
-  'Bayer',
-  'Nam Điền',
-  'Nhật Bản SK5',
-  'Việt Nam Agtech',
-];
+let BRANDS_DB: string[] = ['Đức Minh', 'Á Đông', 'Chì Lan', 'VM', 'Khác'];
 
 let LOCATIONS_DB: string[] = [
-  'Kệ Chậu Nhựa A1 - Dãy 1',
-  'Kệ Chậu Sứ A2 - Tầng 2',
-  'Bãi Đất Trồng B1 - Dãy Ngoài',
-  'Kệ Phân Bón C1 - Tầng 1',
-  'Tủ Hạt Giống D1 - Khay Trung Tâm',
-  'Kệ Dụng Cụ E2 - Dãy 3',
-  'Kho Lưới & Bạt G01',
+  'Kệ Chậu & Vật Tư 01',
+  'Kệ Đĩa & Lọ Hoa 02',
   'Kho Tổng Vận Chuyển H02',
 ];
 
 let UNITS_DB: string[] = [
   'Cái',
-  'Bao',
-  'Chai',
-  'Gói',
-  'Bịch',
-  'Hộp',
-  'Hũ',
-  'Bộ',
-  'Cuộn',
-  'Viên',
-  'Kg',
+  'Bó',
+  'Chục (10 cái)',
   'Thùng',
   'Lốc',
 ];
@@ -372,11 +352,63 @@ function generate300GroceryProducts(): Product[] {
   return products;
 }
 
-let MOCK_PRODUCTS: Product[] = generate300GroceryProducts();
+function loadImportedProductsFromFile(): Product[] {
+  let list: Product[] = [];
+  try {
+    const filePath = path.join(__dirname, '../../data/imported_products.json');
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath, 'utf-8');
+      const data = JSON.parse(content);
+      if (Array.isArray(data) && data.length > 0) {
+        list = data;
+      }
+    }
+  } catch (err) {
+    console.error('Lỗi đọc file imported_products.json:', err);
+  }
+
+  if (list.length === 0) {
+    list = generate300GroceryProducts();
+  }
+
+  // Clean up products: move "Giá Sỉ" from conversions array to prod.wholesalePrice property
+  return list.map((prod) => {
+    let wholesalePrice = prod.wholesalePrice;
+    let conversions = prod.conversions ? [...prod.conversions] : [];
+
+    // Find and extract "Giá Sỉ" from conversions if present
+    const wholesaleIdx = conversions.findIndex((c) => c.unitName.includes('Sỉ'));
+    if (wholesaleIdx !== -1) {
+      if (!wholesalePrice || wholesalePrice === 0) {
+        wholesalePrice = conversions[wholesaleIdx].sellingPrice;
+      }
+      conversions.splice(wholesaleIdx, 1); // Remove "Giá Sỉ" from conversions
+    }
+
+    // Default wholesalePrice if still missing
+    if (!wholesalePrice || wholesalePrice === 0) {
+      wholesalePrice = Math.round((prod.sellingPrice * 0.85) / 500) * 500;
+    }
+
+    // Main conversion unit should be real unit e.g. "Chục (10 cái)"
+    const mainConv = conversions[0];
+
+    return {
+      ...prod,
+      wholesalePrice,
+      conversions,
+      conversionUnit: mainConv?.unitName || (prod.conversionUnit === 'Giá Sỉ' ? undefined : prod.conversionUnit),
+      conversionFactor: mainConv?.conversionFactor || prod.conversionFactor,
+      conversionSellingPrice: mainConv?.sellingPrice || prod.conversionSellingPrice,
+    };
+  });
+}
+
+let MOCK_PRODUCTS: Product[] = loadImportedProductsFromFile();
 
 export class ProductService {
   static resetAllData() {
-    MOCK_PRODUCTS = generate300GroceryProducts();
+    MOCK_PRODUCTS = loadImportedProductsFromFile();
     return MOCK_PRODUCTS;
   }
   static getAllProducts(query?: string, category?: string, brand?: string, location?: string) {
@@ -537,7 +569,7 @@ export class ProductService {
   }
 
   static resetAndSeed300GroceryProducts() {
-    MOCK_PRODUCTS = generate300GroceryProducts();
+    MOCK_PRODUCTS = loadImportedProductsFromFile();
     return MOCK_PRODUCTS.length;
   }
 
@@ -777,6 +809,26 @@ export class ProductService {
     }
   }
 
+  static toggleBranchActiveStatus(productId: string, branchId: string, isActive: boolean) {
+    const product = MOCK_PRODUCTS.find((p) => p.id === productId);
+    if (!product) throw new Error('Không tìm thấy sản phẩm');
+    if (!product.branchActiveStatus) {
+      product.branchActiveStatus = {};
+    }
+    product.branchActiveStatus[branchId] = isActive;
+    return product;
+  }
+
+  static updateBranchMinStock(productId: string, branchId: string, minStock: number) {
+    const product = MOCK_PRODUCTS.find((p) => p.id === productId);
+    if (!product) throw new Error('Không tìm thấy sản phẩm');
+    if (!product.branchMinStocks) {
+      product.branchMinStocks = {};
+    }
+    product.branchMinStocks[branchId] = Math.max(0, minStock);
+    return product;
+  }
+
   static getCategories() {
     return CATEGORIES_DB.map((cat) => {
       const catName = typeof cat === 'string' ? cat : cat.name;
@@ -944,5 +996,36 @@ export class ProductService {
   static deleteUnit(unitName: string) {
     UNITS_DB = UNITS_DB.filter((u) => u !== unitName);
     return this.getUnits();
+  }
+
+  static getRawMasterCatalogs() {
+    return {
+      categories: [...CATEGORIES_DB],
+      brands: [...BRANDS_DB],
+      locations: [...LOCATIONS_DB],
+      units: [...UNITS_DB],
+    };
+  }
+
+  static setRawMasterCatalogs(data: {
+    categories?: (CategoryData | string)[];
+    brands?: string[];
+    locations?: string[];
+    units?: string[];
+  }) {
+    if (data.categories && Array.isArray(data.categories)) {
+      CATEGORIES_DB = data.categories.map((c) =>
+        typeof c === 'string' ? { name: c, icon: '📦', showOnPos: true } : c
+      );
+    }
+    if (data.brands && Array.isArray(data.brands)) {
+      BRANDS_DB = [...data.brands];
+    }
+    if (data.locations && Array.isArray(data.locations)) {
+      LOCATIONS_DB = [...data.locations];
+    }
+    if (data.units && Array.isArray(data.units)) {
+      UNITS_DB = [...data.units];
+    }
   }
 }

@@ -124,18 +124,27 @@ export class PriceListService {
         if (override.customConversionPrice) customConversionPrice = override.customConversionPrice;
         isOverridden = true;
       } else {
-        if (pl.calculationMethod === 'PERCENT_BASE') {
+        const wholesaleConv = prod.conversions?.find(c => c.unitName.includes('Sỉ'));
+        const chucConv = prod.conversions?.find(c => c.unitName.includes('Chục'));
+
+        if (pl.type === 'WHOLESALE' && (prod.wholesalePrice || wholesaleConv)) {
+          customPrice = prod.wholesalePrice || wholesaleConv!.sellingPrice;
+        } else if (pl.calculationMethod === 'PERCENT_BASE') {
           customPrice = Math.round((prod.sellingPrice * (1 - pl.value / 100)) / 500) * 500;
-          if (prod.conversionSellingPrice) {
-            customConversionPrice = Math.round((prod.conversionSellingPrice * (1 - pl.value / 100)) / 1000) * 1000;
-          }
         } else if (pl.calculationMethod === 'PERCENT_COST') {
           customPrice = Math.round((prod.costPrice * (1 + pl.value / 100)) / 500) * 500;
-          if (prod.conversionSellingPrice) {
-            customConversionPrice = Math.round((prod.costPrice * (prod.conversionFactor || 1) * (1 + pl.value / 100)) / 1000) * 1000;
-          }
         } else if (pl.calculationMethod === 'FIXED_OFFSET') {
           customPrice = Math.max(0, prod.sellingPrice - pl.value);
+        }
+
+        if (chucConv) {
+          customConversionPrice = chucConv.sellingPrice;
+        } else if (prod.conversionSellingPrice) {
+          if (pl.calculationMethod === 'PERCENT_BASE') {
+            customConversionPrice = Math.round((prod.conversionSellingPrice * (1 - pl.value / 100)) / 1000) * 1000;
+          } else if (pl.calculationMethod === 'PERCENT_COST') {
+            customConversionPrice = Math.round((prod.costPrice * (prod.conversionFactor || 1) * (1 + pl.value / 100)) / 1000) * 1000;
+          }
         }
       }
 

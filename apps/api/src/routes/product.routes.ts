@@ -24,6 +24,8 @@ router.post('/clear-all', requireRoles(['ADMIN']), ProductController.clearAllPro
 router.post('/import-excel', requireRoles(['ADMIN', 'WAREHOUSE']), ProductController.importExcel);
 router.post('/', requireRoles(['ADMIN', 'WAREHOUSE']), ProductController.createProduct);
 router.put('/:id', requireRoles(['ADMIN', 'WAREHOUSE']), ProductController.updateProduct);
+router.patch('/:id/branch-status', requireRoles(['ADMIN', 'WAREHOUSE']), ProductController.updateBranchStatus);
+router.patch('/:id/branch-min-stock', requireRoles(['ADMIN', 'WAREHOUSE']), ProductController.updateBranchMinStock);
 router.delete('/:id', requireRoles(['ADMIN', 'WAREHOUSE']), ProductController.deleteProduct);
 
 // Master Categories management (ADMIN & WAREHOUSE)

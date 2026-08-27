@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { usePosStore, calculateProductPrice } from '../../store/posStore';
+import { useBranchStore } from '../../store/branchStore';
 import api from '../../services/api';
 import { Search, Plus, QrCode, User, Tag, SlidersHorizontal, Store, FileText, ShoppingCart, Minus, Check, X, ChevronRight, Layers, Menu, History } from 'lucide-react';
 import { VariantSelectModal } from './VariantSelectModal';
@@ -11,6 +12,7 @@ interface MobilePOSViewProps {
 }
 
 export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }) => {
+  const { selectedBranchId } = useBranchStore();
   const {
     cart,
     customer,
@@ -239,13 +241,27 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
       <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2">
         {isLoading ? (
           <div className="text-slate-500 text-center py-12 text-xs">Đang tải danh sách sản phẩm...</div>
-        ) : products.length === 0 ? (
-          <div className="text-slate-500 text-center py-12 text-xs">Không tìm thấy sản phẩm phù hợp.</div>
-        ) : (
-          products.map((p) => {
+        ) : (() => {
+          const displayedProducts = products.filter(
+            (p) => !p.branchActiveStatus || p.branchActiveStatus[selectedBranchId] !== false
+          );
+
+          if (displayedProducts.length === 0) {
+            return <div className="text-slate-500 text-center py-12 text-xs">Không tìm thấy sản phẩm phù hợp tại chi nhánh này.</div>;
+          }
+
+          return displayedProducts.map((p) => {
             const cartItem = cart.find((item) => item.product.id === p.id);
             const { price: displayPrice } = calculateProductPrice(p, p.unit, activePriceList);
-            const isLowStock = p.stockQuantity <= p.minStock;
+            const currBranchStock =
+              p.branchStocks && p.branchStocks[selectedBranchId] !== undefined
+                ? p.branchStocks[selectedBranchId]
+                : p.stockQuantity;
+            const branchMin =
+              p.branchMinStocks && p.branchMinStocks[selectedBranchId] !== undefined
+                ? p.branchMinStocks[selectedBranchId]
+                : (p.minStock || 10);
+            const isLowStock = currBranchStock <= branchMin;
 
             return (
               <div
@@ -276,10 +292,9 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
 
                   <div className="flex items-center gap-2 text-[11px] text-slate-400">
                     <span className="font-mono text-slate-400">{p.sku}</span>
-                    <span className={`px-1.5 py-0.5 rounded font-bold ${isLowStock ? 'bg-red-500/20 text-red-400' : 'bg-slate-800 text-slate-300'}`}>
-                      {p.stockQuantity}
+                    <span className={`px-1.5 py-0.5 rounded font-bold ${isLowStock ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-slate-800 text-slate-300'}`}>
+                      {isLowStock ? `⚠️ Tồn: ${currBranchStock}` : `Tồn: ${currBranchStock}`}
                     </span>
-                    <span className="text-slate-400">KH đặt: 0</span>
                   </div>
 
                   <div className="font-bold text-blue-400 text-sm">
@@ -322,8 +337,8 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
                 )}
               </div>
             );
-          })
-        )}
+          });
+        })()}
       </div>
 
       {/* 6. Sticky Floating Bottom Bar (Matching attached UI screenshot) */}
