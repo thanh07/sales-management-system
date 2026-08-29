@@ -68,6 +68,16 @@ export const App: React.FC = () => {
     }
   }, [user, isAdmin, setSelectedBranchId]);
 
+  // Protect activeTab from unauthorized access for non-admin staff
+  useEffect(() => {
+    if (activeTab === 'SETTINGS' && !canAccessSettings) setActiveTab('POS');
+    if (activeTab === 'USERS' && !canAccessUsers) setActiveTab('POS');
+    if (activeTab === 'PRICELISTS' && !canAccessPricelists) setActiveTab('POS');
+    if (activeTab === 'BRANCHES' && !canAccessBranches) setActiveTab('POS');
+    if (activeTab === 'DASHBOARD' && !canAccessDashboard) setActiveTab('POS');
+    if (activeTab === 'REPORTS' && !canAccessReports) setActiveTab('POS');
+  }, [activeTab, canAccessSettings, canAccessUsers, canAccessPricelists, canAccessBranches, canAccessDashboard, canAccessReports]);
+
   // Close branch dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -376,16 +386,16 @@ export const App: React.FC = () => {
 
                 <div className="space-y-1">
                   {[
-                    { id: 'POS', label: 'Bán quầy (POS)', icon: ShoppingCart },
-                    { id: 'DASHBOARD', label: 'Tổng quan', icon: LayoutDashboard },
-                    { id: 'PRODUCTS', label: 'Sản phẩm & Kho', icon: Package },
-                    { id: 'BRANCHES', label: 'Chi nhánh', icon: Building2 },
-                    { id: 'PRICELISTS', label: 'Thiết lập Bảng giá', icon: Tag },
-                    { id: 'CRM', label: 'Khách hàng (CRM)', icon: Users },
-                    { id: 'USERS', label: 'Quản lý Nhân viên', icon: ShieldCheck },
-                    { id: 'REPORTS', label: 'Báo cáo doanh thu', icon: BarChart3 },
-                    { id: 'SETTINGS', label: 'Thiết lập chung', icon: Settings },
-                  ].map((tab) => {
+                    { id: 'POS', label: 'Bán quầy (POS)', icon: ShoppingCart, allowed: true },
+                    { id: 'DASHBOARD', label: 'Tổng quan', icon: LayoutDashboard, allowed: canAccessDashboard },
+                    { id: 'PRODUCTS', label: 'Sản phẩm & Kho', icon: Package, allowed: true },
+                    { id: 'BRANCHES', label: 'Chi nhánh', icon: Building2, allowed: canAccessBranches },
+                    { id: 'PRICELISTS', label: 'Thiết lập Bảng giá', icon: Tag, allowed: canAccessPricelists },
+                    { id: 'CRM', label: 'Khách hàng (CRM)', icon: Users, allowed: canAccessCRM },
+                    { id: 'USERS', label: 'Quản lý Nhân viên', icon: ShieldCheck, allowed: canAccessUsers },
+                    { id: 'REPORTS', label: 'Báo cáo doanh thu', icon: BarChart3, allowed: canAccessReports },
+                    { id: 'SETTINGS', label: 'Thiết lập chung', icon: Settings, allowed: canAccessSettings },
+                  ].filter((tab) => tab.allowed).map((tab) => {
                     const Icon = tab.icon;
                     const isSelected = activeTab === tab.id;
                     return (

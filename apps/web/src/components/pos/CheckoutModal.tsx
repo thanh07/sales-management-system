@@ -17,6 +17,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
 
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK_TRANSFER' | 'CREDIT_CARD' | 'SPLIT'>('CASH');
   const [receivedAmount, setReceivedAmount] = useState<number>(total);
+  const [isDefaultAmount, setIsDefaultAmount] = useState<boolean>(true);
   const [splitCashAmount, setSplitCashAmount] = useState<number>(0);
   const [splitBankAmount, setSplitBankAmount] = useState<number>(total);
   const [selectedBank, setSelectedBank] = useState({
@@ -47,6 +48,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
   // Sync received amount when total changes
   useEffect(() => {
     setReceivedAmount(total);
+    setIsDefaultAmount(true);
     setSplitBankAmount(total);
     setSplitCashAmount(0);
   }, [total, isOpen]);
@@ -66,7 +68,68 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
   const changeAmount = paymentMethod === 'CASH' ? Math.max(0, receivedAmount - total) : 0;
   const isSufficient = paymentMethod === 'CASH' ? receivedAmount >= total : true;
 
-  const quickCashOptions = [50000, 100000, 200000, 500000];
+  // Smart Cash Denomination Handler (Overwrite on 1st tap, stack on 2nd+)
+  const handleQuickCash = (amount: number) => {
+    if (isDefaultAmount || receivedAmount === total) {
+      setReceivedAmount(amount);
+      setIsDefaultAmount(false);
+    } else {
+      setReceivedAmount((prev) => prev + amount);
+    }
+  };
+
+  // Helper to generate smart cash denomination chips based on total
+  const getSmartCashSuggestions = (totalAmt: number) => {
+    const list: { label: string; amount: number; isSmart?: boolean }[] = [];
+
+    // Exact amount
+    list.push({ label: 'Đủ tiền', amount: totalAmt, isSmart: true });
+
+    // Round to nearest 10k
+    const next10k = Math.ceil(totalAmt / 10000) * 10000;
+    if (next10k > totalAmt) {
+      list.push({ label: `${(next10k / 1000).toLocaleString('vi-VN')}k`, amount: next10k, isSmart: true });
+    }
+
+    // Round to nearest 50k
+    const next50k = Math.ceil(totalAmt / 50000) * 50000;
+    if (next50k > totalAmt && next50k !== next10k) {
+      list.push({ label: `${(next50k / 1000).toLocaleString('vi-VN')}k`, amount: next50k, isSmart: true });
+    }
+
+    // Round to nearest 100k / 500k
+    const next100k = Math.ceil(totalAmt / 100000) * 100000;
+    if (next100k > totalAmt && next100k !== next50k && next100k !== next10k) {
+      list.push({ label: `${(next100k / 1000).toLocaleString('vi-VN')}k`, amount: next100k, isSmart: true });
+    }
+
+    // Polymer bills
+    [50000, 100000, 200000, 500000].forEach((bill) => {
+      if (!list.some((s) => s.amount === bill)) {
+        list.push({ label: `${bill / 1000}k`, amount: bill });
+      }
+    });
+
+    return list;
+  };
+
+  // Helper to calculate exact bill breakdown for returning change
+  const getChangeBreakdown = (change: number) => {
+    if (change <= 0) return [];
+    const bills = [500000, 200000, 100000, 50000, 20000, 10000, 5000, 2000, 1000];
+    const breakdown: { bill: number; count: number }[] = [];
+    let rem = change;
+
+    bills.forEach((b) => {
+      if (rem >= b) {
+        const count = Math.floor(rem / b);
+        rem %= b;
+        breakdown.push({ bill: b, count });
+      }
+    });
+
+    return breakdown;
+  };
 
   const handleCopyAccount = () => {
     navigator.clipboard.writeText(selectedBank.accountNo);
@@ -188,42 +251,103 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
           {paymentMethod === 'CASH' && (
             <div className="space-y-4 bg-slate-950/50 p-4 rounded-2xl border border-slate-800">
               <div>
-                <label className="text-xs text-slate-400 block mb-1.5 font-semibold">Tiền khách đưa (VNĐ)</label>
-                <div className="flex gap-2">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-slate-300 font-bold">Tiền khách đưa (VNĐ)</label>
+                    {!isDefaultAmount && (
+                      <span className="text-[10px] text-amber-400 font-medium">⚡ Đã nhập thủ công</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReceivedAmount(total);
+                        setIsDefaultAmount(true);
+                      }}
+                      className="px-3 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white font-bold text-xs border border-blue-500/40 transition-all shadow-sm shrink-0"
+                    >
+                      Đủ tiền
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReceivedAmount(0);
+                        setIsDefaultAmount(false);
+                      }}
+                      className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-red-600/20 text-slate-300 hover:text-red-400 font-bold text-xs border border-slate-700 transition-all shadow-sm shrink-0"
+                      title="Xóa trắng để nhập lại"
+                    >
+                      🗑️ Xóa
+                    </button>
+                  </div>
+                </div>
+
+                <div className="relative">
                   <input
                     type="number"
-                    value={receivedAmount}
-                    onChange={(e) => setReceivedAmount(Number(e.target.value) || 0)}
-                    className="flex-1 px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold text-lg outline-none focus:border-blue-500"
+                    value={receivedAmount || ''}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => {
+                      setReceivedAmount(Number(e.target.value) || 0);
+                      setIsDefaultAmount(false);
+                    }}
+                    placeholder="0"
+                    className="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold text-xl outline-none focus:border-blue-500 font-mono tracking-wide [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
-                  <button
-                    onClick={() => setReceivedAmount(total)}
-                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold text-xs border border-slate-700"
-                  >
-                    Đủ tiền
-                  </button>
                 </div>
               </div>
 
-              {/* Quick Cash Buttons */}
-              <div className="flex flex-wrap gap-2">
-                {quickCashOptions.map((amt) => (
-                  <button
-                    key={amt}
-                    onClick={() => setReceivedAmount((prev) => prev + amt)}
-                    className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-xs font-bold"
-                  >
-                    +{amt.toLocaleString('vi-VN')}đ
-                  </button>
-                ))}
+              {/* Smart Cash Suggestion Chips */}
+              <div className="space-y-1.5">
+                <div className="text-[11px] text-slate-400 font-medium flex items-center justify-between">
+                  <span>💡 Chọn nhanh mệnh giá tiền:</span>
+                  <span className="text-[10px] text-slate-500">(Bấm 1 lần = Thay thế | Bấm tiếp = Cộng dồn)</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {getSmartCashSuggestions(total).map((item, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleQuickCash(item.amount)}
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${
+                        item.amount === receivedAmount
+                          ? 'bg-blue-600 border-blue-500 text-white shadow-md shadow-blue-600/30'
+                          : item.isSmart
+                          ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300 hover:bg-emerald-600 hover:text-white'
+                          : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800 hover:text-white'
+                      }`}
+                    >
+                      {item.isSmart ? `[ ${item.label} ]` : `+${item.label}`}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {/* Change Calculation */}
-              <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
-                <span className="text-xs text-slate-400">Tiền thừa trả khách:</span>
-                <span className={`text-base font-extrabold ${changeAmount > 0 ? 'text-emerald-400' : 'text-slate-400'}`}>
-                  {formatVND(changeAmount)}
-                </span>
+              {/* Change Calculation & Bill Breakdown */}
+              <div className="pt-3 border-t border-slate-800/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-300 font-bold">Tiền thừa trả khách:</span>
+                  <span className={`text-xl font-black ${changeAmount > 0 ? 'text-amber-400 tracking-tight' : 'text-slate-500'}`}>
+                    {formatVND(changeAmount)}
+                  </span>
+                </div>
+
+                {/* Change Breakdown Suggestion */}
+                {changeAmount > 0 && (
+                  <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs space-y-1">
+                    <div className="font-bold flex items-center gap-1 text-[11px]">
+                      <span>💡 Gợi ý thối tiền mặt cho khách:</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 font-mono text-[11px] font-bold">
+                      {getChangeBreakdown(changeAmount).map((b, i) => (
+                        <span key={i} className="px-2 py-0.5 rounded bg-slate-900 border border-amber-500/40 text-amber-200">
+                          {b.count}x {(b.bill / 1000).toLocaleString('vi-VN')}k
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

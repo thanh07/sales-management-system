@@ -94,6 +94,20 @@ export const SettingsPage: React.FC = () => {
   const { user } = useAuthStore();
   const isAdmin = user?.role === 'ADMIN';
 
+  if (!isAdmin) {
+    return (
+      <div className="p-8 flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4">
+        <div className="w-16 h-16 rounded-2xl bg-red-500/20 text-red-400 flex items-center justify-center border border-red-500/30 shadow-lg shadow-red-500/10">
+          <Lock className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold text-white">Quyền Truy Cập Bị Hạn Chế (403 Forbidden)</h2>
+        <p className="text-slate-400 text-sm max-w-md">
+          Trang Thiết Lập Hệ Thống (Centralized Control Hub) chỉ dành riêng cho tài khoản Quản trị viên (ADMIN). Tài khoản của bạn (<strong className="text-blue-400">{user?.fullName}</strong> - <span className="px-2 py-0.5 rounded bg-slate-800 text-amber-400 font-mono text-xs">{user?.role}</span>) không có quyền xem hoặc thao tác trên trang này.
+        </p>
+      </div>
+    );
+  }
+
   const [activeTab, setActiveTab] = useState<'POS_RULES' | 'RBAC_MATRIX' | 'STORE_PROFILE' | 'PRINT_PAYMENTS' | 'MASTER_CATALOGS' | 'BACKUP_RESTORE'>('POS_RULES');
   const [catalogSubTab, setCatalogSubTab] = useState<'CATEGORIES' | 'BRANDS' | 'LOCATIONS' | 'UNITS' | 'IMAGE_PRESETS'>('CATEGORIES');
 
