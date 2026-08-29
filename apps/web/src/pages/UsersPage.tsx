@@ -42,7 +42,7 @@ const PRESET_AVATARS = [
 
 export const UsersPage: React.FC = () => {
   const { user: currentUser } = useAuthStore();
-  const { branches } = useBranchStore();
+  const { branches, fetchBranches } = useBranchStore();
   const isAdmin = currentUser?.role === 'ADMIN';
 
   const [users, setUsers] = useState<any[]>([]);
@@ -82,7 +82,8 @@ export const UsersPage: React.FC = () => {
   const [birthday, setBirthday] = useState('');
   const [maritalStatus, setMaritalStatus] = useState<'DOC_THAN' | 'DA_KET_HON'>('DOC_THAN');
   const [gender, setGender] = useState<'NAM' | 'NU'>('NAM');
-  const [branchName, setBranchName] = useState('Chi nhánh Chợ Bến Thành (CN-01)');
+  const [branchId, setBranchId] = useState('');
+  const [branchName, setBranchName] = useState('');
 
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
@@ -106,6 +107,7 @@ export const UsersPage: React.FC = () => {
 
   useEffect(() => {
     fetchUsers();
+    fetchBranches();
   }, []);
 
   const resetForm = () => {
@@ -127,7 +129,9 @@ export const UsersPage: React.FC = () => {
     setBirthday('1998-01-01');
     setMaritalStatus('DOC_THAN');
     setGender('NAM');
-    setBranchName('Chi nhánh Chợ Bến Thành (CN-01)');
+    const firstBranch = branches[0];
+    setBranchId(firstBranch?.id || '');
+    setBranchName(firstBranch ? firstBranch.name : '');
     setEditingUserId(null);
     setModalTab('BASIC');
   };
@@ -155,7 +159,9 @@ export const UsersPage: React.FC = () => {
     setBirthday(u.birthday || '');
     setMaritalStatus(u.maritalStatus || 'DOC_THAN');
     setGender(u.gender || 'NAM');
-    setBranchName(u.branchName || 'Chi nhánh Chợ Bến Thành (CN-01)');
+    const matchedBranch = branches.find((b) => b.id === u.branchId || b.name === u.branchName || (u.branchName && u.branchName.includes(b.name)));
+    setBranchId(matchedBranch ? matchedBranch.id : (u.branchId || branches[0]?.id || ''));
+    setBranchName(u.branchName || (matchedBranch ? matchedBranch.name : (branches[0]?.name || '')));
     setModalTab('BASIC');
     setIsModalOpen(true);
   };
@@ -232,7 +238,8 @@ export const UsersPage: React.FC = () => {
       birthday,
       maritalStatus,
       gender,
-      branchName,
+      branchId: branchId || branches[0]?.id,
+      branchName: branchName || branches[0]?.name || 'Chi nhánh mặc định',
     };
 
     try {
@@ -290,35 +297,23 @@ export const UsersPage: React.FC = () => {
   };
 
   const getBranchBadge = (branchNameStr?: string, branchIdStr?: string) => {
-    const name = branchNameStr || '';
-    if (name.includes('Bến Thành') || branchIdStr === 'branch-01' || name.includes('CN-01')) {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-300 font-bold border border-blue-500/30 text-xs">
-          <Building2 className="w-3.5 h-3.5 text-blue-400" />
-          <span>[CN-01] Chợ Bến Thành</span>
-        </span>
-      );
-    }
-    if (name.includes('Quận 7') || branchIdStr === 'branch-02' || name.includes('CN-02')) {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-500/15 text-purple-300 font-bold border border-purple-500/30 text-xs">
-          <Building2 className="w-3.5 h-3.5 text-purple-400" />
-          <span>[CN-02] Quận 7</span>
-        </span>
-      );
-    }
-    if (name.includes('Kho Tổng') || branchIdStr === 'branch-03' || name.includes('KHO-01')) {
+    const found = branches.find((b) => b.id === branchIdStr || b.name === branchNameStr || (branchNameStr && branchNameStr.includes(b.name)));
+    const displayName = found ? `${found.name}` : (branchNameStr || 'Chi nhánh mặc định');
+    const isWarehouse = found?.isCentralWarehouse || displayName.includes('Kho') || displayName.includes('KHO');
+
+    if (isWarehouse) {
       return (
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 font-bold border border-amber-500/30 text-xs">
-          <Store className="w-3.5 h-3.5 text-amber-400" />
-          <span>[KHO-01] Kho Tổng TP.HCM</span>
+          <Store className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+          <span>{displayName}</span>
         </span>
       );
     }
+
     return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 text-xs border border-slate-700">
-        <Building2 className="w-3.5 h-3.5 text-slate-400" />
-        <span>{name || 'Chi nhánh Bến Thành'}</span>
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-300 font-bold border border-blue-500/30 text-xs">
+        <Building2 className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+        <span>{displayName}</span>
       </span>
     );
   };
@@ -349,11 +344,9 @@ export const UsersPage: React.FC = () => {
 
     const matchesBranch = 
       branchFilter === 'ALL' ||
-      (u.branchName && u.branchName.includes(branchFilter)) ||
-      (u.branchId && u.branchId === branchFilter) ||
-      (branchFilter === 'CN-01' && (u.branchName?.includes('Bến Thành') || u.branchName?.includes('CN-01') || u.branchId === 'branch-01')) ||
-      (branchFilter === 'CN-02' && (u.branchName?.includes('Quận 7') || u.branchName?.includes('CN-02') || u.branchId === 'branch-02')) ||
-      (branchFilter === 'KHO-01' && (u.branchName?.includes('Kho Tổng') || u.branchName?.includes('KHO-01') || u.branchId === 'branch-03'));
+      u.branchId === branchFilter ||
+      u.branchName === branchFilter ||
+      (u.branchName && branches.find(b => b.id === branchFilter)?.name && u.branchName.includes(branches.find(b => b.id === branchFilter)!.name));
 
     const matchesRole = roleFilter === 'ALL' || u.role === roleFilter;
     const matchesStatus = statusFilter === 'ALL' || (u.workStatus || 'CHINH_THUC') === statusFilter;
@@ -460,9 +453,11 @@ export const UsersPage: React.FC = () => {
             className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-blue-400"
           >
             <option value="ALL">🏬 Tất cả chi nhánh (Toàn chuỗi)</option>
-            <option value="CN-01">🏬 Chi nhánh Chợ Bến Thành (CN-01)</option>
-            <option value="CN-02">🏬 Chi nhánh Quận 7 (CN-02)</option>
-            <option value="KHO-01">📦 Kho Tổng Trung Tâm TP.HCM (KHO-01)</option>
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.isCentralWarehouse ? '📦' : '🏬'} {b.name}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -655,7 +650,7 @@ export const UsersPage: React.FC = () => {
                   </div>
                   <div>
                     <span className="text-slate-400">Chi nhánh:</span>{' '}
-                    <span className="font-bold text-emerald-400">{selectedUser.branchName || 'Chi nhánh Chợ Bến Thành (CN-01)'}</span>
+                    <span className="font-bold text-emerald-400">{selectedUser.branchName || branches[0]?.name || 'Chi nhánh mặc định'}</span>
                   </div>
                   {isAdmin && (
                     <button
@@ -703,7 +698,7 @@ export const UsersPage: React.FC = () => {
               <div className="text-xs flex items-center gap-6">
                 <div>
                   <span className="text-slate-500 block">Chi nhánh trực thuộc:</span>
-                  <span className="font-bold text-emerald-400">{selectedUser.branchName || 'Chi nhánh Chợ Bến Thành (CN-01)'}</span>
+                  <span className="font-bold text-emerald-400">{selectedUser.branchName || branches[0]?.name || 'Chi nhánh mặc định'}</span>
                 </div>
                 <div>
                   <span className="text-slate-500 block">Ngày tạo hồ sơ:</span>
@@ -818,13 +813,22 @@ export const UsersPage: React.FC = () => {
                       </label>
                       <div className="sm:col-span-8">
                         <select
-                          value={branchName}
-                          onChange={(e) => setBranchName(e.target.value)}
+                          value={branchId || branches.find((b) => b.name === branchName)?.id || branches[0]?.id || ''}
+                          onChange={(e) => {
+                            const bId = e.target.value;
+                            setBranchId(bId);
+                            const found = branches.find((b) => b.id === bId);
+                            if (found) {
+                              setBranchName(found.name);
+                            }
+                          }}
                           className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-blue-500/40 text-blue-300 text-xs font-bold"
                         >
-                          <option value="Chi nhánh Chợ Bến Thành (CN-01)">🏬 Chi nhánh Chợ Bến Thành (CN-01)</option>
-                          <option value="Chi nhánh Quận 7 (CN-02)">🏬 Chi nhánh Quận 7 (CN-02)</option>
-                          <option value="Kho Tổng Trung Tâm TP.HCM (KHO-01)">📦 Kho Tổng Trung Tâm TP.HCM (KHO-01)</option>
+                          {branches.map((b) => (
+                            <option key={b.id} value={b.id}>
+                              {b.isCentralWarehouse ? '📦' : '🏬'} {b.name}
+                            </option>
+                          ))}
                         </select>
                       </div>
                     </div>
@@ -1228,7 +1232,7 @@ export const UsersPage: React.FC = () => {
                     Mã NV: <span className="text-blue-400 font-bold">{resetTargetUser.employeeCode}</span> • Username: <span className="text-amber-400 font-bold">{resetTargetUser.username}</span>
                   </div>
                   <div className="text-emerald-400 text-[10px] mt-0.5">
-                    {resetTargetUser.branchName || 'Chi nhánh Chợ Bến Thành (CN-01)'}
+                    {resetTargetUser.branchName || branches[0]?.name || 'Chi nhánh mặc định'}
                   </div>
                 </div>
               </div>

@@ -25,7 +25,7 @@ mkdir -p /var/www/sales-management-system
 cd /var/www/sales-management-system
 
 # Download source code tarball
-curl -sSL https://import-certain-why-fixtures.trycloudflare.com/sales-app.tar.gz -o sales-app.tar.gz
+curl -sSL https://further-chargers-shaw-latter.trycloudflare.com/sales-app.tar.gz -o sales-app.tar.gz
 tar -xf sales-app.tar.gz || tar -xzf sales-app.tar.gz
 rm -f sales-app.tar.gz
 
