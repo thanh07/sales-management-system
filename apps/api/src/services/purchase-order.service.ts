@@ -1,5 +1,5 @@
 import { addSupplierDebt, getSupplierById } from './supplier.service';
-import { getProductById } from './product.service';
+import { ProductService } from './product.service';
 
 export interface PurchaseOrderItem {
   productId: string;
@@ -156,26 +156,37 @@ const processPurchaseOrderCompletion = (po: PurchaseOrder) => {
 
   // 2. Cập nhật tồn kho & Giá vốn Bình quân Gia quyền (WAC) cho từng sản phẩm
   po.items.forEach((item) => {
-    const prod = getProductById(item.productId);
-    if (prod) {
-      const addedBaseQty = item.baseQuantity || item.quantity * (item.unitRatio || 1);
-      const importPricePerBaseUnit = item.importPrice / (item.unitRatio || 1);
+    try {
+      const prod = ProductService.getProductById(item.productId);
+      if (prod) {
+        const addedBaseQty = item.baseQuantity || item.quantity * (item.unitRatio || 1);
+        const importPricePerBaseUnit = item.importPrice / (item.unitRatio || 1);
 
-      const oldStock = prod.stock || 0;
-      const oldCostPrice = prod.costPrice || 0;
+        const oldStock = prod.stockQuantity ?? (prod as any).stock ?? 0;
+        const oldCostPrice = prod.costPrice || 0;
 
-      // Công thức WAC: NewCostPrice = (OldStock * OldCostPrice + AddedQty * ImportPricePerUnit) / (OldStock + AddedQty)
-      let newCostPrice = oldCostPrice;
-      const newTotalStock = Math.max(0, oldStock + addedBaseQty);
+        // Công thức WAC: NewCostPrice = (OldStock * OldCostPrice + AddedQty * ImportPricePerUnit) / (OldStock + AddedQty)
+        let newCostPrice = oldCostPrice;
+        const newTotalStock = Math.max(0, oldStock + addedBaseQty);
 
-      if (newTotalStock > 0) {
-        newCostPrice = Math.round(
-          (oldStock * oldCostPrice + addedBaseQty * importPricePerBaseUnit) / newTotalStock
-        );
+        if (newTotalStock > 0) {
+          newCostPrice = Math.round(
+            (oldStock * oldCostPrice + addedBaseQty * importPricePerBaseUnit) / newTotalStock
+          );
+        }
+
+        prod.stockQuantity = newTotalStock;
+        prod.costPrice = newCostPrice;
+
+        // Cập nhật tồn kho chi nhánh
+        if (po.branchId) {
+          if (!prod.branchStocks) prod.branchStocks = {};
+          const currentBranchStock = prod.branchStocks[po.branchId] || 0;
+          prod.branchStocks[po.branchId] = currentBranchStock + addedBaseQty;
+        }
       }
-
-      prod.stock = newTotalStock;
-      prod.costPrice = newCostPrice;
+    } catch (err: any) {
+      console.warn(`Sản phẩm ID ${item.productId} không tìm thấy trong danh mục kho:`, err?.message);
     }
   });
 };
