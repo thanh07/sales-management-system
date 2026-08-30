@@ -112,27 +112,37 @@ export const PurchaseOrdersPage: React.FC = () => {
   const fetchSuppliers = async () => {
     try {
       const res: any = await api.get('/suppliers');
-      setSuppliers(res.data || []);
+      const list = Array.isArray(res) ? res : (res?.data || []);
+      setSuppliers(Array.isArray(list) ? list : []);
     } catch (err: any) {
       console.error('Fetch suppliers error:', err);
+      setSuppliers([]);
     }
   };
 
   const fetchPurchaseOrders = async () => {
     try {
       const res: any = await api.get('/purchase-orders');
-      setPurchaseOrders(res.data || []);
+      const list = Array.isArray(res) ? res : (res?.data || []);
+      setPurchaseOrders(Array.isArray(list) ? list : []);
     } catch (err: any) {
       console.error('Fetch purchase orders error:', err);
+      setPurchaseOrders([]);
     }
   };
 
   const fetchProducts = async () => {
     try {
       const res: any = await api.get('/products');
-      setAllProducts(res.data || []);
+      const list = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.data)
+        ? res.data
+        : (res?.data?.products || res?.products || []);
+      setAllProducts(Array.isArray(list) ? list : []);
     } catch (err: any) {
       console.error('Fetch products error:', err);
+      setAllProducts([]);
     }
   };
 
@@ -399,7 +409,11 @@ export const PurchaseOrdersPage: React.FC = () => {
   };
 
   // Filtered Lists
-  const filteredSuppliers = suppliers.filter((s) => {
+  const safeSuppliers = Array.isArray(suppliers) ? suppliers : [];
+  const safePurchaseOrders = Array.isArray(purchaseOrders) ? purchaseOrders : [];
+  const safeProducts = Array.isArray(allProducts) ? allProducts : [];
+
+  const filteredSuppliers = safeSuppliers.filter((s) => {
     const q = supplierSearch.toLowerCase().trim();
     const matchesQuery =
       s.name.toLowerCase().includes(q) ||
@@ -410,7 +424,7 @@ export const PurchaseOrdersPage: React.FC = () => {
     return matchesQuery && matchesGroup;
   });
 
-  const filteredPurchaseOrders = purchaseOrders.filter((po) => {
+  const filteredPurchaseOrders = safePurchaseOrders.filter((po) => {
     const q = poSearch.toLowerCase().trim();
     const matchesQuery =
       po.code.toLowerCase().includes(q) ||
@@ -421,10 +435,10 @@ export const PurchaseOrdersPage: React.FC = () => {
     return matchesQuery && matchesBranch && matchesStatus;
   });
 
-  const totalSupplierDebt = suppliers.reduce((sum, s) => sum + (s.debtAmount || 0), 0);
-  const totalPoMonth = purchaseOrders.filter((p) => p.status === 'COMPLETED').reduce((sum, p) => sum + (p.finalTotal || 0), 0);
+  const totalSupplierDebt = safeSuppliers.reduce((sum, s) => sum + (s.debtAmount || 0), 0);
+  const totalPoMonth = safePurchaseOrders.filter((p) => p.status === 'COMPLETED').reduce((sum, p) => sum + (p.finalTotal || 0), 0);
 
-  const searchedProducts = allProducts.filter((p) => {
+  const searchedProducts = safeProducts.filter((p) => {
     if (!productSearchQuery.trim()) return false;
     const q = productSearchQuery.toLowerCase();
     return p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q) || (p.barcode && p.barcode.includes(q));
