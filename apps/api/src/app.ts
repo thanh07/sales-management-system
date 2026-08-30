@@ -10,6 +10,8 @@ import userRoutes from './routes/user.routes';
 import pricelistRoutes from './routes/pricelist.routes';
 import settingsRoutes from './routes/settings.routes';
 import branchRoutes from './routes/branch.routes';
+import supplierRoutes from './routes/supplier.routes';
+import purchaseOrderRoutes from './routes/purchase-order.routes';
 
 const app = express();
 
@@ -27,6 +29,8 @@ app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/pricelists', pricelistRoutes);
 app.use('/api/v1/settings', settingsRoutes);
 app.use('/api/v1/branches', branchRoutes);
+app.use('/api/v1/suppliers', supplierRoutes);
+app.use('/api/v1/purchase-orders', purchaseOrderRoutes);
 
 // Health check
 app.get('/api/v1/health', (req, res) => {

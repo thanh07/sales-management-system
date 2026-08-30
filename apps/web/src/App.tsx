@@ -11,12 +11,14 @@ import { UsersPage } from './pages/UsersPage';
 import { PriceListsPage } from './pages/PriceListsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { BranchesPage } from './pages/BranchesPage';
+import { PurchaseOrdersPage } from './pages/PurchaseOrdersPage';
 import {
   LogOut,
   Store,
   LayoutDashboard,
   ShoppingCart,
   Package,
+  PackagePlus,
   Users,
   BarChart3,
   ShieldCheck,
@@ -34,7 +36,7 @@ export const App: React.FC = () => {
   const { branches, selectedBranchId, setSelectedBranchId, getSelectedBranch, fetchBranches } = useBranchStore();
 
   const [activeTab, setActiveTab] = useState<
-    'POS' | 'DASHBOARD' | 'PRODUCTS' | 'CRM' | 'REPORTS' | 'USERS' | 'PRICELISTS' | 'SETTINGS' | 'BRANCHES'
+    'POS' | 'DASHBOARD' | 'PRODUCTS' | 'CRM' | 'REPORTS' | 'USERS' | 'PRICELISTS' | 'SETTINGS' | 'BRANCHES' | 'PURCHASE_ORDERS'
   >('POS');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isBranchDropdownOpen, setIsBranchDropdownOpen] = useState(false);
@@ -53,6 +55,7 @@ export const App: React.FC = () => {
   const canAccessUsers = isAdmin || isManager;
   const canAccessReports = isAdmin || isManager || isWarehouse;
   const canAccessSettings = isAdmin;
+  const canAccessPurchaseOrders = isAdmin || isManager || isWarehouse;
 
   const activeBranch = getSelectedBranch();
 
@@ -76,7 +79,8 @@ export const App: React.FC = () => {
     if (activeTab === 'BRANCHES' && !canAccessBranches) setActiveTab('POS');
     if (activeTab === 'DASHBOARD' && !canAccessDashboard) setActiveTab('POS');
     if (activeTab === 'REPORTS' && !canAccessReports) setActiveTab('POS');
-  }, [activeTab, canAccessSettings, canAccessUsers, canAccessPricelists, canAccessBranches, canAccessDashboard, canAccessReports]);
+    if (activeTab === 'PURCHASE_ORDERS' && !canAccessPurchaseOrders) setActiveTab('POS');
+  }, [activeTab, canAccessSettings, canAccessUsers, canAccessPricelists, canAccessBranches, canAccessDashboard, canAccessReports, canAccessPurchaseOrders]);
 
   // Close branch dropdown on outside click
   useEffect(() => {
@@ -271,6 +275,20 @@ export const App: React.FC = () => {
               <span>Sản phẩm & Kho</span>
             </button>
 
+            {canAccessPurchaseOrders && (
+              <button
+                onClick={() => setActiveTab('PURCHASE_ORDERS')}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs transition-all ${
+                  activeTab === 'PURCHASE_ORDERS'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-semibold'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <PackagePlus className="w-4 h-4 text-cyan-400" />
+                <span>Nhập hàng & NCC</span>
+              </button>
+            )}
+
             {canAccessBranches && (
               <button
                 onClick={() => setActiveTab('BRANCHES')}
@@ -365,6 +383,7 @@ export const App: React.FC = () => {
             {activeTab === 'PRICELISTS' && <PriceListsPage />}
             {activeTab === 'USERS' && <UsersPage />}
             {activeTab === 'SETTINGS' && <SettingsPage />}
+            {activeTab === 'PURCHASE_ORDERS' && <PurchaseOrdersPage />}
             {(activeTab === 'DASHBOARD' || activeTab === 'REPORTS') && <DashboardPage />}
           </main>
         </div>
@@ -389,6 +408,7 @@ export const App: React.FC = () => {
                     { id: 'POS', label: 'Bán quầy (POS)', icon: ShoppingCart, allowed: true },
                     { id: 'DASHBOARD', label: 'Tổng quan', icon: LayoutDashboard, allowed: canAccessDashboard },
                     { id: 'PRODUCTS', label: 'Sản phẩm & Kho', icon: Package, allowed: true },
+                    { id: 'PURCHASE_ORDERS', label: 'Nhập hàng & NCC', icon: PackagePlus, allowed: canAccessPurchaseOrders },
                     { id: 'BRANCHES', label: 'Chi nhánh', icon: Building2, allowed: canAccessBranches },
                     { id: 'PRICELISTS', label: 'Thiết lập Bảng giá', icon: Tag, allowed: canAccessPricelists },
                     { id: 'CRM', label: 'Khách hàng (CRM)', icon: Users, allowed: canAccessCRM },
