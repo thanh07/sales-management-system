@@ -288,10 +288,12 @@ export const PurchaseOrdersPage: React.FC = () => {
   };
 
   const handleAddProductToPo = (prod: any) => {
-    // Determine default unit and conversion
-    const defaultUnit = 'Cái';
+    if (!prod) return;
+    const defaultUnit = prod.unit || 'Cái';
     const defaultRatio = 1;
-    const importPrice = prod.costPrice || Math.round(prod.sellingPrice * 0.7);
+    const importPrice = prod.costPrice || Math.round((prod.sellingPrice || 0) * 0.7);
+    const prodCode = prod.code || prod.sku || 'SP000';
+    const prodName = prod.name || 'Sản phẩm không tên';
 
     const existingIndex = poItems.findIndex((i) => i.productId === prod.id && i.unit === defaultUnit);
     if (existingIndex > -1) {
@@ -305,8 +307,8 @@ export const PurchaseOrdersPage: React.FC = () => {
         ...poItems,
         {
           productId: prod.id,
-          productCode: prod.code,
-          productName: prod.name,
+          productCode: prodCode,
+          productName: prodName,
           unit: defaultUnit,
           unitRatio: defaultRatio,
           quantity: 1,
@@ -415,21 +417,35 @@ export const PurchaseOrdersPage: React.FC = () => {
 
   const filteredSuppliers = safeSuppliers.filter((s) => {
     const q = supplierSearch.toLowerCase().trim();
+    const nameStr = s?.name ? String(s.name).toLowerCase() : '';
+    const codeStr = s?.code ? String(s.code).toLowerCase() : '';
+    const phoneStr = s?.phone ? String(s.phone).toLowerCase() : '';
+    const emailStr = s?.email ? String(s.email).toLowerCase() : '';
+
     const matchesQuery =
-      s.name.toLowerCase().includes(q) ||
-      s.code.toLowerCase().includes(q) ||
-      s.phone.includes(q) ||
-      (s.email && s.email.toLowerCase().includes(q));
+      nameStr.includes(q) ||
+      codeStr.includes(q) ||
+      phoneStr.includes(q) ||
+      emailStr.includes(q);
     const matchesGroup = supplierGroupFilter === 'ALL' || s.group === supplierGroupFilter;
     return matchesQuery && matchesGroup;
   });
 
   const filteredPurchaseOrders = safePurchaseOrders.filter((po) => {
     const q = poSearch.toLowerCase().trim();
+    const codeStr = po?.code ? String(po.code).toLowerCase() : '';
+    const suppNameStr = po?.supplierName ? String(po.supplierName).toLowerCase() : '';
+
     const matchesQuery =
-      po.code.toLowerCase().includes(q) ||
-      po.supplierName.toLowerCase().includes(q) ||
-      po.items.some((i: any) => i.productName.toLowerCase().includes(q) || i.productCode.toLowerCase().includes(q));
+      codeStr.includes(q) ||
+      suppNameStr.includes(q) ||
+      (Array.isArray(po?.items) &&
+        po.items.some((i: any) => {
+          const iName = i?.productName ? String(i.productName).toLowerCase() : '';
+          const iCode = i?.productCode ? String(i.productCode).toLowerCase() : '';
+          return iName.includes(q) || iCode.includes(q);
+        }));
+
     const matchesBranch = poBranchFilter === 'ALL' || po.branchId === poBranchFilter;
     const matchesStatus = poStatusFilter === 'ALL' || po.status === poStatusFilter;
     return matchesQuery && matchesBranch && matchesStatus;
@@ -440,8 +456,11 @@ export const PurchaseOrdersPage: React.FC = () => {
 
   const searchedProducts = safeProducts.filter((p) => {
     if (!productSearchQuery.trim()) return false;
-    const q = productSearchQuery.toLowerCase();
-    return p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q) || (p.barcode && p.barcode.includes(q));
+    const q = productSearchQuery.toLowerCase().trim();
+    const nameStr = p?.name ? String(p.name).toLowerCase() : '';
+    const codeStr = p?.code ? String(p.code).toLowerCase() : p?.sku ? String(p.sku).toLowerCase() : '';
+    const barcodeStr = p?.barcode ? String(p.barcode).toLowerCase() : '';
+    return nameStr.includes(q) || codeStr.includes(q) || barcodeStr.includes(q);
   });
 
   const { subtotal: currentPoSubtotal, finalTotal: currentPoFinalTotal, debtRemainder: currentPoDebtRemainder } = calculatePoTotals();
@@ -1203,11 +1222,11 @@ export const PurchaseOrdersPage: React.FC = () => {
                         className="w-full p-2 text-left hover:bg-slate-800 flex items-center justify-between transition-colors rounded-xl"
                       >
                         <div>
-                          <div className="font-bold text-white">{p.name}</div>
-                          <div className="text-[10px] text-slate-400 font-mono">SKU: {p.code} | Tồn hiện tại: {p.stock || 0}</div>
+                          <div className="font-bold text-white">{p.name || 'Sản phẩm không tên'}</div>
+                          <div className="text-[10px] text-slate-400 font-mono">SKU: {p.code || p.sku || '--'} | Tồn: {p.stockQuantity ?? p.stock ?? 0}</div>
                         </div>
                         <div className="text-right font-mono text-emerald-400 font-bold">
-                          Giá vốn hiện tại: {formatVND(p.costPrice || Math.round(p.sellingPrice * 0.7))}
+                          Giá vốn: {formatVND(p.costPrice || Math.round((p.sellingPrice || 0) * 0.7))}
                         </div>
                       </button>
                     ))}
