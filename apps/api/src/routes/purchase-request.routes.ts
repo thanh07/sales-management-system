@@ -3,6 +3,7 @@ import {
   getAllPurchaseRequests,
   getPurchaseRequestById,
   createPurchaseRequest,
+  updatePurchaseRequest,
   depositPurchaseRequest,
   cancelPurchaseRequest,
   convertPurchaseRequestToOrder,
@@ -52,6 +53,16 @@ router.post('/', (req: Request, res: Response) => {
   try {
     const newPR = createPurchaseRequest(req.body);
     res.status(201).json({ success: true, data: newPR });
+  } catch (err: any) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// PUT /api/v1/purchase-requests/:id
+router.put('/:id', (req: Request, res: Response) => {
+  try {
+    const updated = updatePurchaseRequest(req.params.id, req.body);
+    res.json({ success: true, data: updated });
   } catch (err: any) {
     res.status(400).json({ success: false, message: err.message });
   }

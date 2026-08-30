@@ -173,6 +173,54 @@ export const createPurchaseRequest = (data: Partial<PurchaseRequest>): PurchaseR
   return newPR;
 };
 
+// Cập nhật/chỉnh sửa Đơn đặt hàng nhập
+export const updatePurchaseRequest = (id: string, data: Partial<PurchaseRequest>): PurchaseRequest => {
+  const index = purchaseRequests.findIndex((r) => r.id === id);
+  if (index === -1) {
+    throw new Error('Không tìm thấy Đơn đặt hàng nhập');
+  }
+
+  const existing = purchaseRequests[index];
+  if (existing.status === 'COMPLETED' || existing.status === 'CANCELLED') {
+    throw new Error('Không thể chỉnh sửa Đơn đặt hàng đã hoàn thành hoặc đã bị hủy!');
+  }
+
+  const supplier = data.supplierId ? getSupplierById(data.supplierId) : undefined;
+  const items = data.items || existing.items;
+
+  // Kiểm soát không cho phép giảm số lượng đặt nhỏ hơn số lượng đã nhận kho
+  items.forEach((item) => {
+    const origItem = existing.items.find((i) => i.productId === item.productId);
+    if (origItem && origItem.receivedQty > 0 && item.orderedQty < origItem.receivedQty) {
+      throw new Error(`Sản phẩm "${item.productName}" đã nhập kho ${origItem.receivedQty} cái. Không thể giảm số lượng đặt xuống ${item.orderedQty}!`);
+    }
+  });
+
+  const subtotal = items.reduce((sum, i) => sum + (i.subtotal || i.orderedQty * i.importPrice), 0);
+  const discount = data.discount !== undefined ? Number(data.discount) || 0 : existing.discount;
+  const tax = data.tax !== undefined ? Number(data.tax) || 0 : existing.tax;
+  const finalTotal = Math.max(0, subtotal - discount + tax);
+
+  const updated: PurchaseRequest = {
+    ...existing,
+    supplierId: data.supplierId || existing.supplierId,
+    supplierName: supplier ? supplier.name : (data.supplierName || existing.supplierName),
+    branchId: data.branchId || existing.branchId,
+    branchName: data.branchName || existing.branchName,
+    expectedDeliveryDate: data.expectedDeliveryDate !== undefined ? data.expectedDeliveryDate : existing.expectedDeliveryDate,
+    depositAmount: data.depositAmount !== undefined ? Number(data.depositAmount) || 0 : existing.depositAmount,
+    items,
+    subtotal,
+    discount,
+    tax,
+    finalTotal,
+    note: data.note !== undefined ? data.note.trim() : existing.note,
+  };
+
+  purchaseRequests[index] = updated;
+  return updated;
+};
+
 // Chi tạm ứng cọc thêm cho NCC
 export const depositPurchaseRequest = (
   requestId: string,

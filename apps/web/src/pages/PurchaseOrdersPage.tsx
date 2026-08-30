@@ -54,8 +54,9 @@ export const PurchaseOrdersPage: React.FC = () => {
   const [prBranchFilter, setPrBranchFilter] = useState('ALL');
   const [prStatusFilter, setPrStatusFilter] = useState('ALL');
 
-  // Create PR Modal States
+  // Create/Edit PR Modal States
   const [isCreatePrModalOpen, setIsCreatePrModalOpen] = useState(false);
+  const [editingPrId, setEditingPrId] = useState<string | null>(null);
   const [prSupplierId, setPrSupplierId] = useState('');
   const [prBranchId, setPrBranchId] = useState(branches[0]?.id || 'branch-01');
   const [prExpectedDate, setPrExpectedDate] = useState('');
@@ -205,6 +206,7 @@ export const PurchaseOrdersPage: React.FC = () => {
 
   // --- PURCHASE REQUEST (ĐẶT HÀNG NHẬP) HANDLERS ---
   const handleOpenCreatePrModal = () => {
+    setEditingPrId(null);
     setPrSupplierId(suppliers[0]?.id || '');
     setPrBranchId(branches[0]?.id || 'branch-01');
     setPrExpectedDate(new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
@@ -213,6 +215,20 @@ export const PurchaseOrdersPage: React.FC = () => {
     setPrDiscount(0);
     setPrTax(0);
     setPrNote('');
+    setProductSearchQuery('');
+    setIsCreatePrModalOpen(true);
+  };
+
+  const handleOpenEditPrModal = (pr: any) => {
+    setEditingPrId(pr.id);
+    setPrSupplierId(pr.supplierId || suppliers[0]?.id || '');
+    setPrBranchId(pr.branchId || branches[0]?.id || 'branch-01');
+    setPrExpectedDate(pr.expectedDeliveryDate ? pr.expectedDeliveryDate.slice(0, 10) : '');
+    setPrDepositAmount(pr.depositAmount || 0);
+    setPrItems(pr.items || []);
+    setPrDiscount(pr.discount || 0);
+    setPrTax(pr.tax || 0);
+    setPrNote(pr.note || '');
     setProductSearchQuery('');
     setIsCreatePrModalOpen(true);
   };
@@ -275,12 +291,17 @@ export const PurchaseOrdersPage: React.FC = () => {
     };
 
     try {
-      await api.post('/purchase-requests', payload);
-      showToast('Tạo Đơn Đặt Hàng Nhập thành công!');
+      if (editingPrId) {
+        await api.put(`/purchase-requests/${editingPrId}`, payload);
+        showToast('Cập nhật Đơn Đặt Hàng Nhập thành công!');
+      } else {
+        await api.post('/purchase-requests', payload);
+        showToast('Tạo Đơn Đặt Hàng Nhập mới thành công!');
+      }
       setIsCreatePrModalOpen(false);
       fetchPurchaseRequests();
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi tạo đơn đặt hàng nhập');
+      alert(err.message || 'Lỗi khi lưu đơn đặt hàng nhập');
     }
   };
 
@@ -899,6 +920,13 @@ export const PurchaseOrdersPage: React.FC = () => {
                         {pr.status !== 'COMPLETED' && pr.status !== 'CANCELLED' && (
                           <>
                             <button
+                              onClick={() => handleOpenEditPrModal(pr)}
+                              className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-blue-300 border border-slate-700"
+                              title="Chỉnh sửa đơn đặt hàng"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
                               onClick={() => handleOpenPrDepositModal(pr)}
                               className="px-2 py-1 rounded-lg bg-amber-600/20 hover:bg-amber-600 text-amber-300 hover:text-white font-bold text-[11px] border border-amber-500/40"
                               title="Chi tạm ứng cọc cho NCC"
@@ -1157,7 +1185,7 @@ export const PurchaseOrdersPage: React.FC = () => {
             <div className="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
               <h3 className="font-bold text-white text-base flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-blue-400" />
-                <span>Tạo Đơn Đặt Hàng Nhập Kho (Purchase Request)</span>
+                <span>{editingPrId ? 'Chỉnh Sửa Đơn Đặt Hàng Nhập Kho' : 'Tạo Đơn Đặt Hàng Nhập Kho (Purchase Request)'}</span>
               </h3>
               <button onClick={() => setIsCreatePrModalOpen(false)} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
