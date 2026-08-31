@@ -12,6 +12,7 @@ import { PriceListsPage } from './pages/PriceListsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { BranchesPage } from './pages/BranchesPage';
 import { PurchaseOrdersPage } from './pages/PurchaseOrdersPage';
+import { StockAuditPage } from './pages/StockAuditPage';
 import {
   LogOut,
   Store,
@@ -19,6 +20,7 @@ import {
   ShoppingCart,
   Package,
   PackagePlus,
+  ClipboardCheck,
   Users,
   BarChart3,
   ShieldCheck,
@@ -36,7 +38,7 @@ export const App: React.FC = () => {
   const { branches, selectedBranchId, setSelectedBranchId, getSelectedBranch, fetchBranches } = useBranchStore();
 
   const [activeTab, setActiveTab] = useState<
-    'POS' | 'DASHBOARD' | 'PRODUCTS' | 'CRM' | 'REPORTS' | 'USERS' | 'PRICELISTS' | 'SETTINGS' | 'BRANCHES' | 'PURCHASE_ORDERS'
+    'POS' | 'DASHBOARD' | 'PRODUCTS' | 'CRM' | 'REPORTS' | 'USERS' | 'PRICELISTS' | 'SETTINGS' | 'BRANCHES' | 'PURCHASE_ORDERS' | 'STOCK_AUDIT'
   >('POS');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isBranchDropdownOpen, setIsBranchDropdownOpen] = useState(false);
@@ -56,6 +58,7 @@ export const App: React.FC = () => {
   const canAccessReports = isAdmin || isManager || isWarehouse;
   const canAccessSettings = isAdmin;
   const canAccessPurchaseOrders = isAdmin || isManager || isWarehouse;
+  const canAccessStockAudit = isAdmin || isManager || isWarehouse;
 
   const activeBranch = getSelectedBranch();
 
@@ -80,7 +83,8 @@ export const App: React.FC = () => {
     if (activeTab === 'DASHBOARD' && !canAccessDashboard) setActiveTab('POS');
     if (activeTab === 'REPORTS' && !canAccessReports) setActiveTab('POS');
     if (activeTab === 'PURCHASE_ORDERS' && !canAccessPurchaseOrders) setActiveTab('POS');
-  }, [activeTab, canAccessSettings, canAccessUsers, canAccessPricelists, canAccessBranches, canAccessDashboard, canAccessReports, canAccessPurchaseOrders]);
+    if (activeTab === 'STOCK_AUDIT' && !canAccessStockAudit) setActiveTab('POS');
+  }, [activeTab, canAccessSettings, canAccessUsers, canAccessPricelists, canAccessBranches, canAccessDashboard, canAccessReports, canAccessPurchaseOrders, canAccessStockAudit]);
 
   // Close branch dropdown on outside click
   useEffect(() => {
@@ -289,6 +293,20 @@ export const App: React.FC = () => {
               </button>
             )}
 
+            {canAccessStockAudit && (
+              <button
+                onClick={() => setActiveTab('STOCK_AUDIT')}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs transition-all ${
+                  activeTab === 'STOCK_AUDIT'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-semibold'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <ClipboardCheck className="w-4 h-4 text-emerald-400" />
+                <span>Kiểm kho</span>
+              </button>
+            )}
+
             {canAccessBranches && (
               <button
                 onClick={() => setActiveTab('BRANCHES')}
@@ -384,6 +402,7 @@ export const App: React.FC = () => {
             {activeTab === 'USERS' && <UsersPage />}
             {activeTab === 'SETTINGS' && <SettingsPage />}
             {activeTab === 'PURCHASE_ORDERS' && <PurchaseOrdersPage />}
+            {activeTab === 'STOCK_AUDIT' && <StockAuditPage />}
             {(activeTab === 'DASHBOARD' || activeTab === 'REPORTS') && <DashboardPage />}
           </main>
         </div>
@@ -409,6 +428,7 @@ export const App: React.FC = () => {
                     { id: 'DASHBOARD', label: 'Tổng quan', icon: LayoutDashboard, allowed: canAccessDashboard },
                     { id: 'PRODUCTS', label: 'Sản phẩm & Kho', icon: Package, allowed: true },
                     { id: 'PURCHASE_ORDERS', label: 'Nhập hàng & NCC', icon: PackagePlus, allowed: canAccessPurchaseOrders },
+                    { id: 'STOCK_AUDIT', label: 'Kiểm kho', icon: ClipboardCheck, allowed: canAccessStockAudit },
                     { id: 'BRANCHES', label: 'Chi nhánh', icon: Building2, allowed: canAccessBranches },
                     { id: 'PRICELISTS', label: 'Thiết lập Bảng giá', icon: Tag, allowed: canAccessPricelists },
                     { id: 'CRM', label: 'Khách hàng (CRM)', icon: Users, allowed: canAccessCRM },

@@ -13,6 +13,7 @@ import branchRoutes from './routes/branch.routes';
 import supplierRoutes from './routes/supplier.routes';
 import purchaseOrderRoutes from './routes/purchase-order.routes';
 import purchaseRequestRoutes from './routes/purchase-request.routes';
+import stockAuditRoutes from './routes/stock-audit.routes';
 
 const app = express();
 
@@ -33,6 +34,7 @@ app.use('/api/v1/branches', branchRoutes);
 app.use('/api/v1/suppliers', supplierRoutes);
 app.use('/api/v1/purchase-orders', purchaseOrderRoutes);
 app.use('/api/v1/purchase-requests', purchaseRequestRoutes);
+app.use('/api/v1/stock-audits', stockAuditRoutes);
 
 // Health check
 app.get('/api/v1/health', (req, res) => {
