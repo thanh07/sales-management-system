@@ -1,5 +1,5 @@
 import { ProductService } from './product.service';
-import { getBranchById } from './branch.service';
+import { BranchService } from './branch.service';
 
 export interface StockAuditItem {
   productId: string;
@@ -105,7 +105,7 @@ export const getStockAuditById = (id: string): StockAudit | undefined => {
 };
 
 export const createStockAudit = (data: Partial<StockAudit>): StockAudit => {
-  const branch = getBranchById(data.branchId || 'branch-01');
+  const branch = BranchService.getBranchById(data.branchId || 'branch-01');
   const code =
     data.code?.trim() ||
     `PKK${new Date().toISOString().slice(0, 10).replace(/-/g, '')}${Math.floor(100 + Math.random() * 900)}`;

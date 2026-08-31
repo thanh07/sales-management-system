@@ -102,7 +102,7 @@ export const LoginPage: React.FC = () => {
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => handleQuickLogin('admin', 'admin123')}
-              className="px-2.5 py-1.5 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 rounded-lg text-xs text-slate-300 transition-colors text-left"
+              className="hidden sm:block px-2.5 py-1.5 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 rounded-lg text-xs text-slate-300 transition-colors text-left"
             >
               <div className="font-semibold text-blue-400">👑 Admin</div>
               <div className="text-[10px] text-slate-500 font-mono">admin / admin123</div>
