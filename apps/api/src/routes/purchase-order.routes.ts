@@ -1,9 +1,10 @@
-import { Router, Request, Response } from 'express';
 import {
   getAllPurchaseOrders,
   getPurchaseOrderById,
   createPurchaseOrder,
   completePurchaseOrder,
+  cancelPurchaseOrder,
+  createPurchaseReturn,
 } from '../services/purchase-order.service';
 
 const router = Router();
@@ -49,6 +50,27 @@ router.post('/:id/complete', (req: Request, res: Response) => {
   try {
     const po = completePurchaseOrder(req.params.id);
     res.json({ success: true, data: po });
+  } catch (err: any) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/v1/purchase-orders/:id/cancel (Hủy phiếu nhập kho)
+router.post('/:id/cancel', (req: Request, res: Response) => {
+  try {
+    const { userRole, reason } = req.body;
+    const cancelled = cancelPurchaseOrder(req.params.id, userRole || 'STAFF', reason);
+    res.json({ success: true, data: cancelled });
+  } catch (err: any) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/v1/purchase-orders/:id/return (Trả hàng nhập cho NCC)
+router.post('/:id/return', (req: Request, res: Response) => {
+  try {
+    const result = createPurchaseReturn(req.params.id, req.body);
+    res.json({ success: true, data: result });
   } catch (err: any) {
     res.status(400).json({ success: false, message: err.message });
   }

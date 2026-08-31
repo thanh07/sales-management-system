@@ -31,7 +31,11 @@ import {
   AlertCircle,
   Calendar,
   ArrowRightLeft,
-  Ban
+  Ban,
+  Barcode,
+  RotateCcw,
+  Copy,
+  PlusCircle,
 } from 'lucide-react';
 
 const SUPPLIER_GROUPS = [
@@ -124,11 +128,22 @@ export const PurchaseOrdersPage: React.FC = () => {
   const [poSupplierId, setPoSupplierId] = useState('');
   const [poBranchId, setPoBranchId] = useState(branches[0]?.id || 'branch-01');
   const [poItems, setPoItems] = useState<any[]>([]);
+  const [poExtraFee, setPoExtraFee] = useState<number>(0);
   const [poDiscount, setPoDiscount] = useState<number>(0);
   const [poTax, setPoTax] = useState<number>(0);
   const [poPaidAmount, setPoPaidAmount] = useState<number>(0);
   const [poPaymentMethod, setPoPaymentMethod] = useState<'CASH' | 'BANK_TRANSFER' | 'CREDIT_CARD'>('CASH');
   const [poNote, setPoNote] = useState('');
+
+  // Purchase Return Modal States
+  const [isReturnPoModalOpen, setIsReturnPoModalOpen] = useState(false);
+  const [selectedPoForReturn, setSelectedPoForReturn] = useState<any | null>(null);
+  const [returnItems, setReturnItems] = useState<any[]>([]);
+  const [returnNote, setReturnNote] = useState('');
+
+  // Barcode Sticker Modal States
+  const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
+  const [selectedPoForBarcode, setSelectedPoForBarcode] = useState<any | null>(null);
 
   // Product Autocomplete Search inside Modals
   const [allProducts, setAllProducts] = useState<any[]>([]);
@@ -524,6 +539,7 @@ export const PurchaseOrdersPage: React.FC = () => {
     setPoSupplierId(suppliers[0]?.id || '');
     setPoBranchId(branches[0]?.id || 'branch-01');
     setPoItems([]);
+    setPoExtraFee(0);
     setPoDiscount(0);
     setPoTax(0);
     setPoPaidAmount(0);
@@ -602,7 +618,7 @@ export const PurchaseOrdersPage: React.FC = () => {
 
   const calculatePoTotals = () => {
     const subtotal = poItems.reduce((sum, item) => sum + item.subtotal, 0);
-    const finalTotal = Math.max(0, subtotal - poDiscount + poTax);
+    const finalTotal = Math.max(0, subtotal + poExtraFee - poDiscount + poTax);
     const debtRemainder = Math.max(0, finalTotal - poPaidAmount);
     return { subtotal, finalTotal, debtRemainder };
   };
@@ -623,6 +639,7 @@ export const PurchaseOrdersPage: React.FC = () => {
       branchName: branch ? branch.name : 'Chi nhánh mặc định',
       creatorName: `${user?.fullName || 'Quản lý'} (${user?.role || 'ADMIN'})`,
       items: poItems,
+      extraFee: poExtraFee,
       discount: poDiscount,
       tax: poTax,
       paidAmount: poPaidAmount,
@@ -641,6 +658,87 @@ export const PurchaseOrdersPage: React.FC = () => {
     } catch (err: any) {
       alert(err.message || 'Lỗi khi lưu phiếu nhập kho');
     }
+  };
+
+  const handleCancelPo = async (po: any) => {
+    if (user?.role !== 'ADMIN' && user?.role !== 'MANAGER') {
+      alert('Chỉ Quản lý hoặc Admin mới có quyền Hủy Phiếu Nhập Kho!');
+      return;
+    }
+    const reason = prompt(`Nhập lý do hủy Phiếu nhập kho "${po.code}":`);
+    if (reason === null) return;
+
+    try {
+      await api.post(`/purchase-orders/${po.id}/cancel`, {
+        userRole: user?.role || 'STAFF',
+        reason,
+      });
+      showToast(`Đã hủy Phiếu nhập kho "${po.code}" & hoàn tác kho/công nợ!`);
+      fetchPurchaseOrders();
+      fetchSuppliers();
+      fetchProducts();
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi hủy phiếu nhập kho');
+    }
+  };
+
+  const handleOpenReturnPoModal = (po: any) => {
+    setSelectedPoForReturn(po);
+    const initialReturns = (po.items || []).map((i: any) => ({
+      productId: i.productId,
+      productCode: i.productCode,
+      productName: i.productName,
+      unit: i.unit,
+      importQty: i.quantity,
+      returnQty: 0,
+      returnPrice: i.importPrice,
+    }));
+    setReturnItems(initialReturns);
+    setReturnNote('');
+    setIsReturnPoModalOpen(true);
+  };
+
+  const handleSaveReturnPo = async () => {
+    if (!selectedPoForReturn) return;
+    const validReturns = returnItems.filter((i) => i.returnQty > 0);
+    if (validReturns.length === 0) {
+      alert('Vui lòng nhập số lượng sản phẩm trả lại cho Nhà cung cấp');
+      return;
+    }
+
+    try {
+      const res: any = await api.post(`/purchase-orders/${selectedPoForReturn.id}/return`, {
+        returnItems: validReturns.map((i) => ({
+          productId: i.productId,
+          returnQty: i.returnQty,
+          returnPrice: i.returnPrice,
+        })),
+        note: returnNote,
+        creatorName: `${user?.fullName || 'Quản lý'} (${user?.role || 'ADMIN'})`,
+      });
+
+      showToast(`Đã ghi nhận Trả hàng cho NCC "${selectedPoForReturn.supplierName}"!`);
+      setIsReturnPoModalOpen(false);
+      fetchPurchaseOrders();
+      fetchSuppliers();
+      fetchProducts();
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi trả hàng nhập');
+    }
+  };
+
+  const handleClonePo = (po: any) => {
+    setPoSupplierId(po.supplierId || suppliers[0]?.id || '');
+    setPoBranchId(po.branchId || branches[0]?.id || 'branch-01');
+    setPoItems(po.items || []);
+    setPoExtraFee(po.extraFee || 0);
+    setPoDiscount(po.discount || 0);
+    setPoTax(po.tax || 0);
+    setPoPaidAmount(0);
+    setPoPaymentMethod('CASH');
+    setPoNote(`Sao chép từ phiếu nhập ${po.code}`);
+    setIsCreatePoModalOpen(true);
+    showToast(`Đã sao chép danh mục sản phẩm từ phiếu ${po.code}!`);
   };
 
   // Filtered Lists
@@ -1037,20 +1135,68 @@ export const PurchaseOrdersPage: React.FC = () => {
                       <td className="p-3 text-right font-mono text-slate-300">{formatVND(po.paidAmount)}</td>
                       <td className="p-3 text-right font-mono font-bold text-amber-400">{formatVND(po.debtAmount)}</td>
                       <td className="p-3 text-center">
-                        <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold inline-flex items-center gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Đã nhập kho
-                        </span>
+                        {po.status === 'COMPLETED' && (
+                          <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold inline-flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Đã nhập kho
+                          </span>
+                        )}
+                        {po.status === 'RETURNED' && (
+                          <span className="px-2.5 py-1 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[11px] font-bold inline-flex items-center gap-1">
+                            <RotateCcw className="w-3.5 h-3.5" /> Đã trả hàng
+                          </span>
+                        )}
+                        {po.status === 'CANCELLED' && (
+                          <span className="px-2.5 py-1 rounded-lg bg-red-500/20 text-red-300 border border-red-500/30 text-[11px] font-bold inline-flex items-center gap-1">
+                            <Ban className="w-3.5 h-3.5" /> Đã hủy
+                          </span>
+                        )}
                       </td>
-                      <td className="p-3 text-center">
+                      <td className="p-3 text-center space-x-1 shrink-0">
                         <button
                           onClick={() => {
                             setSelectedPo(po);
                             setIsPrintPoModalOpen(true);
                           }}
-                          className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold text-[11px] border border-slate-700"
+                          className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700"
+                          title="In phiếu nhập kho"
                         >
-                          <Printer className="w-3.5 h-3.5 inline mr-1" /> In phiếu
+                          <Printer className="w-3.5 h-3.5" />
                         </button>
+                        <button
+                          onClick={() => {
+                            setSelectedPoForBarcode(po);
+                            setIsBarcodeModalOpen(true);
+                          }}
+                          className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700"
+                          title="In tem mã vạch barcode lô hàng"
+                        >
+                          <Barcode className="w-3.5 h-3.5" />
+                        </button>
+                        {po.status === 'COMPLETED' && (
+                          <button
+                            onClick={() => handleOpenReturnPoModal(po)}
+                            className="px-2 py-1 rounded-lg bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white font-bold text-[11px] border border-purple-500/40"
+                            title="Trả hàng cho Nhà cung cấp"
+                          >
+                            🔄 Trả hàng
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleClonePo(po)}
+                          className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+                          title="Sao chép phiếu nhập kho"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                        {po.status !== 'CANCELLED' && (user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+                          <button
+                            onClick={() => handleCancelPo(po)}
+                            className="p-1 rounded-lg bg-slate-800 hover:bg-red-500/20 text-red-400 border border-slate-700"
+                            title="Hủy phiếu nhập kho"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -2109,6 +2255,17 @@ export const PurchaseOrdersPage: React.FC = () => {
                     <span>Tổng tiền hàng nhập:</span>
                     <span className="font-mono font-bold text-white">{formatVND(currentPoSubtotal)}</span>
                   </div>
+                  <div className="flex justify-between text-slate-400 items-center">
+                    <span>Chi phí nhập bổ sung (Ship/bốc vần):</span>
+                    <input
+                      type="number"
+                      value={poExtraFee}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => setPoExtraFee(Number(e.target.value) || 0)}
+                      placeholder="0"
+                      className="w-32 text-right py-1 px-2 rounded-lg bg-slate-900 border border-blue-500/40 text-blue-300 font-mono font-bold text-sm"
+                    />
+                  </div>
                   <div className="flex justify-between text-slate-200 font-bold border-t border-slate-800 pt-1 text-sm">
                     <span>Tổng thanh toán:</span>
                     <span className="font-mono text-emerald-400 font-black">{formatVND(currentPoFinalTotal)}</span>
@@ -2213,6 +2370,147 @@ export const PurchaseOrdersPage: React.FC = () => {
               >
                 <Printer className="w-4 h-4" />
                 <span>In Phiếu Nhập Kho</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL TRẢ HÀNG NHẬP KHO CHO NCC --- */}
+      {isReturnPoModalOpen && selectedPoForReturn && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+              <div>
+                <h3 className="font-bold text-white text-base flex items-center gap-2">
+                  <RotateCcw className="w-5 h-5 text-purple-400" />
+                  <span>Trả Hàng Cho Nhà Cung Cấp (Purchase Return)</span>
+                </h3>
+                <span className="text-xs text-slate-400">
+                  Từ Phiếu Nhập: <strong className="text-blue-300 font-mono">{selectedPoForReturn.code}</strong> | NCC: <strong>{selectedPoForReturn.supplierName}</strong>
+                </span>
+              </div>
+              <button onClick={() => setIsReturnPoModalOpen(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 overflow-y-auto flex-1 space-y-4 text-xs">
+              <div className="bg-purple-500/10 border border-purple-500/30 p-3 rounded-2xl text-purple-300 text-xs">
+                Giá trị hàng trả sẽ được <strong>TỰ ĐỘNG GHI GIẢM NỢ</strong> cho Nhà cung cấp "{selectedPoForReturn.supplierName}" và trừ lại tồn kho chi nhánh.
+              </div>
+
+              <div className="border border-slate-800 rounded-2xl overflow-hidden bg-slate-950/40">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-950 text-slate-400 uppercase font-bold border-b border-slate-800">
+                    <tr>
+                      <th className="p-2.5">Sản phẩm</th>
+                      <th className="p-2.5 text-center">Đã nhập kho</th>
+                      <th className="p-2.5 text-center">SL Trả NCC</th>
+                      <th className="p-2.5 text-right">Đơn giá trả</th>
+                      <th className="p-2.5 text-right">Thành tiền trả</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {returnItems.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-slate-800/30">
+                        <td className="p-2.5 font-bold text-white">{item.productName} ({item.unit})</td>
+                        <td className="p-2.5 text-center font-mono text-slate-400">{item.importQty}</td>
+                        <td className="p-2.5 text-center">
+                          <input
+                            type="number"
+                            min={0}
+                            max={item.importQty}
+                            value={item.returnQty}
+                            onChange={(e) => {
+                              const updated = [...returnItems];
+                              updated[idx].returnQty = Math.min(item.importQty, Math.max(0, Number(e.target.value) || 0));
+                              setReturnItems(updated);
+                            }}
+                            className="w-16 text-center py-1 rounded-lg bg-slate-900 border border-purple-500/50 text-purple-300 font-bold font-mono text-sm"
+                          />
+                        </td>
+                        <td className="p-2.5 text-right font-mono text-slate-300">{formatVND(item.returnPrice)}</td>
+                        <td className="p-2.5 text-right font-mono font-bold text-white">{formatVND(item.returnQty * item.returnPrice)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div>
+                <label className="block text-slate-400 mb-1 font-semibold">Ghi chú trả hàng cho NCC</label>
+                <input
+                  type="text"
+                  value={returnNote}
+                  onChange={(e) => setReturnNote(e.target.value)}
+                  placeholder="Ví dụ: Trả 5 chậu do bị nứt vỡ khi giao hàng"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white"
+                />
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-slate-800 flex items-center justify-end gap-2 bg-slate-950">
+              <button
+                onClick={() => setIsReturnPoModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={handleSaveReturnPo}
+                className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg shadow-purple-600/30 flex items-center gap-1.5"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>Xác Nhận Trả Hàng NCC</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL IN TEM MÃ VẠCH (BARCODE STICKER) LÔ HÀNG VỪA NHẬP --- */}
+      {isBarcodeModalOpen && selectedPoForBarcode && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="px-5 py-3 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+              <h3 className="font-bold text-white text-base flex items-center gap-2">
+                <Barcode className="w-5 h-5 text-emerald-400" />
+                <span>In Tem Mã Vạch Barcode Lô Hàng: {selectedPoForBarcode.code}</span>
+              </h3>
+              <button onClick={() => setIsBarcodeModalOpen(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1 bg-white text-slate-900 space-y-4">
+              <div className="text-center border-b pb-2 border-slate-300">
+                <h4 className="font-bold text-sm uppercase">DANH SÁCH TEM MÃ VẠCH (STICKERS) IN CHO KỆ BÁN HÀNG</h4>
+                <span className="text-[11px] text-slate-600">Lô hàng {selectedPoForBarcode.code} | Ngày nhập: {new Date(selectedPoForBarcode.createdAt).toLocaleDateString('vi-VN')}</span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {selectedPoForBarcode.items?.map((item: any, idx: number) => (
+                  <div key={idx} className="p-3 border-2 border-dashed border-slate-400 rounded-xl text-center space-y-1 bg-slate-50 font-mono">
+                    <div className="font-bold text-xs truncate font-sans text-black">{item.productName}</div>
+                    <div className="text-[10px] text-slate-600">Mã SKU: {item.productCode}</div>
+                    <div className="text-sm font-black tracking-widest bg-white border border-slate-300 py-1 rounded">
+                      ||||| {item.productCode} |||||
+                    </div>
+                    <div className="font-bold text-xs text-blue-800">{formatVND(item.importPrice)} / {item.unit}</div>
+                    <div className="text-[9px] text-slate-500">SL nhãn: {item.quantity} tem</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-slate-800 flex items-center justify-end gap-2 bg-slate-950">
+              <button
+                onClick={() => window.print()}
+                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-600/30"
+              >
+                <Printer className="w-4 h-4" />
+                <span>In Tem Mã Vạch Sticker</span>
               </button>
             </div>
           </div>
