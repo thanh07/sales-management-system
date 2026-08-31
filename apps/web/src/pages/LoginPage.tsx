@@ -3,8 +3,8 @@ import { useAuthStore } from '../store/authStore';
 import { Store, Lock, User as UserIcon, ShieldAlert, ArrowRight } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin123');
+  const [username, setUsername] = useState('NVA');
+  const [password, setPassword] = useState('cashier123');
   const { login, isLoading, error } = useAuthStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
