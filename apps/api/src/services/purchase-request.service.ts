@@ -73,7 +73,7 @@ let purchaseRequests: PurchaseRequest[] = [
     tax: 0,
     finalTotal: 5300000,
     status: 'ORDERING',
-    note: 'Đơn đặt hàng hộp và chậu nung đợt tháng 9 - Đã chuyển cọc 1 triệu',
+    note: 'Đơn đặt hàng hộp và chậu nung đợt tháng 9',
     createdAt: '2026-08-25T10:00:00Z',
   },
 ];

@@ -57,6 +57,7 @@ export const PurchaseOrdersPage: React.FC = () => {
   // Create/Edit PR Modal States
   const [isCreatePrModalOpen, setIsCreatePrModalOpen] = useState(false);
   const [editingPrId, setEditingPrId] = useState<string | null>(null);
+  const [hasDeposit, setHasDeposit] = useState(false);
   const [prSupplierId, setPrSupplierId] = useState('');
   const [prBranchId, setPrBranchId] = useState(branches[0]?.id || 'branch-01');
   const [prExpectedDate, setPrExpectedDate] = useState('');
@@ -207,6 +208,7 @@ export const PurchaseOrdersPage: React.FC = () => {
   // --- PURCHASE REQUEST (ĐẶT HÀNG NHẬP) HANDLERS ---
   const handleOpenCreatePrModal = () => {
     setEditingPrId(null);
+    setHasDeposit(false);
     setPrSupplierId(suppliers[0]?.id || '');
     setPrBranchId(branches[0]?.id || 'branch-01');
     setPrExpectedDate(new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
@@ -221,10 +223,12 @@ export const PurchaseOrdersPage: React.FC = () => {
 
   const handleOpenEditPrModal = (pr: any) => {
     setEditingPrId(pr.id);
+    const dep = pr.depositAmount || 0;
+    setHasDeposit(dep > 0);
     setPrSupplierId(pr.supplierId || suppliers[0]?.id || '');
     setPrBranchId(pr.branchId || branches[0]?.id || 'branch-01');
     setPrExpectedDate(pr.expectedDeliveryDate ? pr.expectedDeliveryDate.slice(0, 10) : '');
-    setPrDepositAmount(pr.depositAmount || 0);
+    setPrDepositAmount(dep);
     setPrItems(pr.items || []);
     setPrDiscount(pr.discount || 0);
     setPrTax(pr.tax || 0);
@@ -282,7 +286,7 @@ export const PurchaseOrdersPage: React.FC = () => {
       branchName: branch ? branch.name : 'Chi nhánh mặc định',
       creatorName: `${user?.fullName || 'Quản lý'} (${user?.role || 'ADMIN'})`,
       expectedDeliveryDate: prExpectedDate,
-      depositAmount: prDepositAmount,
+      depositAmount: hasDeposit ? prDepositAmount : 0,
       items: prItems,
       discount: prDiscount,
       tax: prTax,
@@ -1344,16 +1348,38 @@ export const PurchaseOrdersPage: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
-                <div>
-                  <label className="block text-slate-400 mb-1 font-semibold">Tạm ứng cọc tiền cho NCC (VNĐ)</label>
-                  <input
-                    type="number"
-                    value={prDepositAmount}
-                    onChange={(e) => setPrDepositAmount(Number(e.target.value) || 0)}
-                    placeholder="0"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-amber-500/40 text-amber-300 font-bold font-mono text-sm"
-                  />
-                  <span className="text-[10px] text-slate-500 mt-1 block">Khoản cọc này sẽ tự động cấn trừ khi nhập kho</span>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2.5 text-slate-300 font-semibold cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={hasDeposit}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setHasDeposit(checked);
+                        if (!checked) setPrDepositAmount(0);
+                      }}
+                      className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span>Thanh toán đặt cọc / tạm ứng cho NCC</span>
+                  </label>
+
+                  {hasDeposit ? (
+                    <div className="pt-1">
+                      <label className="block text-slate-400 mb-1 font-semibold">Số tiền đặt cọc (VNĐ)</label>
+                      <input
+                        type="number"
+                        value={prDepositAmount}
+                        onChange={(e) => setPrDepositAmount(Number(e.target.value) || 0)}
+                        placeholder="Nhập số tiền cọc..."
+                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-amber-500/50 text-amber-300 font-bold font-mono text-sm"
+                      />
+                      <span className="text-[10px] text-slate-500 mt-1 block">Khoản cọc này sẽ tự động cấn trừ khi nhập kho</span>
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-slate-500 italic pt-1">
+                      Đơn hàng không phát sinh đặt cọc trước với Nhà cung cấp.
+                    </div>
+                  )}
                 </div>
 
                 <div>
