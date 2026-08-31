@@ -79,7 +79,7 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
   const { subtotal, total } = calculateTotal();
 
   return (
-    <div className="flex flex-col h-full w-full bg-slate-950 text-slate-100 overflow-hidden relative pb-16">
+    <div className="flex flex-col h-full w-full bg-slate-950 text-slate-100 overflow-hidden relative">
       {/* 1. Mobile Header Bar */}
       <div className="px-4 py-3 bg-slate-900 border-b border-slate-800 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
@@ -238,7 +238,7 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
       </div>
 
       {/* 5. Mobile Product List (ListView matching attached UI screenshot) */}
-      <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2">
+      <div className="flex-1 overflow-y-auto px-4 pt-2 pb-28 space-y-2">
         {isLoading ? (
           <div className="text-slate-500 text-center py-12 text-xs">Đang tải danh sách sản phẩm...</div>
         ) : (() => {

@@ -76,7 +76,7 @@ export const POSPage: React.FC<POSPageProps> = ({ onOpenMobileMenu }) => {
   }, [parkCurrentOrder, clearCart, setInvoiceModalOpen, setCustomerModalOpen, setPriceListModalOpen, setCheckoutModalOpen, setOrderHistoryModalOpen, setDeliveryModalOpen, addTab, closeTab, activeTabId, tabs]);
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex overflow-hidden bg-slate-950 w-full relative">
+    <div className="h-screen md:h-[calc(100vh-4rem)] flex overflow-hidden bg-slate-950 w-full relative">
       {/* Mobile Responsive POS View (Visible on screens < md) */}
       <div className="block md:hidden h-full w-full">
         <MobilePOSView onOpenMobileMenu={onOpenMobileMenu} />
