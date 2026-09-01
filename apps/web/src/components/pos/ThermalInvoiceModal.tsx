@@ -79,21 +79,30 @@ export const ThermalInvoiceModal: React.FC<ThermalInvoiceModalProps> = ({
           {/* Items Table */}
           <div className="space-y-2 text-xs border-b border-dashed border-slate-300 pb-3">
             <div className="grid grid-cols-12 font-bold text-slate-700 pb-1 border-b border-slate-200">
-              <div className="col-span-6">Tên sản phẩm</div>
+              <div className="col-span-4">Tên sản phẩm</div>
               <div className="col-span-2 text-center">SL / ĐV</div>
-              <div className="col-span-4 text-right">Thành tiền</div>
+              <div className="col-span-3 text-right">Đơn giá</div>
+              <div className="col-span-3 text-right">Thành tiền</div>
             </div>
-            {currentOrder.items.map((item: any, idx: number) => (
-              <div key={idx} className="grid grid-cols-12 py-0.5">
-                <div className="col-span-6 font-sans font-medium line-clamp-1">
-                  {item.name || item.productId}
+            {currentOrder.items.map((item: any, idx: number) => {
+              const unitPrice = item.unitPrice !== undefined ? item.unitPrice : (item.selectedPrice !== undefined ? item.selectedPrice : 0);
+              return (
+                <div key={idx} className="grid grid-cols-12 py-0.5 items-center">
+                  <div className="col-span-4 font-sans font-medium line-clamp-1">
+                    {item.name || item.productId}
+                  </div>
+                  <div className="col-span-2 text-center font-bold">
+                    {item.quantity} {item.selectedUnit || ''}
+                  </div>
+                  <div className="col-span-3 text-right text-slate-600">
+                    {formatVND(unitPrice)}
+                  </div>
+                  <div className="col-span-3 text-right font-semibold">
+                    {formatVND(unitPrice * item.quantity)}
+                  </div>
                 </div>
-                <div className="col-span-2 text-center font-bold">
-                  {item.quantity} {item.selectedUnit || ''}
-                </div>
-                <div className="col-span-4 text-right">{formatVND(item.unitPrice * item.quantity)}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Pricing Details */}
