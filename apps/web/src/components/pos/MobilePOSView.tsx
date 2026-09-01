@@ -42,6 +42,7 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
   const [isCategoryDrawerOpen, setIsCategoryDrawerOpen] = useState(false);
   const [activeVariantProduct, setActiveVariantProduct] = useState<any | null>(null);
   const [isMobileCartDrawerOpen, setIsMobileCartDrawerOpen] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(20);
 
   const fetchProducts = async () => {
     setIsLoading(true);
@@ -60,6 +61,7 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
   };
 
   useEffect(() => {
+    setVisibleCount(20);
     fetchProducts();
   }, [searchQuery, selectedCategory]);
 
@@ -238,50 +240,61 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
       </div>
 
       {/* 5. Mobile Product List (ListView matching attached UI screenshot) */}
-      <div className="flex-1 overflow-y-auto px-4 pt-2 pb-28 space-y-2">
-        {isLoading ? (
-          <div className="text-slate-500 text-center py-12 text-xs">Đang tải danh sách sản phẩm...</div>
-        ) : (() => {
-          const displayedProducts = products.filter(
-            (p) => !p.branchActiveStatus || p.branchActiveStatus[selectedBranchId] !== false
-          );
+      {(() => {
+        const displayedProducts = products.filter(
+          (p) => !p.branchActiveStatus || p.branchActiveStatus[selectedBranchId] !== false
+        );
+        const visibleProducts = displayedProducts.slice(0, visibleCount);
 
-          if (displayedProducts.length === 0) {
-            return <div className="text-slate-500 text-center py-12 text-xs">Không tìm thấy sản phẩm phù hợp tại chi nhánh này.</div>;
+        const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+          const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+          if (scrollHeight - scrollTop - clientHeight < 150) {
+            if (visibleCount < displayedProducts.length) {
+              setVisibleCount((prev) => Math.min(prev + 20, displayedProducts.length));
+            }
           }
+        };
 
-          return displayedProducts.map((p) => {
-            const cartItem = cart.find((item) => item.product.id === p.id);
-            const { price: displayPrice } = calculateProductPrice(p, p.unit, activePriceList);
-            const currBranchStock =
-              p.branchStocks && p.branchStocks[selectedBranchId] !== undefined
-                ? p.branchStocks[selectedBranchId]
-                : p.stockQuantity;
-            const branchMin =
-              p.branchMinStocks && p.branchMinStocks[selectedBranchId] !== undefined
-                ? p.branchMinStocks[selectedBranchId]
-                : (p.minStock || 10);
-            const isLowStock = currBranchStock <= branchMin;
+        return (
+          <div onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 pt-2 pb-28 space-y-2">
+            {isLoading ? (
+              <div className="text-slate-500 text-center py-12 text-xs">Đang tải danh sách sản phẩm...</div>
+            ) : displayedProducts.length === 0 ? (
+              <div className="text-slate-500 text-center py-12 text-xs">Không tìm thấy sản phẩm phù hợp tại chi nhánh này.</div>
+            ) : (
+              <>
+                {visibleProducts.map((p) => {
+                  const cartItem = cart.find((item) => item.product.id === p.id);
+                  const { price: displayPrice } = calculateProductPrice(p, p.unit, activePriceList);
+                  const currBranchStock =
+                    p.branchStocks && p.branchStocks[selectedBranchId] !== undefined
+                      ? p.branchStocks[selectedBranchId]
+                      : p.stockQuantity;
+                  const branchMin =
+                    p.branchMinStocks && p.branchMinStocks[selectedBranchId] !== undefined
+                      ? p.branchMinStocks[selectedBranchId]
+                      : (p.minStock || 10);
+                  const isLowStock = currBranchStock <= branchMin;
 
-            return (
-              <div
-                key={p.id}
-                onClick={() => handleProductClick(p)}
-                className={`p-3 rounded-2xl border transition-all flex items-center gap-3 cursor-pointer ${
-                  cartItem
-                    ? 'bg-slate-900 border-blue-500/50 shadow-md'
-                    : 'bg-slate-900/50 border-slate-800/80 hover:bg-slate-900'
-                }`}
-              >
-                {/* Product Image Thumbnail */}
-                <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-950 shrink-0 relative border border-slate-800">
-                  <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
-                  {p.hasVariants && (
-                    <span className="absolute bottom-0 inset-x-0 bg-blue-600/90 text-white text-[9px] font-bold text-center py-0.5">
-                      {p.variants?.length} biến thể
-                    </span>
-                  )}
-                </div>
+                  return (
+                    <div
+                      key={p.id}
+                      onClick={() => handleProductClick(p)}
+                      className={`p-3 rounded-2xl border transition-all flex items-center gap-3 cursor-pointer ${
+                        cartItem
+                          ? 'bg-slate-900 border-blue-500/50 shadow-md'
+                          : 'bg-slate-900/50 border-slate-800/80 hover:bg-slate-900'
+                      }`}
+                    >
+                      {/* Product Image Thumbnail */}
+                      <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-950 shrink-0 relative border border-slate-800">
+                        <img src={p.image} alt={p.name} loading="lazy" className="w-full h-full object-cover" />
+                        {p.hasVariants && (
+                          <span className="absolute bottom-0 inset-x-0 bg-blue-600/90 text-white text-[9px] font-bold text-center py-0.5">
+                            {p.variants?.length} biến thể
+                          </span>
+                        )}
+                      </div>
 
                 {/* Product Main Info */}
                 <div className="flex-1 min-w-0 space-y-1">
@@ -335,11 +348,25 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
                     <Plus className="w-4 h-4" />
                   </button>
                 )}
-              </div>
-            );
-          });
-        })()}
-      </div>
+                    </div>
+                  );
+                })}
+
+                {visibleCount < displayedProducts.length && (
+                  <div className="py-3 text-center">
+                    <button
+                      onClick={() => setVisibleCount((prev) => Math.min(prev + 20, displayedProducts.length))}
+                      className="px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-blue-400 text-xs font-bold hover:bg-slate-800 transition-all"
+                    >
+                      ⬇️ Tải thêm sản phẩm ({visibleCount} / {displayedProducts.length})
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        );
+      })()}
 
       {/* 6. Sticky Floating Bottom Bar (Matching attached UI screenshot) */}
       <div className="fixed bottom-0 inset-x-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 p-3 flex items-center gap-3">
