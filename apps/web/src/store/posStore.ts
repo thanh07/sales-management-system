@@ -145,6 +145,7 @@ interface PosState {
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   updateItemUnit: (productId: string, unitName: string) => void;
+  updateItemPrice: (productId: string, price: number) => void;
   clearCart: () => void;
 
   parkCurrentOrder: () => Promise<void>;
@@ -388,6 +389,17 @@ export const usePosStore = create<PosState>((set, get) => ({
       return item;
     });
 
+    const newTabs = tabs.map((t) => (t.id === activeTabId ? { ...t, cart: updatedCart } : t));
+    set({
+      tabs: newTabs,
+      cart: updatedCart,
+    });
+  },
+
+  updateItemPrice: (productId, price) => {
+    const { tabs, activeTabId } = get();
+    const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
+    const updatedCart = activeTab.cart.map((item) => (item.product.id === productId ? { ...item, selectedPrice: Math.max(0, price) } : item));
     const newTabs = tabs.map((t) => (t.id === activeTabId ? { ...t, cart: updatedCart } : t));
     set({
       tabs: newTabs,

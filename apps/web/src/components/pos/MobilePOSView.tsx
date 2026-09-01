@@ -20,6 +20,8 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
     parkedOrders,
     addToCart,
     updateQuantity,
+    updateItemUnit,
+    updateItemPrice,
     removeFromCart,
     clearCart,
     calculateTotal,
@@ -411,16 +413,100 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
               </button>
             </div>
 
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-              {cart.map((item) => (
-                <div key={`${item.product.id}-${item.selectedUnit}`} className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs">
-                  <div>
-                    <h4 className="font-bold text-white">{item.product.name}</h4>
-                    <span className="text-slate-400">{item.quantity} {item.selectedUnit} x {formatVND(item.selectedPrice)}</span>
+            <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+              {cart.map((item) => {
+                const availableUnits = [
+                  item.product.unit || 'Cái',
+                  ...(item.product.conversions || []).map((c: any) => c.unitName),
+                ].filter((v, i, a) => a.indexOf(v) === i);
+
+                return (
+                  <div
+                    key={`${item.product.id}-${item.selectedUnit}`}
+                    className="p-3 rounded-2xl bg-slate-950 border border-slate-800 space-y-2 text-xs"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-white text-sm line-clamp-1">{item.product.name}</h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          <select
+                            value={item.selectedUnit}
+                            onChange={(e) => updateItemUnit(item.product.id, e.target.value)}
+                            className="px-2 py-0.5 rounded-lg bg-slate-900 border border-slate-700 text-blue-300 font-bold text-[11px]"
+                          >
+                            {availableUnits.map((u: string) => (
+                              <option key={u} value={u}>
+                                {u}
+                              </option>
+                            ))}
+                          </select>
+
+                          <button
+                            onClick={() => {
+                              const newPriceStr = prompt(
+                                `Sửa đơn giá bán cho ${item.product.name} (${item.selectedUnit}):`,
+                                item.selectedPrice.toString()
+                              );
+                              if (newPriceStr !== null) {
+                                const price = parseInt(newPriceStr || '0', 10);
+                                if (!isNaN(price)) updateItemPrice(item.product.id, price);
+                              }
+                            }}
+                            className="text-slate-300 hover:text-amber-300 font-semibold underline decoration-dotted text-[11px]"
+                            title="Bấm để sửa đơn giá"
+                          >
+                            {formatVND(item.selectedPrice)}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <div className="font-mono font-bold text-emerald-400 text-sm">
+                          {formatVND(item.selectedPrice * item.quantity)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-slate-800/80 pt-2">
+                      <button
+                        onClick={() => removeFromCart(item.product.id)}
+                        className="px-2 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 font-semibold text-[11px] flex items-center gap-1 border border-red-500/20"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        <span>Xóa</span>
+                      </button>
+
+                      <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
+                        <button
+                          onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                          className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center font-bold text-xs"
+                        >
+                          <Minus className="w-3.5 h-3.5" />
+                        </button>
+
+                        <input
+                          type="number"
+                          min={1}
+                          value={item.quantity}
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value || '1', 10);
+                            updateQuantity(item.product.id, Math.max(1, val));
+                          }}
+                          className="w-12 text-center py-0.5 font-mono font-bold text-white bg-slate-950 border border-slate-700 rounded-md text-xs"
+                        />
+
+                        <button
+                          onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                          className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center font-bold text-xs"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <span className="font-bold text-emerald-400">{formatVND(item.selectedPrice * item.quantity)}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="border-t border-slate-800 pt-3 space-y-2 text-xs">
