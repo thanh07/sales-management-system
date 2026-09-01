@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { usePosStore, calculateProductPrice } from '../../store/posStore';
 import { useBranchStore } from '../../store/branchStore';
 import api from '../../services/api';
-import { Search, Plus, QrCode, User, Tag, SlidersHorizontal, Store, FileText, ShoppingCart, Minus, Check, X, ChevronRight, Layers, Menu, History } from 'lucide-react';
+import { Search, Plus, QrCode, User, Tag, SlidersHorizontal, Store, FileText, ShoppingCart, Minus, Check, X, ChevronRight, Layers, Menu, History, Clock } from 'lucide-react';
 import { VariantSelectModal } from './VariantSelectModal';
 import { CategorySelectDrawer } from './CategorySelectDrawer';
 import { OrderTabBar } from './OrderTabBar';
@@ -12,7 +12,7 @@ interface MobilePOSViewProps {
 }
 
 export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }) => {
-  const { selectedBranchId } = useBranchStore();
+  const { selectedBranchId, branches } = useBranchStore();
   const {
     cart,
     customer,
@@ -24,6 +24,7 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
     updateItemPrice,
     removeFromCart,
     clearCart,
+    parkCurrentOrder,
     calculateTotal,
     setCustomerModalOpen,
     setPriceListModalOpen,
@@ -402,15 +403,113 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
       {/* Mobile Cart / Checkout Drawer */}
       {isMobileCartDrawerOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex flex-col justify-end">
-          <div className="bg-slate-900 border-t border-slate-800 rounded-t-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom duration-200">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="font-bold text-lg text-white">Giỏ hàng thanh toán ({totalCartCount} món)</h3>
-              <button
-                onClick={() => setIsMobileCartDrawerOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white"
+          <div className="bg-slate-900 border-t border-slate-800 rounded-t-3xl p-5 space-y-3 max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-200">
+            {/* Drawer Header Title */}
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+              <h3 className="font-bold text-base text-white">Giỏ hàng thanh toán ({totalCartCount} món)</h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setIsMobileCartDrawerOpen(false);
+                    setParkedModalOpen(true);
+                  }}
+                  className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-semibold flex items-center gap-1 border border-slate-700"
+                  title="Danh sách đơn tạm lưu"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Đơn tạm ({parkedOrders.length})</span>
+                </button>
+                <button
+                  onClick={() => setIsMobileCartDrawerOpen(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Header Quick Controls Section (Circled area matching attached UI screenshot) */}
+            <div className="space-y-2 bg-slate-950/60 p-3 rounded-2xl border border-slate-800/80 text-xs">
+              {/* 1. Search / Barcode Scan Bar */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Tên, mã hàng, mã vạch..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => {
+                    const barcode = prompt('Quét hoặc nhập mã vạch sản phẩm:');
+                    if (barcode) {
+                      const found = products.find((p) => p.barcode === barcode || p.sku === barcode);
+                      if (found) {
+                        handleProductClick(found);
+                      } else {
+                        alert('Không tìm thấy sản phẩm với mã vạch này!');
+                      }
+                    }
+                  }}
+                  className="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-blue-400 flex items-center justify-center shrink-0"
+                  title="Quét mã vạch"
+                >
+                  <QrCode className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* 2. Customer Select Row */}
+              <div
+                onClick={() => setCustomerModalOpen(true)}
+                className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800/80 cursor-pointer transition-all"
               >
-                <X className="w-5 h-5" />
-              </button>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <User className="w-4 h-4 text-blue-400" />
+                  <span className="font-semibold text-white">
+                    {customer ? customer.name : 'Khách lẻ'}
+                  </span>
+                  {customer?.phone && <span className="text-slate-400 text-[11px]">({customer.phone})</span>}
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-500" />
+              </div>
+
+              {/* 3. Price List Select Row */}
+              <div
+                onClick={() => setPriceListModalOpen(true)}
+                className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800/80 cursor-pointer transition-all"
+              >
+                <div className="flex items-center gap-2 text-slate-300">
+                  <Tag className="w-4 h-4 text-amber-400" />
+                  <span className="font-semibold text-white">
+                    {activePriceList ? activePriceList.name : 'Bảng giá chung'}
+                  </span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-500" />
+              </div>
+
+              {/* 4. Warehouse / Branch Info Row */}
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80">
+                <div className="flex items-center gap-2 text-slate-300">
+                  <Store className="w-4 h-4 text-indigo-400" />
+                  <span className="text-slate-400">Kho bán hàng:</span>
+                  <span className="font-semibold text-white truncate max-w-[170px]">
+                    {branches.find((b) => b.id === selectedBranchId)?.name || 'Chi nhánh 1'}
+                  </span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-500" />
+              </div>
             </div>
 
             <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
@@ -522,13 +621,27 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
 
             <div className="flex gap-2 pt-2">
               <button
+                onClick={async () => {
+                  await parkCurrentOrder();
+                  setIsMobileCartDrawerOpen(false);
+                  alert('Đã lưu tạm đơn hàng thành công!');
+                }}
+                disabled={cart.length === 0}
+                className="w-1/3 py-3 bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 font-bold text-xs rounded-xl border border-amber-500/30 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center gap-1"
+              >
+                <Clock className="w-3.5 h-3.5" />
+                <span>Lưu tạm</span>
+              </button>
+
+              <button
                 onClick={() => {
                   setIsMobileCartDrawerOpen(false);
                   setCheckoutModalOpen(true);
                 }}
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-600/30"
+                disabled={cart.length === 0}
+                className="w-2/3 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-blue-600/30 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center gap-1.5"
               >
-                Thanh toán ({formatVND(total)})
+                <span>Thanh toán ({formatVND(total)})</span>
               </button>
             </div>
           </div>
