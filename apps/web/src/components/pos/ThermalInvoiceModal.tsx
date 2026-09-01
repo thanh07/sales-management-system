@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { usePosStore } from '../../store/posStore';
 import api from '../../services/api';
-import { Printer, CheckCircle, X } from 'lucide-react';
+import { Printer, CheckCircle, X, Share2, Download } from 'lucide-react';
+import html2canvas from 'html2canvas';
 
 interface ThermalInvoiceModalProps {
   order?: any;
@@ -16,6 +17,8 @@ export const ThermalInvoiceModal: React.FC<ThermalInvoiceModalProps> = ({
 }) => {
   const { isInvoiceModalOpen, setInvoiceModalOpen, lastOrder } = usePosStore();
   const [storeSettings, setStoreSettings] = React.useState<any>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const receiptRef = useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     api.get('/settings').then((res: any) => {
@@ -39,6 +42,87 @@ export const ThermalInvoiceModal: React.FC<ThermalInvoiceModalProps> = ({
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const generateReceiptCanvas = async () => {
+    if (!receiptRef.current) return null;
+    return await html2canvas(receiptRef.current, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+    });
+  };
+
+  const handleShareImage = async () => {
+    if (isCapturing) return;
+    setIsCapturing(true);
+    try {
+      const canvas = await generateReceiptCanvas();
+      if (!canvas) {
+        setIsCapturing(false);
+        return;
+      }
+
+      canvas.toBlob(async (blob) => {
+        if (!blob) {
+          setIsCapturing(false);
+          return;
+        }
+
+        const fileName = `HoaDon_${currentOrder.orderNumber || 'POS'}.png`;
+        const file = new File([blob], fileName, { type: 'image/png' });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              title: `Hóa đơn ${currentOrder.orderNumber}`,
+              text: `Hóa đơn bán hàng ${currentOrder.orderNumber}`,
+              files: [file],
+            });
+            setIsCapturing(false);
+            return;
+          } catch (shareErr) {
+            console.log('Share cancelled:', shareErr);
+          }
+        }
+
+        try {
+          if (navigator.clipboard && window.ClipboardItem) {
+            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+            alert('Đã sao chép ảnh hóa đơn vào bộ nhớ đệm!\nBạn có thể mở Zalo / Messenger và dán (Ctrl + V) để gửi cho khách.');
+          } else {
+            handleDownloadImage();
+          }
+        } catch (copyErr) {
+          handleDownloadImage();
+        }
+        setIsCapturing(false);
+      }, 'image/png');
+    } catch (err) {
+      console.error(err);
+      alert('Không thể tạo ảnh hóa đơn, vui lòng thử lại!');
+      setIsCapturing(false);
+    }
+  };
+
+  const handleDownloadImage = async () => {
+    if (isCapturing) return;
+    setIsCapturing(true);
+    try {
+      const canvas = await generateReceiptCanvas();
+      if (!canvas) return;
+
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `HoaDon_${currentOrder.orderNumber || 'POS'}.png`;
+      link.click();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsCapturing(false);
+    }
   };
 
   const storeName = storeSettings?.storeName || 'CỬA HÀNG RETAIL PRO';
@@ -65,7 +149,7 @@ export const ThermalInvoiceModal: React.FC<ThermalInvoiceModalProps> = ({
         </div>
 
         {/* Printable Thermal Receipt (K80 Standard) */}
-        <div className="p-6 bg-white text-slate-900 font-mono text-sm space-y-4 print:p-0 print:bg-white print:text-black">
+        <div ref={receiptRef} className="p-6 bg-white text-slate-900 font-mono text-sm space-y-4 print:p-0 print:bg-white print:text-black">
           <div className="text-center border-b border-dashed border-slate-300 pb-3">
             <h2 className="font-bold text-base uppercase tracking-wider">{storeName}</h2>
             <p className="text-xs text-slate-600">Đ/c: {storeAddress}</p>
@@ -183,17 +267,38 @@ export const ThermalInvoiceModal: React.FC<ThermalInvoiceModalProps> = ({
         </div>
 
         {/* Modal Actions */}
-        <div className="p-4 border-t border-slate-800 flex gap-3 bg-slate-900">
+        <div className="p-4 border-t border-slate-800 flex items-center gap-2 bg-slate-900">
           <button
             onClick={handlePrint}
-            className="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 transition-all"
+            className="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 transition-all text-xs sm:text-sm"
           >
             <Printer className="w-5 h-5" />
             <span>In Hóa Đơn (F12)</span>
           </button>
+
+          {/* Icon-Only Share Button (Zalo / Messenger / Mobile Share Sheet / PC Clipboard) */}
+          <button
+            onClick={handleShareImage}
+            disabled={isCapturing}
+            className="p-3 bg-slate-800 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 font-bold rounded-xl transition-all border border-slate-700 disabled:opacity-50 shrink-0"
+            title="Chia sẻ ảnh Hóa đơn qua Zalo / Messenger / Mạng xã hội"
+          >
+            <Share2 className="w-5 h-5" />
+          </button>
+
+          {/* Icon-Only Download Image Button */}
+          <button
+            onClick={handleDownloadImage}
+            disabled={isCapturing}
+            className="p-3 bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 font-bold rounded-xl transition-all border border-slate-700 disabled:opacity-50 shrink-0"
+            title="Tải ảnh Hóa đơn (.png)"
+          >
+            <Download className="w-5 h-5" />
+          </button>
+
           <button
             onClick={handleClose}
-            className="px-5 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-xl"
+            className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-xl text-xs sm:text-sm shrink-0"
           >
             Đóng
           </button>
