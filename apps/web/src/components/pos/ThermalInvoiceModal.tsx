@@ -51,7 +51,7 @@ export const ThermalInvoiceModal: React.FC<ThermalInvoiceModalProps> = ({
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#ffffff',
-    });
+    } as any);
   };
 
   const handleShareImage = async () => {
@@ -64,7 +64,7 @@ export const ThermalInvoiceModal: React.FC<ThermalInvoiceModalProps> = ({
         return;
       }
 
-      canvas.toBlob(async (blob) => {
+      canvas.toBlob(async (blob: Blob | null) => {
         if (!blob) {
           setIsCapturing(false);
           return;
