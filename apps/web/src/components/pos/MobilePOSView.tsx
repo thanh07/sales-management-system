@@ -48,16 +48,25 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
   const [visibleCount, setVisibleCount] = useState(20);
   const [addedCartToast, setAddedCartToast] = useState<string | null>(null);
 
+  const removeAccents = (str: string) => {
+    return (str || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'D')
+      .toLowerCase();
+  };
+
   const matchingCartSearchResults = searchQuery.trim()
     ? products.filter((p) => {
-        const q = searchQuery.toLowerCase().trim();
+        const q = removeAccents(searchQuery.trim());
         return (
-          (p.name && p.name.toLowerCase().includes(q)) ||
-          (p.sku && p.sku.toLowerCase().includes(q)) ||
-          (p.barcode && p.barcode.includes(q)) ||
-          (p.category && p.category.toLowerCase().includes(q))
+          removeAccents(p.name).includes(q) ||
+          removeAccents(p.sku).includes(q) ||
+          (p.barcode && p.barcode.includes(searchQuery.trim())) ||
+          removeAccents(p.category || '').includes(q)
         );
-      }).slice(0, 8)
+      }).slice(0, 10)
     : [];
 
   const fetchProducts = async () => {
@@ -492,9 +501,9 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
             )}
 
             {/* Header Quick Controls Section (Circled area matching attached UI screenshot) */}
-            <div className="space-y-2 bg-slate-950/60 p-3 rounded-2xl border border-slate-800/80 text-xs">
+            <div className="space-y-2 bg-slate-950/60 p-3 rounded-2xl border border-slate-800/80 text-xs relative z-30">
               {/* 1. Search / Barcode Scan Bar with Full-Width Autocomplete Dropdown */}
-              <div className="flex items-center gap-2 relative">
+              <div className="flex items-center gap-2 relative z-50">
                 <div className="flex-1 relative">
                   <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
@@ -547,7 +556,7 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
 
                 {/* Realtime Autocomplete Search Results Full-Width Dropdown Overlay */}
                 {searchQuery.trim().length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-1.5 bg-slate-900/98 border border-slate-700/90 rounded-2xl shadow-2xl z-50 overflow-hidden max-h-72 overflow-y-auto divide-y divide-slate-800/80 animate-in fade-in zoom-in-95 duration-100 backdrop-blur-md">
+                  <div className="absolute top-full left-0 right-0 mt-1.5 bg-slate-900/98 border border-slate-700/90 rounded-2xl shadow-2xl z-[999] overflow-hidden max-h-72 overflow-y-auto divide-y divide-slate-800/80 animate-in fade-in zoom-in-95 duration-100 backdrop-blur-md">
                     {matchingCartSearchResults.length > 0 ? (
                       matchingCartSearchResults.map((prod) => {
                         const stock = prod.branchStocks && prod.branchStocks[selectedBranchId] !== undefined
