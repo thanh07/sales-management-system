@@ -132,24 +132,25 @@ export const ThermalInvoiceModal: React.FC<ThermalInvoiceModalProps> = ({
   const receiptFooter = storeSettings?.receiptFooter || 'Cảm ơn Quý khách & Hẹn gặp lại!';
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-        {/* Header */}
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
-          <div className="flex items-center gap-3 text-emerald-400">
-            <CheckCircle className="w-6 h-6" />
-            <h3 className="font-bold text-lg text-white">Thanh toán Thành công!</h3>
+    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg flex flex-col max-h-[92vh] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        {/* Header (Fixed Top) */}
+        <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 shrink-0">
+          <div className="flex items-center gap-2.5 text-emerald-400">
+            <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+            <h3 className="font-bold text-base sm:text-lg text-white">Thanh toán Thành công!</h3>
           </div>
           <button
             onClick={handleClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Printable Thermal Receipt (K80 Standard) */}
-        <div ref={receiptRef} className="p-6 bg-white text-slate-900 font-mono text-sm space-y-4 print:p-0 print:bg-white print:text-black">
+        {/* Scrollable Receipt Body (flex-1 overflow-y-auto) */}
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 flex justify-center bg-slate-950/50">
+          <div ref={receiptRef} className="p-4 sm:p-6 bg-white text-slate-900 font-mono text-sm space-y-4 rounded-2xl shadow-lg w-full max-w-[360px] my-auto print:p-0 print:bg-white print:text-black print:max-w-none print:shadow-none">
           <div className="text-center border-b border-dashed border-slate-300 pb-3">
             <h2 className="font-bold text-base uppercase tracking-wider">{storeName}</h2>
             <p className="text-xs text-slate-600">Đ/c: {storeAddress}</p>
@@ -265,14 +266,15 @@ export const ThermalInvoiceModal: React.FC<ThermalInvoiceModalProps> = ({
             <p className="text-[9px] mt-0.5">Hệ thống quản trị bán lẻ Sales Manager Pro</p>
           </div>
         </div>
+        </div>
 
-        {/* Modal Actions */}
-        <div className="p-4 border-t border-slate-800 flex items-center gap-2 bg-slate-900">
+        {/* Sticky Modal Actions Footer */}
+        <div className="p-3 sm:p-4 border-t border-slate-800 flex items-center gap-2 bg-slate-900 shrink-0 z-10 shadow-lg">
           <button
             onClick={handlePrint}
-            className="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 transition-all text-xs sm:text-sm"
+            className="flex-1 py-2.5 sm:py-3 px-3 sm:px-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 transition-all text-xs sm:text-sm active:scale-95"
           >
-            <Printer className="w-5 h-5" />
+            <Printer className="w-4 h-4 sm:w-5 sm:h-5" />
             <span>In Hóa Đơn (F12)</span>
           </button>
 
@@ -280,25 +282,25 @@ export const ThermalInvoiceModal: React.FC<ThermalInvoiceModalProps> = ({
           <button
             onClick={handleShareImage}
             disabled={isCapturing}
-            className="p-3 bg-slate-800 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 font-bold rounded-xl transition-all border border-slate-700 disabled:opacity-50 shrink-0"
+            className="p-2.5 sm:p-3 bg-slate-800 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 font-bold rounded-xl transition-all border border-slate-700 disabled:opacity-50 shrink-0 active:scale-95"
             title="Chia sẻ ảnh Hóa đơn qua Zalo / Messenger / Mạng xã hội"
           >
-            <Share2 className="w-5 h-5" />
+            <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
 
           {/* Icon-Only Download Image Button */}
           <button
             onClick={handleDownloadImage}
             disabled={isCapturing}
-            className="p-3 bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 font-bold rounded-xl transition-all border border-slate-700 disabled:opacity-50 shrink-0"
+            className="p-2.5 sm:p-3 bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 font-bold rounded-xl transition-all border border-slate-700 disabled:opacity-50 shrink-0 active:scale-95"
             title="Tải ảnh Hóa đơn (.png)"
           >
-            <Download className="w-5 h-5" />
+            <Download className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
 
           <button
             onClick={handleClose}
-            className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-xl text-xs sm:text-sm shrink-0"
+            className="px-3.5 sm:px-4 py-2.5 sm:py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-xl text-xs sm:text-sm shrink-0 active:scale-95"
           >
             Đóng
           </button>
