@@ -713,10 +713,10 @@ export class ProductService {
     return [headers.join(','), ...sampleRows.map((r) => r.join(','))].join('\n');
   }
 
-  static generateExcelExportCsv() {
+  static generateExcelExportCsv(query?: string, category?: string, brand?: string, location?: string, branchId?: string) {
     const headers = [
       'SKU',
-      'Mã Barcode (Độc nhất)',
+      'Mã Barcode',
       'Tên sản phẩm',
       'Phân loại / Biến thể',
       'Danh mục (Category)',
@@ -725,52 +725,74 @@ export class ProductService {
       'Đơn vị nhỏ nhất',
       'Đơn vị quy đổi',
       'Hệ số quy đổi',
-      'Giá nhập',
+      'Giá nhập (Vốn)',
       'Giá bán lẻ',
+      'Giá sỉ',
       'Giá bán đơn vị lớn',
       'Tồn kho',
-      'Ngưỡng cảnh báo'
+      'Ngưỡng cảnh báo',
+      'Trạng thái'
     ];
     const rows: (string | number)[][] = [];
 
-    MOCK_PRODUCTS.forEach((p) => {
+    const products = this.getAllProducts(query, category, brand, location);
+
+    products.forEach((p) => {
+      const stock = (branchId && p.branchStocks && p.branchStocks[branchId] !== undefined)
+        ? p.branchStocks[branchId]
+        : p.stockQuantity;
+
+      const minStock = (branchId && p.branchMinStocks && p.branchMinStocks[branchId] !== undefined)
+        ? p.branchMinStocks[branchId]
+        : p.minStock;
+
+      const firstConv = (p.conversions && p.conversions.length > 0) ? p.conversions[0] : null;
+      const convUnit = p.conversionUnit || (firstConv ? firstConv.unitName : '');
+      const convFactor = p.conversionFactor || (firstConv ? firstConv.conversionFactor : '');
+      const convPrice = p.conversionSellingPrice || (firstConv ? firstConv.sellingPrice : '');
+      const statusStr = p.isActive !== false ? 'Đang kinh doanh' : 'Ngưng kinh doanh';
+
       if (p.hasVariants && p.variants && p.variants.length > 0) {
         p.variants.forEach((v) => {
           rows.push([
-            v.sku,
-            v.barcode || v.sku,
+            `"${v.sku}"`,
+            `"\t${v.barcode || v.sku}"`,
             `"${v.variantName.replace(/"/g, '""')}"`,
             `"${v.attributeValues ? Object.entries(v.attributeValues).map(([k, val]) => `${k}: ${val}`).join('; ') : v.variantName}"`,
-            `"${p.category}"`,
-            `"${p.brand}"`,
-            `"${p.location || ''}"`,
-            p.unit,
-            p.conversionUnit || '',
-            p.conversionFactor || '',
-            v.costPrice || p.costPrice,
-            v.sellingPrice,
-            p.conversionSellingPrice || '',
-            v.stockQuantity,
-            v.minStock || p.minStock,
+            `"${p.category.replace(/"/g, '""')}"`,
+            `"${p.brand.replace(/"/g, '""')}"`,
+            `"${(p.location || '').replace(/"/g, '""')}"`,
+            `"${p.unit}"`,
+            `"${convUnit}"`,
+            convFactor,
+            v.costPrice || p.costPrice || 0,
+            v.sellingPrice || 0,
+            p.wholesalePrice || 0,
+            convPrice || 0,
+            stock,
+            v.minStock || minStock || 0,
+            `"${statusStr}"`,
           ]);
         });
       } else {
         rows.push([
-          p.sku,
-          p.barcode,
+          `"${p.sku}"`,
+          `"\t${p.barcode || p.sku}"`,
           `"${p.name.replace(/"/g, '""')}"`,
-          'Hàng tiêu chuẩn',
-          `"${p.category}"`,
-          `"${p.brand}"`,
-          `"${p.location || ''}"`,
-          p.unit,
-          p.conversionUnit || '',
-          p.conversionFactor || '',
-          p.costPrice,
-          p.sellingPrice,
-          p.conversionSellingPrice || '',
-          p.stockQuantity,
-          p.minStock,
+          '"Hàng tiêu chuẩn"',
+          `"${p.category.replace(/"/g, '""')}"`,
+          `"${p.brand.replace(/"/g, '""')}"`,
+          `"${(p.location || '').replace(/"/g, '""')}"`,
+          `"${p.unit}"`,
+          `"${convUnit}"`,
+          convFactor,
+          p.costPrice || 0,
+          p.sellingPrice || 0,
+          p.wholesalePrice || 0,
+          convPrice || 0,
+          stock,
+          minStock || 0,
+          `"${statusStr}"`,
         ]);
       }
     });

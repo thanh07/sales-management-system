@@ -951,24 +951,98 @@ export const ProductsPage: React.FC = () => {
   const handleExportExcel = async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('/api/v1/products/export-excel', {
+      const queryParams = new URLSearchParams();
+      if (selectedBranchId) queryParams.append('branchId', selectedBranchId);
+      if (searchQuery) queryParams.append('query', searchQuery);
+      if (selectedCategory && selectedCategory !== 'Tất cả') queryParams.append('category', selectedCategory);
+      if (selectedBrand && selectedBrand !== 'Tất cả') queryParams.append('brand', selectedBrand);
+      if (selectedLocation && selectedLocation !== 'Tất cả') queryParams.append('location', selectedLocation);
+
+      const response = await fetch(`/api/v1/products/export-excel?${queryParams.toString()}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      if (!response.ok) throw new Error('Không thể tải file Excel');
+      if (!response.ok) throw new Error('Không thể tải file từ Server, chuyển sang xuất từ bộ lọc màn hình...');
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'danh_sach_san_pham_da_don_vi_quy_doi.csv';
+      a.download = `danh_sach_san_pham_${selectedBranchId || 'all'}.csv`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
-      alert(err.message || 'Lỗi xuất file Excel');
+      console.warn('Lỗi API export, sử dụng client-side exporter:', err);
+      // Client-side export fallback directly from sortedAndFilteredProducts
+      const headers = [
+        'SKU',
+        'Mã Barcode',
+        'Tên sản phẩm',
+        'Phân loại / Biến thể',
+        'Danh mục (Category)',
+        'Thương hiệu (Brand)',
+        'Vị trí kho (Location)',
+        'Đơn vị nhỏ nhất',
+        'Đơn vị quy đổi',
+        'Hệ số quy đổi',
+        'Giá nhập (Vốn)',
+        'Giá bán lẻ',
+        'Giá sỉ',
+        'Giá bán đơn vị lớn',
+        'Tồn kho',
+        'Ngưỡng cảnh báo',
+        'Trạng thái'
+      ];
+
+      const rows: string[][] = sortedAndFilteredProducts.map((p) => {
+        const stock = p.branchStocks && p.branchStocks[selectedBranchId] !== undefined
+          ? p.branchStocks[selectedBranchId]
+          : (p.stockQuantity || 0);
+
+        const minStock = p.branchMinStocks && p.branchMinStocks[selectedBranchId] !== undefined
+          ? p.branchMinStocks[selectedBranchId]
+          : (p.minStock || 0);
+
+        const firstConv = (p.conversions && p.conversions.length > 0) ? p.conversions[0] : null;
+        const convUnit = p.conversionUnit || (firstConv ? firstConv.unitName : '');
+        const convFactor = p.conversionFactor || (firstConv ? firstConv.conversionFactor : '');
+        const convPrice = p.conversionSellingPrice || (firstConv ? firstConv.sellingPrice : '');
+        const statusStr = p.isActive !== false ? 'Đang kinh doanh' : 'Ngưng kinh doanh';
+
+        return [
+          `"${p.sku || ''}"`,
+          `"\t${p.barcode || p.sku || ''}"`,
+          `"${(p.name || '').replace(/"/g, '""')}"`,
+          '"Hàng tiêu chuẩn"',
+          `"${(p.category || '').replace(/"/g, '""')}"`,
+          `"${(p.brand || '').replace(/"/g, '""')}"`,
+          `"${(p.location || '').replace(/"/g, '""')}"`,
+          `"${p.unit || 'Cái'}"`,
+          `"${convUnit}"`,
+          `"${convFactor}"`,
+          `"${p.costPrice || 0}"`,
+          `"${p.sellingPrice || 0}"`,
+          `"${p.wholesalePrice || 0}"`,
+          `"${convPrice || 0}"`,
+          `"${stock}"`,
+          `"${minStock}"`,
+          `"${statusStr}"`
+        ];
+      });
+
+      const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `danh_sach_san_pham_${selectedBranchId || 'all'}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
     }
   };
 

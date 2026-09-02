@@ -118,7 +118,8 @@ export class ProductController {
 
   static exportExcel = async (req: Request, res: Response) => {
     try {
-      const csv = ProductService.generateExcelExportCsv();
+      const { query, category, brand, location, branchId } = req.query as Record<string, string>;
+      const csv = ProductService.generateExcelExportCsv(query, category, brand, location, branchId);
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
       res.setHeader('Content-Disposition', 'attachment; filename=danh_sach_san_pham.csv');
       return res.status(200).send('\uFEFF' + csv);
