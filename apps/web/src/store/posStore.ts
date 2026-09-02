@@ -38,21 +38,30 @@ export const calculateProductPrice = (product: any, unitName?: string, activePri
 
   const convList = product.conversions && product.conversions.length > 0
     ? product.conversions
-    : (product.conversionUnit ? [{ id: 'c0', unitName: product.conversionUnit, conversionFactor: product.conversionFactor || 24, sellingPrice: product.conversionSellingPrice || product.sellingPrice * 24 }] : []);
+    : (product.conversionUnit ? [{ id: 'c0', unitName: product.conversionUnit, conversionFactor: product.conversionFactor || product.conversionRate || 10, sellingPrice: product.conversionSellingPrice || (product.sellingPrice || 0) * 10 }] : []);
 
   const targetUnit = unitName || product.unit;
   let targetFactor = 1;
   let targetPrice = product.sellingPrice || 0;
 
   if (targetUnit !== product.unit) {
-    const conv = convList.find((c: any) => c.unitName === targetUnit);
+    const conv = convList.find((c: any) =>
+      c.unitName === targetUnit ||
+      (c.unitName && targetUnit && (c.unitName.toLowerCase().includes(targetUnit.toLowerCase()) || targetUnit.toLowerCase().includes(c.unitName.toLowerCase())))
+    );
+
     if (conv) {
-      targetFactor = conv.conversionFactor || 1;
-      if (product.variantConversions && product.variantConversions[targetUnit]) {
+      targetFactor = conv.conversionFactor || conv.conversionRate || 10;
+      if (conv.sellingPrice && conv.sellingPrice > 0) {
+        targetPrice = conv.sellingPrice;
+      } else if (product.variantConversions && product.variantConversions[targetUnit]) {
         targetPrice = product.variantConversions[targetUnit];
       } else {
         targetPrice = (product.sellingPrice || 0) * targetFactor;
       }
+    } else if (targetUnit.toLowerCase().includes('chục')) {
+      targetFactor = 10;
+      targetPrice = (product.sellingPrice || 0) * targetFactor;
     }
   }
 

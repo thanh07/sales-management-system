@@ -128,9 +128,13 @@ export const CartDrawer: React.FC = () => {
             const prod = item.product;
             const convList = prod.conversions && prod.conversions.length > 0
               ? prod.conversions
-              : (prod.conversionUnit ? [{ id: 'c0', unitName: prod.conversionUnit, conversionFactor: prod.conversionFactor || 24, sellingPrice: prod.conversionSellingPrice || prod.sellingPrice * 24 }] : []);
+              : (prod.conversionUnit ? [{ id: 'c0', unitName: prod.conversionUnit, conversionFactor: prod.conversionFactor || prod.conversionRate || 10, sellingPrice: prod.conversionSellingPrice || (prod.sellingPrice || 0) * 10 }] : []);
 
-            const availableUnits = [prod.unit, ...convList.map((c: any) => c.unitName)];
+            const availableUnits = [
+              prod.unit || 'Cái',
+              ...convList.map((c: any) => c.unitName),
+              ...(prod.conversionUnit ? [prod.conversionUnit] : []),
+            ].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i);
 
             return (
               <div
@@ -159,11 +163,15 @@ export const CartDrawer: React.FC = () => {
                       onChange={(e) => updateItemUnit(prod.id, e.target.value)}
                       className="px-2 py-1 rounded bg-slate-900 border border-slate-700 text-purple-300 font-bold text-[11px] focus:outline-none focus:ring-1 focus:ring-purple-500"
                     >
-                      {availableUnits.map((u) => (
-                        <option key={u} value={u}>
-                          {u} {u !== prod.unit ? `(x${convList.find((c: any) => c.unitName === u)?.conversionFactor || 24})` : '(Lẻ)'}
-                        </option>
-                      ))}
+                      {availableUnits.map((u) => {
+                        const conv = convList.find((c: any) => c.unitName === u || (c.unitName && u && (c.unitName.includes(u) || u.includes(c.unitName))));
+                        const factor = conv?.conversionFactor || conv?.conversionRate || (u.toLowerCase().includes('chục') ? 10 : 1);
+                        return (
+                          <option key={u} value={u}>
+                            {u} {u !== prod.unit ? `(x${factor})` : '(Lẻ)'}
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
 

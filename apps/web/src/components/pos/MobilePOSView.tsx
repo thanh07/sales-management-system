@@ -650,7 +650,8 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
                 const availableUnits = [
                   item.product.unit || 'Cái',
                   ...(item.product.conversions || []).map((c: any) => c.unitName),
-                ].filter((v, i, a) => a.indexOf(v) === i);
+                  ...(item.product.conversionUnit ? [item.product.conversionUnit] : []),
+                ].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i);
 
                 return (
                   <div
