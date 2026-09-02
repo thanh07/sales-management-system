@@ -493,7 +493,7 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
 
             {/* Header Quick Controls Section (Circled area matching attached UI screenshot) */}
             <div className="space-y-2 bg-slate-950/60 p-3 rounded-2xl border border-slate-800/80 text-xs">
-              {/* 1. Search / Barcode Scan Bar with Autocomplete Dropdown */}
+              {/* 1. Search / Barcode Scan Bar with Full-Width Autocomplete Dropdown */}
               <div className="flex items-center gap-2 relative">
                 <div className="flex-1 relative">
                   <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -523,60 +523,6 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
                       <X className="w-3.5 h-3.5" />
                     </button>
                   )}
-
-                  {/* Realtime Autocomplete Search Results Dropdown Overlay */}
-                  {searchQuery.trim().length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-1.5 bg-slate-900 border border-slate-700/90 rounded-2xl shadow-2xl z-50 overflow-hidden max-h-64 overflow-y-auto divide-y divide-slate-800/80 animate-in fade-in zoom-in-95 duration-100">
-                      {matchingCartSearchResults.length > 0 ? (
-                        matchingCartSearchResults.map((prod) => {
-                          const stock = prod.branchStocks && prod.branchStocks[selectedBranchId] !== undefined
-                            ? prod.branchStocks[selectedBranchId]
-                            : (prod.stockQuantity || 0);
-
-                          return (
-                            <div
-                              key={prod.id}
-                              onClick={() => {
-                                handleProductClick(prod);
-                                setSearchQuery('');
-                                setAddedCartToast(prod.name);
-                                setTimeout(() => setAddedCartToast(null), 2500);
-                              }}
-                              className="p-2.5 flex items-center justify-between hover:bg-slate-800 cursor-pointer transition-colors active:bg-blue-600/30"
-                            >
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                <img
-                                  src={prod.image || 'https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=100'}
-                                  alt=""
-                                  className="w-9 h-9 rounded-lg object-cover bg-slate-800 shrink-0 border border-slate-700/50"
-                                />
-                                <div className="min-w-0 text-left">
-                                  <div className="text-xs font-bold text-white truncate">{prod.name}</div>
-                                  <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1.5 mt-0.5">
-                                    <span>{prod.sku}</span>
-                                    <span>•</span>
-                                    <span className={stock > 0 ? "text-emerald-400 font-semibold" : "text-amber-400 font-semibold"}>
-                                      Tồn: {stock} {prod.unit}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                <span className="text-xs font-bold text-blue-400">{formatVND(prod.sellingPrice)}</span>
-                                <button className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white font-bold text-[11px] rounded-lg shadow-sm">
-                                  + Thêm
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <div className="p-4 text-center text-xs text-slate-400 font-medium">
-                          Không tìm thấy sản phẩm nào phù hợp với "{searchQuery}"
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
 
                 <button
@@ -598,6 +544,63 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
                 >
                   <QrCode className="w-4 h-4" />
                 </button>
+
+                {/* Realtime Autocomplete Search Results Full-Width Dropdown Overlay */}
+                {searchQuery.trim().length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1.5 bg-slate-900/98 border border-slate-700/90 rounded-2xl shadow-2xl z-50 overflow-hidden max-h-72 overflow-y-auto divide-y divide-slate-800/80 animate-in fade-in zoom-in-95 duration-100 backdrop-blur-md">
+                    {matchingCartSearchResults.length > 0 ? (
+                      matchingCartSearchResults.map((prod) => {
+                        const stock = prod.branchStocks && prod.branchStocks[selectedBranchId] !== undefined
+                          ? prod.branchStocks[selectedBranchId]
+                          : (prod.stockQuantity || 0);
+
+                        return (
+                          <div
+                            key={prod.id}
+                            onClick={() => {
+                              handleProductClick(prod);
+                              setSearchQuery('');
+                              setAddedCartToast(prod.name);
+                              setTimeout(() => setAddedCartToast(null), 2500);
+                            }}
+                            className="p-3 flex items-center justify-between gap-3 hover:bg-slate-800/90 cursor-pointer transition-colors active:bg-blue-600/30 text-left"
+                          >
+                            <div className="flex items-start gap-3 min-w-0 flex-1">
+                              <img
+                                src={prod.image || 'https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=100'}
+                                alt=""
+                                className="w-10 h-10 rounded-xl object-cover bg-slate-800 shrink-0 border border-slate-700/60 shadow-sm mt-0.5"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="text-xs font-bold text-white leading-snug break-words">
+                                  {prod.name}
+                                </div>
+                                <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-1 flex-wrap font-sans">
+                                  <span className="font-mono text-slate-400">{prod.sku}</span>
+                                  <span className="text-slate-600">•</span>
+                                  <span className="font-bold text-blue-400">{formatVND(prod.sellingPrice)}</span>
+                                  <span className="text-slate-600">•</span>
+                                  <span className={stock > 0 ? "text-emerald-400 font-semibold" : "text-amber-400 font-semibold"}>
+                                    Tồn: {stock} {prod.unit}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <button className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-md shrink-0 flex items-center gap-1 active:scale-95 transition-transform">
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Thêm</span>
+                            </button>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="p-4 text-center text-xs text-slate-400 font-medium">
+                        Không tìm thấy sản phẩm nào phù hợp với "{searchQuery}"
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* 2. Customer Select Row */}
