@@ -111,6 +111,7 @@ export const PriceListsPage: React.FC = () => {
   const [matrixPageSize, setMatrixPageSize] = useState(10);
   const [bulkFormulaMethod, setBulkFormulaMethod] = useState<'PERCENT_BASE' | 'PERCENT_COST' | 'FIXED_OFFSET'>('PERCENT_BASE');
   const [bulkFormulaValue, setBulkFormulaValue] = useState<number>(10);
+  const [matrixDisplayMode, setMatrixDisplayMode] = useState<'SINGLE' | 'MULTI'>('SINGLE');
 
   // Form State (for both Create & Edit Settings)
   const [editId, setEditId] = useState<string | null>(null);
@@ -750,76 +751,117 @@ export const PriceListsPage: React.FC = () => {
               </button>
             </div>
 
-            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-bold text-blue-400 shrink-0">⚡ Áp dụng công thức chung:</span>
-                <select
-                  value={bulkFormulaMethod}
-                  onChange={(e: any) => setBulkFormulaMethod(e.target.value)}
-                  className="px-3 py-2 rounded-lg glass-input bg-slate-900 font-medium"
-                >
-                  <option value="PERCENT_BASE">% Giảm so với Giá Bán Niêm Yết (Giá chung - %)</option>
-                  <option value="PERCENT_COST">% Lợi Nhuận so với Giá Nhập (Giá nhập + %)</option>
-                  <option value="FIXED_OFFSET">Giảm số tiền cố định (Giá chung - VNĐ)</option>
-                </select>
-                <input
-                  type="number"
-                  value={bulkFormulaValue}
-                  onChange={(e) => setBulkFormulaValue(Number(e.target.value))}
-                  placeholder="10"
-                  className="w-20 px-3 py-2 rounded-lg glass-input font-bold text-emerald-400"
-                />
-                <button
-                  onClick={handleApplyBulkFormula}
-                  className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold shrink-0 shadow-md shadow-blue-600/30"
-                >
-                  Áp Dụng
-                </button>
+            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3 text-xs">
+              {/* Option 3 Mode Switcher Toggle Bar */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-300">⚙️ Chế độ tính giá Bảng giá Sỉ:</span>
+                  <div className="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => setMatrixDisplayMode('SINGLE')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                        matrixDisplayMode === 'SINGLE'
+                          ? 'bg-blue-600 text-white shadow-md'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                      title="Chỉ tính giá sỉ theo đơn vị nhỏ nhất (Cái) - Tự động tính Chục"
+                    >
+                      <span>🔹 1. Giá Sỉ Theo Cái (Mặc định)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMatrixDisplayMode('MULTI')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                        matrixDisplayMode === 'MULTI'
+                          ? 'bg-purple-600 text-white shadow-md'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                      title="Hiển thị thêm Cột Giá Chục có Checkbox tùy chỉnh riêng"
+                    >
+                      <span>🔮 2. Giá Sỉ Đa Đơn Vị (Cái & Chục)</span>
+                    </button>
+                  </div>
+                </div>
+
+                <span className="text-[11px] text-slate-400 italic">
+                  {matrixDisplayMode === 'SINGLE'
+                    ? '💡 Đang chọn: Bán mặc định theo đơn vị nhỏ nhất Cái (Tự động nhân × 10 cho Chục)'
+                    : '💡 Đang chọn: Tự do bật Checkbox để cài giá sỉ ưu đãi riêng cho Chục'}
+                </span>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-                {/* Category Filter */}
-                <select
-                  value={matrixCategoryFilter}
-                  onChange={(e) => {
-                    setMatrixCategoryFilter(e.target.value);
-                    setMatrixPage(1);
-                  }}
-                  className="px-3 py-2 rounded-lg glass-input bg-slate-900 text-xs font-semibold"
-                >
-                  <option value="Tất cả">📁 Tất cả Nhóm Hàng</option>
-                  <option value="Chậu Trồng Cây">🪴 Chậu Trồng Cây</option>
-                  <option value="Bình Bông & Lọ Hoa">🏺 Bình Bông & Lọ Hoa</option>
-                  <option value="Dụng Cụ Chì & Vật Tư Lan">🌿 Dụng Cụ Chì & Vật Tư Lan</option>
-                  <option value="Đĩa & Khay Lót">🍽️ Đĩa & Khay Lót</option>
-                  <option value="Khay & Chậu Rau">🥬 Khay & Chậu Rau</option>
-                </select>
-
-                {/* Brand Filter */}
-                <select
-                  value={matrixBrandFilter}
-                  onChange={(e) => {
-                    setMatrixBrandFilter(e.target.value);
-                    setMatrixPage(1);
-                  }}
-                  className="px-3 py-2 rounded-lg glass-input bg-slate-900 text-xs font-semibold"
-                >
-                  <option value="Tất cả">🏷️ Tất cả Thương Hiệu</option>
-                  <option value="Đức Minh">Đức Minh</option>
-                  <option value="Á Đông">Á Đông</option>
-                  <option value="Chì Lan">Chì Lan</option>
-                  <option value="VM">VM</option>
-                </select>
-
-                <div className="relative w-full sm:w-48">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-bold text-blue-400 shrink-0">⚡ Áp dụng công thức chung:</span>
+                  <select
+                    value={bulkFormulaMethod}
+                    onChange={(e: any) => setBulkFormulaMethod(e.target.value)}
+                    className="px-3 py-2 rounded-lg glass-input bg-slate-900 font-medium"
+                  >
+                    <option value="PERCENT_BASE">% Giảm so với Giá Bán Niêm Yết (Giá chung - %)</option>
+                    <option value="PERCENT_COST">% Lợi Nhuận so với Giá Nhập (Giá nhập + %)</option>
+                    <option value="FIXED_OFFSET">Giảm số tiền cố định (Giá chung - VNĐ)</option>
+                  </select>
                   <input
-                    type="text"
-                    value={matrixSearch}
-                    onChange={(e) => setMatrixSearch(e.target.value)}
-                    placeholder="Lọc theo tên, SKU..."
-                    className="w-full pl-9 pr-3 py-2 rounded-lg glass-input text-xs"
+                    type="number"
+                    value={bulkFormulaValue}
+                    onChange={(e) => setBulkFormulaValue(Number(e.target.value))}
+                    placeholder="10"
+                    className="w-20 px-3 py-2 rounded-lg glass-input font-bold text-emerald-400"
                   />
+                  <button
+                    onClick={handleApplyBulkFormula}
+                    className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold shrink-0 shadow-md shadow-blue-600/30"
+                  >
+                    Áp Dụng
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                  {/* Category Filter */}
+                  <select
+                    value={matrixCategoryFilter}
+                    onChange={(e) => {
+                      setMatrixCategoryFilter(e.target.value);
+                      setMatrixPage(1);
+                    }}
+                    className="px-3 py-2 rounded-lg glass-input bg-slate-900 text-xs font-semibold"
+                  >
+                    <option value="Tất cả">📁 Tất cả Nhóm Hàng</option>
+                    <option value="Chậu Trồng Cây">🪴 Chậu Trồng Cây</option>
+                    <option value="Bình Bông & Lọ Hoa">🏺 Bình Bông & Lọ Hoa</option>
+                    <option value="Dụng Cụ Chì & Vật Tư Lan">🌿 Dụng Cụ Chì & Vật Tư Lan</option>
+                    <option value="Đĩa & Khay Lót">🍽️ Đĩa & Khay Lót</option>
+                    <option value="Khay & Chậu Rau">🥬 Khay & Chậu Rau</option>
+                  </select>
+
+                  {/* Brand Filter */}
+                  <select
+                    value={matrixBrandFilter}
+                    onChange={(e) => {
+                      setMatrixBrandFilter(e.target.value);
+                      setMatrixPage(1);
+                    }}
+                    className="px-3 py-2 rounded-lg glass-input bg-slate-900 text-xs font-semibold"
+                  >
+                    <option value="Tất cả">🏷️ Tất cả Thương Hiệu</option>
+                    <option value="Đức Minh">Đức Minh</option>
+                    <option value="Á Đông">Á Đông</option>
+                    <option value="Chì Lan">Chì Lan</option>
+                    <option value="VM">VM</option>
+                  </select>
+
+                  <div className="relative w-full sm:w-48">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      value={matrixSearch}
+                      onChange={(e) => setMatrixSearch(e.target.value)}
+                      placeholder="Lọc theo tên, SKU..."
+                      className="w-full pl-9 pr-3 py-2 rounded-lg glass-input text-xs"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -936,7 +978,12 @@ export const PriceListsPage: React.FC = () => {
                     <th className="p-3">Đơn Vị Tính</th>
                     <th className="p-3">Giá Nhập (Vốn)</th>
                     <th className="p-3">Giá Bán Niêm Yết</th>
-                    <th className="p-3 text-emerald-400">GIÁ TRONG BẢNG GIÁ SỈ (ĐƠN VỊ CÁI)</th>
+                    <th className="p-3 text-emerald-400">
+                      {matrixDisplayMode === 'SINGLE' ? 'GIÁ TRONG BẢNG GIÁ SỈ (ĐƠN VỊ CÁI)' : 'GIÁ SỈ THEO CÁI (LẺ)'}
+                    </th>
+                    {matrixDisplayMode === 'MULTI' && (
+                      <th className="p-3 text-purple-400">GIÁ SỈ THEO CHỤC (QUY ĐỔI)</th>
+                    )}
                     <th className="p-3">% LÃI GỘP SỈ</th>
                     <th className="p-3">Trạng Thái</th>
                   </tr>
@@ -959,7 +1006,7 @@ export const PriceListsPage: React.FC = () => {
                       <td className="p-3 text-slate-500">{formatVND(item.costPrice)}</td>
                       <td className="p-3 text-slate-400 font-medium">{formatVND(item.basePrice)}</td>
 
-                      {/* Option 1: 1 Single Clean Wholesale Price Column (Base Unit + Auto-Calculated Chục Subtext) */}
+                      {/* Column 5: Giá Sỉ Theo Cái (Base Unit) */}
                       <td className="p-3">
                         <div className="space-y-1">
                           <div className="flex items-center gap-1.5 min-w-[140px]">
@@ -971,7 +1018,7 @@ export const PriceListsPage: React.FC = () => {
                             <span className="text-[11px] text-slate-400 font-bold">đ / {item.unit}</span>
                           </div>
 
-                          {item.conversionUnit && (
+                          {matrixDisplayMode === 'SINGLE' && item.conversionUnit && (
                             <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
                               <span className="text-slate-500">↳ Tương đương:</span>
                               <span className="text-purple-400 font-bold">
@@ -982,6 +1029,49 @@ export const PriceListsPage: React.FC = () => {
                           )}
                         </div>
                       </td>
+
+                      {/* Column 6 (Only in MULTI mode): Giá Sỉ Theo Chục with Checkbox Toggle */}
+                      {matrixDisplayMode === 'MULTI' && (
+                        <td className="p-3">
+                          {item.conversionUnit ? (
+                            <div className="flex items-center gap-2 min-w-[185px]">
+                              <label className="flex items-center gap-1.5 cursor-pointer shrink-0" title="Bật/Tắt áp dụng giá sỉ tùy chỉnh cho Chục">
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(item.customConversionPrice && item.customConversionPrice > 0)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      const factor = item.conversionRate || 10;
+                                      const defaultConvPrice = (item.customPrice || item.basePrice || 0) * factor;
+                                      handleItemPriceChange(item.productId, defaultConvPrice, true);
+                                    } else {
+                                      handleItemPriceChange(item.productId, 0, true);
+                                    }
+                                  }}
+                                  className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 bg-slate-900 border-slate-700 cursor-pointer"
+                                />
+                              </label>
+
+                              {item.customConversionPrice && item.customConversionPrice > 0 ? (
+                                <div className="flex items-center gap-1.5 flex-1">
+                                  <FormattedPriceInput
+                                    value={item.customConversionPrice}
+                                    onChange={(newPrice) => handleItemPriceChange(item.productId, newPrice, true)}
+                                    colorClass="text-purple-400 border-purple-500/60 font-bold"
+                                  />
+                                  <span className="text-[11px] text-slate-400 font-bold">đ</span>
+                                </div>
+                              ) : (
+                                <span className="text-[11px] text-slate-500 italic font-mono">
+                                  (Mặc định bán theo Cái)
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-slate-600 text-[11px] font-mono">—</span>
+                          )}
+                        </td>
+                      )}
 
                       {/* Profit Margin % Badge */}
                       <td className="p-3 font-mono font-bold">
