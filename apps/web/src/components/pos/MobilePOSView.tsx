@@ -66,6 +66,48 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
   useEffect(() => {
     setVisibleCount(20);
     fetchProducts();
+
+    const handleStockUpdate = (e: any) => {
+      const { items, branchId } = e.detail || {};
+      if (items && Array.isArray(items)) {
+        setProducts((prevProducts) =>
+          prevProducts.map((p) => {
+            const matchedItem = items.find(
+              (it: any) => it.productId === p.id || it.sku === p.sku || it.barcode === p.barcode
+            );
+            if (matchedItem) {
+              const qtyDeducted = Number(matchedItem.quantity || 1) * Number(matchedItem.conversionFactor || 1);
+              const targetBranch = branchId || 'branch-01';
+              const newBranchStocks = { ...(p.branchStocks || {}) };
+              const currentStock = newBranchStocks[targetBranch] !== undefined ? newBranchStocks[targetBranch] : (p.stockQuantity || 0);
+              const updatedStock = Math.max(0, currentStock - qtyDeducted);
+
+              const isB1 = targetBranch === 'b1' || targetBranch === 'branch-01' || targetBranch === 'CN-01';
+              const isB2 = targetBranch === 'b2' || targetBranch === 'branch-02' || targetBranch === 'CN-02';
+              const isB3 = targetBranch === 'b3' || targetBranch === 'branch-03' || targetBranch === 'CN-03';
+              const aliases = isB1 ? ['b1', 'branch-01', 'CN-01'] : isB2 ? ['b2', 'branch-02', 'CN-02'] : isB3 ? ['b3', 'branch-03', 'CN-03'] : [targetBranch];
+
+              aliases.forEach((a) => {
+                newBranchStocks[a] = updatedStock;
+              });
+
+              return {
+                ...p,
+                branchStocks: newBranchStocks,
+                stockQuantity: Math.max(0, (p.stockQuantity || 0) - qtyDeducted),
+              };
+            }
+            return p;
+          })
+        );
+      }
+      fetchProducts();
+    };
+
+    window.addEventListener('pos:stock-updated', handleStockUpdate);
+    return () => {
+      window.removeEventListener('pos:stock-updated', handleStockUpdate);
+    };
   }, [searchQuery, selectedCategory]);
 
   const handleProductClick = (product: any) => {

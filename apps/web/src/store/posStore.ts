@@ -524,6 +524,13 @@ export const usePosStore = create<PosState>((set, get) => ({
     setLastOrder(orderData);
     setInvoiceModalOpen(true);
 
+    // Dispatch realtime stock update event across all components
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('pos:stock-updated', {
+        detail: { items: checkoutPayload.items, branchId: activeBranchId }
+      }));
+    }
+
     // If more than 1 tab, close current tab, otherwise clear it
     if (tabs.length > 1) {
       get().closeTab(activeTabId);

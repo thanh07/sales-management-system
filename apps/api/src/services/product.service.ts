@@ -801,29 +801,64 @@ export class ProductService {
   }
 
   static updateStock(productId: string, quantityChange: number, branchId: string = 'branch-01') {
+    const targetBranch = branchId || 'branch-01';
+
     for (const p of MOCK_PRODUCTS) {
-      if (p.id === productId) {
+      if (p.id === productId || p.sku === productId || p.barcode === productId) {
         if (!p.branchStocks) {
-          const b1 = Math.round(p.stockQuantity * 0.4);
-          const b2 = Math.round(p.stockQuantity * 0.35);
-          const b3 = Math.max(0, p.stockQuantity - b1 - b2);
-          p.branchStocks = { 'branch-01': b1, 'branch-02': b2, 'branch-03': b3 };
+          p.branchStocks = { b1: 100, b2: 100, b3: 100, 'branch-01': 100, 'branch-02': 100, 'branch-03': 100 };
         }
-        p.branchStocks[branchId] = Math.max(0, (p.branchStocks[branchId] || 0) + quantityChange);
-        p.stockQuantity = Object.values(p.branchStocks).reduce((sum, q) => sum + Number(q), 0);
+
+        // Identify matching branch aliases
+        const isB1 = targetBranch === 'b1' || targetBranch === 'branch-01' || targetBranch === 'CN-01';
+        const isB2 = targetBranch === 'b2' || targetBranch === 'branch-02' || targetBranch === 'CN-02';
+        const isB3 = targetBranch === 'b3' || targetBranch === 'branch-03' || targetBranch === 'CN-03';
+
+        const keysToUpdate = isB1 ? ['b1', 'branch-01', 'CN-01'] : isB2 ? ['b2', 'branch-02', 'CN-02'] : isB3 ? ['b3', 'branch-03', 'CN-03'] : [targetBranch];
+
+        const currentVal = p.branchStocks[keysToUpdate[0]] !== undefined ? p.branchStocks[keysToUpdate[0]] : (p.branchStocks[targetBranch] || 0);
+        const newVal = Math.max(0, currentVal + quantityChange);
+
+        const branchMap = p.branchStocks || {};
+        keysToUpdate.forEach((k) => {
+          branchMap[k] = newVal;
+        });
+        p.branchStocks = branchMap;
+
+        // Recalculate total stock (using primary keys b1, b2, b3 or branch-01, branch-02, branch-03)
+        const primaryB1 = p.branchStocks['b1'] ?? p.branchStocks['branch-01'] ?? 0;
+        const primaryB2 = p.branchStocks['b2'] ?? p.branchStocks['branch-02'] ?? 0;
+        const primaryB3 = p.branchStocks['b3'] ?? p.branchStocks['branch-03'] ?? 0;
+        p.stockQuantity = primaryB1 + primaryB2 + primaryB3;
         return;
       }
+
       if (p.variants) {
-        const v = p.variants.find((vr) => vr.id === productId);
+        const v = p.variants.find((vr) => vr.id === productId || vr.sku === productId || vr.barcode === productId);
         if (v) {
           if (!v.branchStocks) {
-            const vb1 = Math.round(v.stockQuantity * 0.4);
-            const vb2 = Math.round(v.stockQuantity * 0.35);
-            const vb3 = Math.max(0, v.stockQuantity - vb1 - vb2);
-            v.branchStocks = { 'branch-01': vb1, 'branch-02': vb2, 'branch-03': vb3 };
+            v.branchStocks = { b1: 100, b2: 100, b3: 100, 'branch-01': 100, 'branch-02': 100, 'branch-03': 100 };
           }
-          v.branchStocks[branchId] = Math.max(0, (v.branchStocks[branchId] || 0) + quantityChange);
-          v.stockQuantity = Object.values(v.branchStocks).reduce((sum, q) => sum + Number(q), 0);
+
+          const isB1 = targetBranch === 'b1' || targetBranch === 'branch-01' || targetBranch === 'CN-01';
+          const isB2 = targetBranch === 'b2' || targetBranch === 'branch-02' || targetBranch === 'CN-02';
+          const isB3 = targetBranch === 'b3' || targetBranch === 'branch-03' || targetBranch === 'CN-03';
+
+          const keysToUpdate = isB1 ? ['b1', 'branch-01', 'CN-01'] : isB2 ? ['b2', 'branch-02', 'CN-02'] : isB3 ? ['b3', 'branch-03', 'CN-03'] : [targetBranch];
+
+          const currentVal = v.branchStocks[keysToUpdate[0]] !== undefined ? v.branchStocks[keysToUpdate[0]] : (v.branchStocks[targetBranch] || 0);
+          const newVal = Math.max(0, currentVal + quantityChange);
+
+          const vBranchMap = v.branchStocks || {};
+          keysToUpdate.forEach((k) => {
+            vBranchMap[k] = newVal;
+          });
+          v.branchStocks = vBranchMap;
+
+          const vb1 = v.branchStocks['b1'] ?? v.branchStocks['branch-01'] ?? 0;
+          const vb2 = v.branchStocks['b2'] ?? v.branchStocks['branch-02'] ?? 0;
+          const vb3 = v.branchStocks['b3'] ?? v.branchStocks['branch-03'] ?? 0;
+          v.stockQuantity = vb1 + vb2 + vb3;
           p.stockQuantity = p.variants.reduce((sum, vr) => sum + Number(vr.stockQuantity), 0);
           return;
         }
