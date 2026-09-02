@@ -285,10 +285,18 @@ export const PriceListsPage: React.FC = () => {
   const handleOpenMatrixEditor = async (id: string) => {
     try {
       const res: any = await api.get(`/pricelists/${id}`);
-      setEditingPriceList(res.data);
-      setMatrixItems(res.data.items || []);
+      const priceList = res.data;
+      setEditingPriceList(priceList);
+      setMatrixItems(priceList.items || []);
       setMatrixPage(1);
       setMatrixSearch('');
+
+      // Auto-set matrix mode: STANDARD / RETAIL -> 'MULTI' (Cái & Chục), WHOLESALE -> 'SINGLE' (Cái)
+      if (priceList.type === 'STANDARD') {
+        setMatrixDisplayMode('MULTI');
+      } else {
+        setMatrixDisplayMode('SINGLE');
+      }
     } catch (err) {
       console.error(err);
     }

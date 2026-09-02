@@ -60,10 +60,10 @@ export const calculateProductPrice = (product: any, unitName?: string, activePri
   if (activePriceList && activePriceList.code !== 'BG-BASE') {
     const priceListItem = activePriceList.items?.find((i: any) => i.productId === product.id);
     if (priceListItem) {
-      if (targetUnit !== product.unit && priceListItem.customConversionPrice) {
+      if (targetUnit !== product.unit && priceListItem.customConversionPrice && priceListItem.customConversionPrice > 0) {
         targetPrice = priceListItem.customConversionPrice;
-      } else if (targetUnit === product.unit && priceListItem.customPrice) {
-        targetPrice = priceListItem.customPrice;
+      } else if (priceListItem.customPrice && priceListItem.customPrice > 0) {
+        targetPrice = targetUnit === product.unit ? priceListItem.customPrice : priceListItem.customPrice * targetFactor;
       }
     } else if (activePriceList.calculationMethod === 'PERCENT_BASE' && activePriceList.value > 0) {
       const discountRatio = 1 - (activePriceList.value / 100);
