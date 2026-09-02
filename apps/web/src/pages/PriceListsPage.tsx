@@ -930,13 +930,14 @@ export const PriceListsPage: React.FC = () => {
 
             <div className="overflow-x-auto border border-slate-800 rounded-xl">
               <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-950 font-bold border-b border-slate-800 text-slate-400 uppercase">
+                <thead className="bg-slate-950 font-bold border-b border-slate-800 text-slate-400 uppercase text-[11px]">
                   <tr>
                     <th className="p-3">Sản phẩm / Mã SKU</th>
                     <th className="p-3">Đơn Vị Tính</th>
                     <th className="p-3">Giá Nhập (Vốn)</th>
                     <th className="p-3">Giá Bán Niêm Yết</th>
-                    <th className="p-3">GIÁ TRONG BẢNG GIÁ SỈ (SỬA TRỰC TIẾP)</th>
+                    <th className="p-3 text-emerald-400">GIÁ SỈ THEO CÁI (LẺ)</th>
+                    <th className="p-3 text-purple-400">GIÁ SỈ THEO CHỤC (QUY ĐỔI)</th>
                     <th className="p-3">% LÃI GỘP SỈ</th>
                     <th className="p-3">Trạng Thái</th>
                   </tr>
@@ -959,31 +960,57 @@ export const PriceListsPage: React.FC = () => {
                       <td className="p-3 text-slate-500">{formatVND(item.costPrice)}</td>
                       <td className="p-3 text-slate-400 font-medium">{formatVND(item.basePrice)}</td>
 
-                      {/* Interactive Formatted Price Input Cell with 500 VND Step & Space Separators */}
+                      {/* 1. Standalone Column: Giá Sỉ Theo Cái (Đơn Vị Lẻ) */}
                       <td className="p-3">
-                        <div className="space-y-1.5">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[11px] text-slate-400 w-12">{item.unit}:</span>
-                            <FormattedPriceInput
-                              value={item.customPrice}
-                              onChange={(newPrice) => handleItemPriceChange(item.productId, newPrice, false)}
-                              colorClass="text-emerald-400 border-blue-500/60"
-                            />
-                            <span className="text-[11px] text-slate-400 font-bold">đ</span>
-                          </div>
-
-                          {item.conversionUnit && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-[11px] text-slate-400 w-12">{item.conversionUnit}:</span>
-                              <FormattedPriceInput
-                                value={item.customConversionPrice || 0}
-                                onChange={(newPrice) => handleItemPriceChange(item.productId, newPrice, true)}
-                                colorClass="text-purple-400 border-purple-500/60"
-                              />
-                              <span className="text-[11px] text-slate-400 font-bold">đ</span>
-                            </div>
-                          )}
+                        <div className="flex items-center gap-1.5 min-w-[130px]">
+                          <FormattedPriceInput
+                            value={item.customPrice}
+                            onChange={(newPrice) => handleItemPriceChange(item.productId, newPrice, false)}
+                            colorClass="text-emerald-400 border-blue-500/60 font-bold"
+                          />
+                          <span className="text-[11px] text-slate-400 font-bold">đ</span>
                         </div>
+                      </td>
+
+                      {/* 2. Standalone Column: Giá Sỉ Theo Chục with Checkbox Toggle */}
+                      <td className="p-3">
+                        {item.conversionUnit ? (
+                          <div className="flex items-center gap-2 min-w-[185px]">
+                            <label className="flex items-center gap-1.5 cursor-pointer shrink-0" title="Bật/Tắt áp dụng giá sỉ tùy chỉnh cho Chục">
+                              <input
+                                type="checkbox"
+                                checked={Boolean(item.customConversionPrice && item.customConversionPrice > 0)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    const factor = item.conversionRate || 10;
+                                    const defaultConvPrice = (item.customPrice || item.basePrice || 0) * factor;
+                                    handleItemPriceChange(item.productId, defaultConvPrice, true);
+                                  } else {
+                                    handleItemPriceChange(item.productId, 0, true);
+                                  }
+                                }}
+                                className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 bg-slate-900 border-slate-700 cursor-pointer"
+                              />
+                            </label>
+
+                            {item.customConversionPrice && item.customConversionPrice > 0 ? (
+                              <div className="flex items-center gap-1.5 flex-1">
+                                <FormattedPriceInput
+                                  value={item.customConversionPrice}
+                                  onChange={(newPrice) => handleItemPriceChange(item.productId, newPrice, true)}
+                                  colorClass="text-purple-400 border-purple-500/60 font-bold"
+                                />
+                                <span className="text-[11px] text-slate-400 font-bold">đ</span>
+                              </div>
+                            ) : (
+                              <span className="text-[11px] text-slate-500 italic font-mono">
+                                (Mặc định bán theo Cái)
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-600 text-[11px] font-mono">—</span>
+                        )}
                       </td>
 
                       {/* Profit Margin % Badge */}
