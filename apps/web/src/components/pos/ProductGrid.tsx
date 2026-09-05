@@ -18,7 +18,9 @@ import {
   List,
   ArrowUp,
   ArrowDown,
-  Truck
+  Truck,
+  Plus,
+  X
 } from 'lucide-react';
 import { VariantSelectModal } from './VariantSelectModal';
 import { OrderTabBar } from './OrderTabBar';
@@ -144,8 +146,18 @@ export const ProductGrid: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Tìm tên, SKU, Barcode... (F1)"
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl glass-input text-xs font-medium"
+              className="w-full pl-10 pr-9 py-2.5 rounded-xl glass-input text-xs font-medium"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-400 hover:text-red-300 transition-all flex items-center justify-center border border-red-500/30 shadow-sm active:scale-95"
+                title="Xóa nhanh từ khóa tìm kiếm"
+              >
+                <X className="w-3.5 h-3.5 text-red-400 stroke-[3]" />
+              </button>
+            )}
           </div>
 
           <button

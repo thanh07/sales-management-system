@@ -217,8 +217,18 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Tên, mã hàng, mã vạch, l..."
-              className="w-full pl-10 pr-3 py-2.5 rounded-xl glass-input text-xs bg-slate-900 border-slate-800"
+              className="w-full pl-10 pr-9 py-2.5 rounded-xl glass-input text-xs bg-slate-900 border-slate-800"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-400 hover:text-red-300 transition-all flex items-center justify-center border border-red-500/30 shadow-sm active:scale-95"
+                title="Xóa nhanh từ khóa tìm kiếm"
+              >
+                <X className="w-3.5 h-3.5 text-red-400 stroke-[3]" />
+              </button>
+            )}
           </div>
 
           {/* Quick Add Custom Item Button */}
@@ -526,10 +536,12 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
                   />
                   {searchQuery && (
                     <button
+                      type="button"
                       onClick={() => setSearchQuery('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-400 hover:text-red-300 transition-all flex items-center justify-center border border-red-500/30 shadow-sm active:scale-95"
+                      title="Xóa nhanh từ khóa tìm kiếm"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <X className="w-3.5 h-3.5 text-red-400 stroke-[3]" />
                     </button>
                   )}
                 </div>
