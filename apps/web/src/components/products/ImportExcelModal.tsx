@@ -199,26 +199,43 @@ export const ImportExcelModal: React.FC<ImportExcelModalProps> = ({ isOpen, onCl
         const convFactorIdx = findIndex(['hệ số', 'conversion factor', 'he so']);
         const convPriceIdx = findIndex(['giá bán đơn vị lớn', 'giá quy đổi', 'conversion price']);
 
+        const cleanNumber = (val?: string, defaultVal = 0): number => {
+          if (!val) return defaultVal;
+          let str = String(val).trim().replace(/[^\d.,-]/g, '');
+          if (!str) return defaultVal;
+          if (/^\d{1,3}(\.\d{3})+$/.test(str)) {
+            str = str.replace(/\./g, '');
+          } else if (/^\d{1,3}(,\d{3})+$/.test(str)) {
+            str = str.replace(/,/g, '');
+          } else if (str.includes(',') && !str.includes('.')) {
+            str = str.replace(',', '.');
+          }
+          const num = Number(str);
+          return isNaN(num) ? defaultVal : num;
+        };
+
         for (let i = 1; i < lines.length; i++) {
           const parts = parseCSVLine(lines[i]);
           if (parts.length === 0 || parts.every((p) => p === '')) continue;
 
           const name = (nameIdx >= 0 ? parts[nameIdx] : parts[0]) || '';
           const sku = (skuIdx >= 0 ? parts[skuIdx] : parts[1]) || '';
-          const barcode = (barcodeIdx >= 0 ? parts[barcodeIdx] : parts[2]) || '';
+          const rawBarcode = (barcodeIdx >= 0 ? parts[barcodeIdx] : parts[2]) || '';
+          const barcode = rawBarcode.trim().replace(/^\\t/, '').replace(/\s+/g, '');
+
           const category = (catIdx >= 0 ? parts[catIdx] : parts[3]) || 'Đồ Dùng Gia Đình & Tạp Hóa';
           const brand = (brandIdx >= 0 ? parts[brandIdx] : parts[4]) || 'Khác';
           const location = (locIdx >= 0 ? parts[locIdx] : parts[5]) || 'Kho Tổng G05';
           const unit = (unitIdx >= 0 ? parts[unitIdx] : parts[6]) || 'Cái';
 
-          const costPrice = Number((costIdx >= 0 ? parts[costIdx] : parts[7])?.replace(/[^0-9.-]/g, '')) || 0;
-          const sellingPrice = Number((sellIdx >= 0 ? parts[sellIdx] : parts[8])?.replace(/[^0-9.-]/g, '')) || 0;
-          const stockQuantity = Number((stockIdx >= 0 ? parts[stockIdx] : parts[9])?.replace(/[^0-9.-]/g, '')) || 0;
-          const minStock = Number((minStockIdx >= 0 ? parts[minStockIdx] : parts[10])?.replace(/[^0-9.-]/g, '')) || 10;
+          const costPrice = cleanNumber(costIdx >= 0 ? parts[costIdx] : parts[7], 0);
+          const sellingPrice = cleanNumber(sellIdx >= 0 ? parts[sellIdx] : parts[8], 0);
+          const stockQuantity = cleanNumber(stockIdx >= 0 ? parts[stockIdx] : parts[9], 0);
+          const minStock = cleanNumber(minStockIdx >= 0 ? parts[minStockIdx] : parts[10], 10);
 
           const conversionUnit = convUnitIdx >= 0 ? parts[convUnitIdx] : parts[11];
-          const conversionFactor = Number((convFactorIdx >= 0 ? parts[convFactorIdx] : parts[12])?.replace(/[^0-9.-]/g, '')) || undefined;
-          const conversionSellingPrice = Number((convPriceIdx >= 0 ? parts[convPriceIdx] : parts[13])?.replace(/[^0-9.-]/g, '')) || undefined;
+          const conversionFactor = cleanNumber(convFactorIdx >= 0 ? parts[convFactorIdx] : parts[12], 0);
+          const conversionSellingPrice = cleanNumber(convPriceIdx >= 0 ? parts[convPriceIdx] : parts[13], 0);
 
           // Validation Rules
           const errorMessages: string[] = [];
@@ -233,7 +250,7 @@ export const ImportExcelModal: React.FC<ImportExcelModalProps> = ({ isOpen, onCl
             id: `row-${i}`,
             name: name.trim(),
             sku: sku.trim(),
-            barcode: barcode.trim(),
+            barcode,
             category: category.trim(),
             brand: brand.trim(),
             location: location.trim(),

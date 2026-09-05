@@ -575,49 +575,79 @@ export class ProductService {
 
   static importProductsFromExcel(items: any[]) {
     let count = 0;
+    const cleanNum = (val: any, defaultVal = 0): number => {
+      if (typeof val === 'number') return isNaN(val) ? defaultVal : val;
+      if (!val) return defaultVal;
+      let str = String(val).trim().replace(/[^\d.,-]/g, '');
+      if (!str) return defaultVal;
+      if (/^\d{1,3}(\.\d{3})+$/.test(str)) {
+        str = str.replace(/\./g, '');
+      } else if (/^\d{1,3}(,\d{3})+$/.test(str)) {
+        str = str.replace(/,/g, '');
+      } else if (str.includes(',') && !str.includes('.')) {
+        str = str.replace(',', '.');
+      }
+      const num = Number(str);
+      return isNaN(num) ? defaultVal : num;
+    };
+
     items.forEach((item, idx) => {
-      const name = item.name || item['Tên sản phẩm (*)'] || item['Tên sản phẩm'] || item['Ten san pham'];
-      if (name && name.trim()) {
-        const barcode = item.barcode || item['Mã Barcode / Mã vạch'] || item['Mã Barcode (Độc nhất)'] || item['Barcode'] || ('893800' + Math.floor(100000 + Math.random() * 900000));
-        const sku = item.sku || item['Mã SKU'] || item['SKU'] || ('SKU-' + Math.floor(1000 + Math.random() * 9000));
-        const category = item.category || item['Nhóm hàng / Danh mục'] || item['Danh mục (Category)'] || 'Đồ Dùng Gia Đình & Tạp Hóa';
-        const brand = item.brand || item['Thương hiệu'] || item['Thương hiệu (Brand)'] || 'Khác';
-        const location = item.location || item['Vị trí lưu kho'] || item['Vị trí kho (Location)'] || 'Kho Tổng G05';
-        const unit = item.unit || item['Đơn vị cơ bản (*)'] || item['Đơn vị nhỏ nhất'] || item['Đơn vị tính'] || 'Cái';
+      const rawName = item.name || item['Tên sản phẩm (*)'] || item['Tên sản phẩm'] || item['Ten san pham'];
+      if (rawName && String(rawName).trim()) {
+        const rawBarcode = String(item.barcode || item['Mã Barcode / Mã vạch'] || item['Mã Barcode (Độc nhất)'] || item['Barcode'] || '').trim().replace(/^\\t/, '').replace(/\s+/g, '');
+        const barcode = rawBarcode || ('893800' + Math.floor(100000 + Math.random() * 900000));
 
-        const costPrice = Number(item.costPrice || item['Giá nhập (Giá vốn)'] || item['Giá nhập']) || 0;
-        const sellingPrice = Number(item.sellingPrice || item['Giá bán lẻ (*)'] || item['Giá bán lẻ'] || item['Giá bán']) || 0;
-        const stockQuantity = Number(item.stockQuantity || item['Tồn kho ban đầu'] || item['Tồn kho']) || 0;
-        const minStock = Number(item.minStock || item['Ngưỡng báo sắp hết'] || item['Ngưỡng cảnh báo']) || 10;
+        const rawSku = String(item.sku || item['Mã SKU'] || item['SKU'] || '').trim();
+        const sku = rawSku || ('SKU-' + Math.floor(1000 + Math.random() * 9000));
 
-        const conversionUnit = item.conversionUnit || item['Đơn vị quy đổi lớn'] || item['Đơn vị quy đổi'] || '';
-        const conversionFactor = Number(item.conversionFactor || item['Hệ số quy đổi']) || (conversionUnit ? 24 : undefined);
-        const conversionSellingPrice = Number(item.conversionSellingPrice || item['Giá bán đơn vị lớn']) || (conversionUnit && conversionFactor ? sellingPrice * conversionFactor : undefined);
+        const category = String(item.category || item['Nhóm hàng / Danh mục'] || item['Danh mục (Category)'] || 'Đồ Dùng Gia Đình & Tạp Hóa').trim();
+        const brand = String(item.brand || item['Thương hiệu'] || item['Thương hiệu (Brand)'] || 'Khác').trim();
+        const location = String(item.location || item['Vị trí lưu kho'] || item['Vị trí kho (Location)'] || 'Kho Tổng G05').trim();
+        const unit = String(item.unit || item['Đơn vị cơ bản (*)'] || item['Đơn vị nhỏ nhất'] || item['Đơn vị tính'] || 'Cái').trim();
+
+        const costPrice = cleanNum(item.costPrice || item['Giá nhập (Giá vốn)'] || item['Giá nhập'], 0);
+        const sellingPrice = cleanNum(item.sellingPrice || item['Giá bán lẻ (*)'] || item['Giá bán lẻ'] || item['Giá bán'], 0);
+        const stockQuantity = cleanNum(item.stockQuantity || item['Tồn kho ban đầu'] || item['Tồn kho'], 0);
+        const minStock = cleanNum(item.minStock || item['Ngưỡng báo sắp hết'] || item['Ngưỡng cảnh báo'], 10);
+
+        const conversionUnit = String(item.conversionUnit || item['Đơn vị quy đổi lớn'] || item['Đơn vị quy đổi'] || '').trim();
+        const conversionFactorVal = cleanNum(item.conversionFactor || item['Hệ số quy đổi'], 0);
+        const conversionFactor = conversionFactorVal > 1 ? conversionFactorVal : (conversionUnit ? 24 : undefined);
+        const conversionSellingPriceVal = cleanNum(item.conversionSellingPrice || item['Giá bán đơn vị lớn'], 0);
+        const conversionSellingPrice = conversionSellingPriceVal > 0 ? conversionSellingPriceVal : (conversionUnit && conversionFactor ? sellingPrice * conversionFactor : undefined);
 
         const conversions = conversionUnit && conversionFactor
           ? [{ id: `c-${Date.now()}-${idx}`, unitName: conversionUnit, conversionFactor, sellingPrice: conversionSellingPrice || sellingPrice * conversionFactor }]
           : [];
 
-        const existingIdx = MOCK_PRODUCTS.findIndex((p) => p.barcode === barcode || p.sku === sku);
+        const existingIdx = MOCK_PRODUCTS.findIndex((p) => (barcode && p.barcode === barcode) || (sku && p.sku === sku));
+        const oldProd = existingIdx > -1 ? MOCK_PRODUCTS[existingIdx] : null;
+
         const newProduct: Product = {
-          id: existingIdx > -1 ? MOCK_PRODUCTS[existingIdx].id : `prod-${Date.now()}-${idx}`,
+          id: oldProd ? oldProd.id : `prod-${Date.now()}-${idx}`,
           sku,
           barcode,
-          name: name.trim(),
+          name: String(rawName).trim(),
           category,
           brand,
           location,
           unit,
-          conversionUnit: conversionUnit || undefined,
-          conversionFactor,
-          conversionSellingPrice,
-          conversions,
+          conversionUnit: conversionUnit || (oldProd ? oldProd.conversionUnit : undefined),
+          conversionFactor: conversionFactor || (oldProd ? oldProd.conversionFactor : undefined),
+          conversionSellingPrice: conversionSellingPrice || (oldProd ? oldProd.conversionSellingPrice : undefined),
+          conversions: conversions.length > 0 ? conversions : (oldProd ? oldProd.conversions : undefined),
           costPrice,
           sellingPrice,
           stockQuantity,
           minStock,
-          image: item.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80',
+          image: item.image || (oldProd ? oldProd.image : 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80'),
           isActive: true,
+          branchStocks: oldProd?.branchStocks ? { ...oldProd.branchStocks, 'branch-01': stockQuantity } : { 'branch-01': stockQuantity, 'branch-02': 0, 'branch-03': 0 },
+          branchMinStocks: oldProd?.branchMinStocks,
+          branchActiveStatus: oldProd?.branchActiveStatus,
+          hasVariants: oldProd?.hasVariants,
+          attributes: oldProd?.attributes,
+          variants: oldProd?.variants,
         };
 
         if (existingIdx > -1) {
