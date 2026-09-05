@@ -47,24 +47,31 @@ export const CustomerSelectModal: React.FC<CustomerSelectModalProps> = ({
 
   if (!isOpen) return null;
 
-  const resolvePriceListForCustomer = async (custGroup?: string) => {
+  const resolvePriceListForCustomer = async (custGroup?: string, custPriceListId?: string) => {
     try {
+      if (custPriceListId) {
+        const detailsRes: any = await api.get(`/pricelists/${custPriceListId}`);
+        setActivePriceList(detailsRes.data);
+        return detailsRes.data;
+      }
       const res: any = await api.get('/pricelists/resolve', {
         params: { group: custGroup || 'RETAIL' },
       });
       if (res.data) {
-        // Fetch full items details for price list
         const detailsRes: any = await api.get(`/pricelists/${res.data.id}`);
-        setActivePriceList(detailsRes.data || res.data);
+        const resolvedList = detailsRes.data || res.data;
+        setActivePriceList(resolvedList);
+        return resolvedList;
       }
     } catch (err) {
       console.error('Error resolving price list:', err);
     }
+    return null;
   };
 
   const handleSelect = async (cust: any) => {
     setCustomer(cust);
-    await resolvePriceListForCustomer(cust.group);
+    await resolvePriceListForCustomer(cust.group, cust.priceListId);
     if (onSelectCustomer) onSelectCustomer(cust);
     if (onClose) onClose();
   };
@@ -83,7 +90,9 @@ export const CustomerSelectModal: React.FC<CustomerSelectModalProps> = ({
         phone,
         group,
       });
-      setCustomer(res.data);
+      const newCust = res.data;
+      setCustomer(newCust);
+      await resolvePriceListForCustomer(newCust.group, newCust.priceListId);
       setIsAddingNew(false);
       if (onClose) onClose();
     } catch (err: any) {

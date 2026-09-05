@@ -279,12 +279,18 @@ export class PriceListService {
   }
 
   static getActivePriceListForCustomerGroup(customerGroup?: string) {
-    if (!customerGroup) return PRICE_LISTS_DB.find((p) => p.code === 'BG-BASE');
+    if (!customerGroup || customerGroup === 'RETAIL') {
+      return PRICE_LISTS_DB.find((p) => p.code === 'BG-BASE') || PRICE_LISTS_DB[0];
+    }
 
     const activeList = PRICE_LISTS_DB.find(
-      (p) => p.isActive && p.appliedCustomerGroups.includes(customerGroup)
+      (p) =>
+        p.isActive &&
+        (p.appliedCustomerGroups?.includes(customerGroup) ||
+          p.appliedCustomerGroups?.includes('ALL') ||
+          (customerGroup === 'WHOLESALE' && (p.type === 'WHOLESALE' || p.code === 'BG-WHOLESALE')))
     );
 
-    return activeList || PRICE_LISTS_DB.find((p) => p.code === 'BG-BASE');
+    return activeList || PRICE_LISTS_DB.find((p) => p.code === 'BG-BASE') || PRICE_LISTS_DB[0];
   }
 }
