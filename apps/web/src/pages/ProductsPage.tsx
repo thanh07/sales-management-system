@@ -2537,7 +2537,7 @@ export const ProductsPage: React.FC = () => {
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2 text-blue-400">
                 <Edit3 className="w-5 h-5" />
-                <h3 className="font-bold text-lg text-white">Chỉnh Sửa Thông Tin Sản Phẩm & Biến Thể</h3>
+                <h3 className="font-bold text-base sm:text-lg text-white">Chỉnh Sửa Sản Phẩm <span className="hidden sm:inline">& Biến Thể</span></h3>
               </div>
               <button onClick={() => { setIsEditModalOpen(false); setEditingProduct(null); }} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
@@ -2622,14 +2622,14 @@ export const ProductsPage: React.FC = () => {
                       </label>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-[10px] text-slate-400 font-medium">Gợi ý mẫu:</span>
+                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-full">
+                      <span className="text-[10px] text-slate-400 font-medium shrink-0">Gợi ý mẫu:</span>
                       {imagePresets.map((preset) => (
                         <button
                           key={preset.id || preset.label}
                           type="button"
                           onClick={() => setImage(preset.url)}
-                          className="px-2 py-0.5 rounded-md bg-slate-900 hover:bg-blue-600/20 text-slate-300 hover:text-blue-300 text-[10px] border border-slate-800 transition-all"
+                          className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-blue-600/20 text-slate-300 hover:text-blue-300 text-[11px] border border-slate-800 transition-all shrink-0 whitespace-nowrap"
                         >
                           {preset.label}
                         </button>
@@ -2640,7 +2640,7 @@ export const ProductsPage: React.FC = () => {
               </div>
 
               {/* Category, Brand & Location Selectors */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-slate-300 font-semibold">Nhóm hàng</label>
@@ -2740,7 +2740,7 @@ export const ProductsPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-slate-400 text-[11px] mb-1 font-semibold">Đơn vị nhỏ nhất (*)</label>
                     <select
@@ -2893,7 +2893,8 @@ export const ProductsPage: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className="overflow-x-auto">
+                    {/* Desktop Table View */}
+                    <div className="overflow-x-auto hidden sm:block">
                       <table className="w-full text-left text-xs border-collapse">
                         <thead>
                           <tr className="border-b border-slate-800 text-slate-400 text-[11px]">
@@ -2956,6 +2957,65 @@ export const ProductsPage: React.FC = () => {
                           ))}
                         </tbody>
                       </table>
+                    </div>
+
+                    {/* Mobile Branch Cards View */}
+                    <div className="space-y-2.5 sm:hidden">
+                      {branches.map((b) => (
+                        <div key={b.id} className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-bold text-white text-xs">{b.name}</div>
+                              <div className="text-[10px] font-mono text-blue-400">{b.code}</div>
+                            </div>
+                            <label className="inline-flex items-center gap-1.5 cursor-pointer bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
+                              <input
+                                type="checkbox"
+                                checked={branchActiveStatusForm[b.id] !== false}
+                                onChange={(e) => {
+                                  setBranchActiveStatusForm({ ...branchActiveStatusForm, [b.id]: e.target.checked });
+                                }}
+                                className="w-4 h-4 rounded text-blue-600 bg-slate-950 border-slate-700"
+                              />
+                              <span className={`text-[11px] font-bold ${branchActiveStatusForm[b.id] !== false ? 'text-emerald-400' : 'text-slate-500'}`}>
+                                {branchActiveStatusForm[b.id] !== false ? 'Bật bán' : 'Tắt bán'}
+                              </span>
+                            </label>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-800/60">
+                            <div>
+                              <label className="block text-slate-400 text-[10px] mb-1 font-semibold">Tồn kho ban đầu</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={branchStocksForm[b.id] ?? 0}
+                                onChange={(e) => {
+                                  const val = Math.max(0, Number(e.target.value));
+                                  const updated = { ...branchStocksForm, [b.id]: val };
+                                  setBranchStocksForm(updated);
+                                  setStockQuantity(Object.values(updated).reduce((sum, q) => sum + Number(q), 0));
+                                }}
+                                className="w-full px-2.5 py-1.5 rounded-lg glass-input text-xs font-mono font-bold text-emerald-400 text-center"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-slate-400 text-[10px] mb-1 font-semibold">Min Cảnh Báo</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={branchMinStocksForm[b.id] ?? 10}
+                                onChange={(e) => {
+                                  const val = Math.max(0, Number(e.target.value));
+                                  setBranchMinStocksForm({ ...branchMinStocksForm, [b.id]: val });
+                                }}
+                                className="w-full px-2.5 py-1.5 rounded-lg glass-input text-xs font-mono font-bold text-amber-400 text-center"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
@@ -3447,7 +3507,7 @@ export const ProductsPage: React.FC = () => {
             <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-4">
               <div className="flex items-center gap-2 text-blue-400">
                 <PackagePlus className="w-5 h-5" />
-                <h3 className="font-bold text-lg text-white">Thêm Sản Phẩm Mới (Đồng Bộ Danh Mục ĐVT Hệ Thống)</h3>
+                <h3 className="font-bold text-base sm:text-lg text-white">Thêm Sản Phẩm Mới <span className="hidden sm:inline">(Đồng Bộ Danh Mục ĐVT Hệ Thống)</span></h3>
               </div>
               <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
@@ -3533,14 +3593,14 @@ export const ProductsPage: React.FC = () => {
                       </label>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-[10px] text-slate-400 font-medium">Gợi ý mẫu:</span>
+                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-full">
+                      <span className="text-[10px] text-slate-400 font-medium shrink-0">Gợi ý mẫu:</span>
                       {imagePresets.map((preset) => (
                         <button
                           key={preset.id || preset.label}
                           type="button"
                           onClick={() => setImage(preset.url)}
-                          className="px-2 py-0.5 rounded-md bg-slate-900 hover:bg-blue-600/20 text-slate-300 hover:text-blue-300 text-[10px] border border-slate-800 transition-all"
+                          className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-blue-600/20 text-slate-300 hover:text-blue-300 text-[11px] border border-slate-800 transition-all shrink-0 whitespace-nowrap"
                         >
                           {preset.label}
                         </button>
@@ -3551,7 +3611,7 @@ export const ProductsPage: React.FC = () => {
               </div>
 
               {/* Category, Brand & Location Selectors */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-slate-300 font-semibold">Nhóm hàng</label>
@@ -3651,7 +3711,7 @@ export const ProductsPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-slate-400 text-[11px] mb-1 font-semibold">Đơn vị nhỏ nhất (*)</label>
                     <select
@@ -3790,7 +3850,8 @@ export const ProductsPage: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className="overflow-x-auto">
+                    {/* Desktop Table View */}
+                    <div className="overflow-x-auto hidden sm:block">
                       <table className="w-full text-left text-xs border-collapse">
                         <thead>
                           <tr className="border-b border-slate-800 text-slate-400 text-[11px]">
@@ -3853,6 +3914,65 @@ export const ProductsPage: React.FC = () => {
                           ))}
                         </tbody>
                       </table>
+                    </div>
+
+                    {/* Mobile Branch Cards View */}
+                    <div className="space-y-2.5 sm:hidden">
+                      {branches.map((b) => (
+                        <div key={b.id} className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-bold text-white text-xs">{b.name}</div>
+                              <div className="text-[10px] font-mono text-blue-400">{b.code}</div>
+                            </div>
+                            <label className="inline-flex items-center gap-1.5 cursor-pointer bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
+                              <input
+                                type="checkbox"
+                                checked={branchActiveStatusForm[b.id] !== false}
+                                onChange={(e) => {
+                                  setBranchActiveStatusForm({ ...branchActiveStatusForm, [b.id]: e.target.checked });
+                                }}
+                                className="w-4 h-4 rounded text-blue-600 bg-slate-950 border-slate-700"
+                              />
+                              <span className={`text-[11px] font-bold ${branchActiveStatusForm[b.id] !== false ? 'text-emerald-400' : 'text-slate-500'}`}>
+                                {branchActiveStatusForm[b.id] !== false ? 'Bật bán' : 'Tắt bán'}
+                              </span>
+                            </label>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-800/60">
+                            <div>
+                              <label className="block text-slate-400 text-[10px] mb-1 font-semibold">Tồn kho ban đầu</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={branchStocksForm[b.id] ?? 0}
+                                onChange={(e) => {
+                                  const val = Math.max(0, Number(e.target.value));
+                                  const updated = { ...branchStocksForm, [b.id]: val };
+                                  setBranchStocksForm(updated);
+                                  setStockQuantity(Object.values(updated).reduce((sum, q) => sum + Number(q), 0));
+                                }}
+                                className="w-full px-2.5 py-1.5 rounded-lg glass-input text-xs font-mono font-bold text-emerald-400 text-center"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-slate-400 text-[10px] mb-1 font-semibold">Min Cảnh Báo</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={branchMinStocksForm[b.id] ?? 10}
+                                onChange={(e) => {
+                                  const val = Math.max(0, Number(e.target.value));
+                                  setBranchMinStocksForm({ ...branchMinStocksForm, [b.id]: val });
+                                }}
+                                className="w-full px-2.5 py-1.5 rounded-lg glass-input text-xs font-mono font-bold text-amber-400 text-center"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
