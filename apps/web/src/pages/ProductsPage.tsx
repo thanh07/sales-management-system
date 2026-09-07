@@ -1501,7 +1501,7 @@ export const ProductsPage: React.FC = () => {
           </div>
 
           {/* Action Ribbon Buttons */}
-          <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          <div className="flex items-center gap-1.5 text-xs overflow-x-auto no-scrollbar max-w-full pb-1 whitespace-nowrap">
             {/* + Thêm mới Dropdown */}
             {!isCashier && (
               <div className="relative">
@@ -1689,7 +1689,7 @@ export const ProductsPage: React.FC = () => {
         </div>
 
         {/* Master Catalog Quick Access Pills */}
-        <div className="flex flex-wrap items-center gap-2 text-xs">
+        <div className="flex items-center gap-2 text-xs overflow-x-auto no-scrollbar max-w-full pb-1 whitespace-nowrap">
           <button
             onClick={() => setIsCategoryModalOpen(true)}
             className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-blue-400 border border-slate-800 text-[11px] font-semibold flex items-center gap-1.5 transition-all"
@@ -1847,8 +1847,143 @@ export const ProductsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. DESKTOP PRODUCTS TABLE WITH INLINE COLUMN FILTERS (MISA eShop style) */}
-      <div className="glass-panel rounded-2xl border border-slate-800 overflow-hidden shadow-xl flex flex-col">
+      {/* 2. MOBILE PRODUCTS CARD LIST VIEW (sm:hidden) */}
+      <div className="space-y-3 sm:hidden">
+        {paginatedProducts.length === 0 ? (
+          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 text-center text-slate-400 text-xs">
+            Không tìm thấy hàng hóa phù hợp với bộ lọc hiện tại.
+          </div>
+        ) : (
+          paginatedProducts.map((p) => {
+            const isSelected = selectedProductIds.includes(p.id);
+            const isExpanded = expandedProductIds.includes(p.id);
+            const hasChildren = p.hasVariants && p.variants && p.variants.length > 0;
+            const currentBranchStock = p.branchStocks && p.branchStocks[selectedBranchId] !== undefined ? p.branchStocks[selectedBranchId] : p.stockQuantity;
+            const branchMin = p.branchMinStocks && p.branchMinStocks[selectedBranchId] !== undefined ? p.branchMinStocks[selectedBranchId] : (p.minStock || 10);
+            const isLowStock = currentBranchStock <= branchMin;
+
+            return (
+              <div
+                key={p.id}
+                className={`p-3.5 rounded-2xl border transition-all space-y-2.5 ${
+                  isSelected ? 'bg-blue-600/15 border-blue-500' : 'bg-slate-900/90 border-slate-800'
+                }`}
+              >
+                {/* Header: Checkbox + Image + Name + Actions */}
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => handleToggleSelectRow(p.id)}
+                    className="w-4 h-4 rounded text-blue-600 bg-slate-950 border-slate-700 mt-1 shrink-0"
+                  />
+
+                  <div className="w-12 h-12 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center shrink-0 overflow-hidden shadow-inner">
+                    {p.image ? (
+                      <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-lg">{getSmartProductIcon(p.name, p.category).icon}</span>
+                    )}
+                  </div>
+
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <div className="flex items-center justify-between gap-1">
+                      <h4 className="font-bold text-white text-xs truncate">{p.name}</h4>
+                      {!isCashier && (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => handleOpenEditModal(p)}
+                            className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-blue-400"
+                            title="Sửa sản phẩm"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setBarcodeTargetProducts([p]);
+                              setIsBarcodeModalOpen(true);
+                            }}
+                            className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400"
+                            title="In tem"
+                          >
+                            <Barcode className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[11px]">
+                      <span className="font-mono text-blue-400 font-bold bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
+                        {p.sku}
+                      </span>
+                      {p.brand && <span className="text-slate-400 truncate">TH: {p.brand}</span>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Price, Unit & Stock row */}
+                <div className="grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs">
+                  <div>
+                    <div className="text-[10px] text-slate-400">Giá bán lẻ:</div>
+                    <div className="font-bold text-blue-400 font-mono text-xs">{formatVND(p.sellingPrice)} / {p.unit}</div>
+                  </div>
+
+                  <div className="text-right">
+                    <div className="text-[10px] text-slate-400">Tồn chi nhánh:</div>
+                    <div className={`font-bold font-mono text-xs ${isLowStock ? 'text-amber-400' : 'text-emerald-400'}`}>
+                      {currentBranchStock} {p.unit} {isLowStock && '⚠️'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tags & Variant toggle */}
+                <div className="flex items-center justify-between text-[11px] pt-0.5">
+                  <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700/60 truncate max-w-[150px]">
+                    {p.category}
+                  </span>
+
+                  {hasChildren && (
+                    <button
+                      type="button"
+                      onClick={() => toggleExpandProduct(p.id)}
+                      className={`px-2.5 py-1 rounded-lg font-bold text-[11px] border flex items-center gap-1 transition-all ${
+                        isExpanded
+                          ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                          : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                      }`}
+                    >
+                      {isExpanded ? <ChevronDown className="w-3 h-3 text-blue-400" /> : <ChevronRight className="w-3 h-3 text-amber-400" />}
+                      <span>{p.variants.length} biến thể {isExpanded ? '▲' : '▼'}</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Expanded Variants List on Mobile */}
+                {hasChildren && isExpanded && (
+                  <div className="space-y-1.5 pt-2 border-t border-slate-800">
+                    <div className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Danh sách biến thể:</div>
+                    {p.variants.map((v: any) => (
+                      <div key={v.id} className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-xs flex items-center justify-between">
+                        <div>
+                          <div className="font-bold text-white text-[11px]">{v.variantName}</div>
+                          <div className="font-mono text-[10px] text-blue-400">{v.sku}</div>
+                        </div>
+                        <div className="text-right font-mono">
+                          <div className="font-bold text-emerald-400 text-[11px]">{formatVND(v.sellingPrice)}</div>
+                          <div className="text-[10px] text-slate-400">Tồn: {v.stockQuantity || 0}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* 3. DESKTOP PRODUCTS TABLE WITH INLINE COLUMN FILTERS (hidden sm:flex) */}
+      <div className="glass-panel rounded-2xl border border-slate-800 overflow-hidden shadow-xl hidden sm:flex flex-col">
         <div className="overflow-x-auto flex-1">
           <table className="w-full min-w-[1050px] text-left text-xs text-slate-300">
             <thead className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 text-slate-300 text-xs">
