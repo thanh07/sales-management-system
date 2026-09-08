@@ -353,6 +353,19 @@ export const ProductsPage: React.FC = () => {
   const startIndex = sortedAndFilteredProducts.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const endIndex = Math.min(currentPage * pageSize, sortedAndFilteredProducts.length);
 
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const delta = 1;
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= currentPage - delta && i <= currentPage + delta)) {
+        pages.push(i);
+      } else if (pages[pages.length - 1] !== '...') {
+        pages.push('...');
+      }
+    }
+    return pages;
+  };
+
   // MISA Action Handlers
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -2662,6 +2675,105 @@ export const ProductsPage: React.FC = () => {
               )}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* 4. PAGINATION FOOTER CONTROL BAR (Mobile & Desktop) */}
+      <div className="glass-panel rounded-2xl border border-slate-800 p-3 mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-300 shadow-xl">
+        {/* Left: Product count summary & Page size selector */}
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+          <div className="text-slate-400">
+            Hiển thị <span className="font-bold text-white">{startIndex} - {endIndex}</span> trong tổng số <span className="font-bold text-blue-400">{sortedAndFilteredProducts.length}</span> hàng hóa
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-slate-400">Hiển thị:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="bg-slate-900 border border-slate-700/80 rounded-xl px-2.5 py-1 text-slate-200 font-bold focus:outline-none focus:border-blue-500 transition-colors"
+            >
+              <option value={10}>10 / trang</option>
+              <option value={25}>25 / trang</option>
+              <option value={50}>50 / trang</option>
+              <option value={100}>100 / trang</option>
+              <option value={200}>200 / trang</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Right: Page Navigation Controls */}
+        <div className="flex items-center gap-1 w-full sm:w-auto justify-center sm:justify-end overflow-x-auto no-scrollbar py-1">
+          {/* First Page */}
+          <button
+            type="button"
+            onClick={() => setCurrentPage(1)}
+            disabled={currentPage === 1}
+            className="p-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-900 disabled:cursor-not-allowed transition-all"
+            title="Trang đầu"
+          >
+            <ChevronsLeft className="w-4 h-4" />
+          </button>
+
+          {/* Previous Page */}
+          <button
+            type="button"
+            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            disabled={currentPage === 1}
+            className="p-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-900 disabled:cursor-not-allowed transition-all"
+            title="Trang trước"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+
+          {/* Page Numbers */}
+          <div className="flex items-center gap-1 mx-1">
+            {getPageNumbers().map((page, idx) => (
+              typeof page === 'number' ? (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setCurrentPage(page)}
+                  className={`min-w-[32px] h-8 px-2 rounded-lg font-bold transition-all text-xs flex items-center justify-center ${
+                    currentPage === page
+                      ? 'bg-blue-600 text-white border border-blue-500 shadow-md shadow-blue-600/30'
+                      : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'
+                  }`}
+                >
+                  {page}
+                </button>
+              ) : (
+                <span key={idx} className="px-1 text-slate-500 font-bold select-none">
+                  ...
+                </span>
+              )
+            ))}
+          </div>
+
+          {/* Next Page */}
+          <button
+            type="button"
+            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+            disabled={currentPage === totalPages}
+            className="p-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-900 disabled:cursor-not-allowed transition-all"
+            title="Trang tiếp"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+
+          {/* Last Page */}
+          <button
+            type="button"
+            onClick={() => setCurrentPage(totalPages)}
+            disabled={currentPage === totalPages}
+            className="p-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-900 disabled:cursor-not-allowed transition-all"
+            title="Trang cuối"
+          >
+            <ChevronsRight className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
