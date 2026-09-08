@@ -107,9 +107,9 @@ export class ProductController {
 
   static importExcel = async (req: Request, res: Response) => {
     try {
-      const { items } = req.body;
+      const { items, options } = req.body;
       if (!Array.isArray(items)) throw new Error('Dữ liệu danh sách không hợp lệ');
-      const count = ProductService.importProductsFromExcel(items);
+      const count = ProductService.importProductsFromExcel(items, options);
       return sendSuccess(res, { count }, `Đã nhập thành công ${count} sản phẩm từ file Excel!`);
     } catch (err: any) {
       return sendError(res, err.message, 400);

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import api from '../../services/api';
 import {
   X,
@@ -11,8 +11,16 @@ import {
   Info,
   Layers,
   ArrowRight,
+  ArrowLeft,
   FileText,
+  Settings2,
+  Building2,
+  RefreshCw,
+  SlidersHorizontal,
+  PlusCircle,
+  HelpCircle,
 } from 'lucide-react';
+import { useBranchStore } from '../../store/branchStore';
 
 interface ImportExcelModalProps {
   isOpen: boolean;
@@ -122,11 +130,25 @@ export const downloadProductExcelTemplate = () => {
 };
 
 export const ImportExcelModal: React.FC<ImportExcelModalProps> = ({ isOpen, onClose, onSuccess }) => {
+  const { branches, selectedBranchId } = useBranchStore();
+
+  const [step, setStep] = useState<'UPLOAD' | 'CONFIG' | 'PREVIEW'>('UPLOAD');
   const [file, setFile] = useState<File | null>(null);
   const [parsedRows, setParsedRows] = useState<ParsedProductRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // KiotViet-style Import Strategy Configuration States
+  const [duplicateMode, setDuplicateMode] = useState<'UPDATE_EXISTING' | 'SKIP_EXISTING'>('UPDATE_EXISTING');
+  const [stockMode, setStockMode] = useState<'OVERWRITE_STOCK' | 'ADDITIVE_STOCK' | 'KEEP_STOCK'>('OVERWRITE_STOCK');
+  const [targetBranchId, setTargetBranchId] = useState<string>(selectedBranchId || 'branch-01');
+
+  useEffect(() => {
+    if (selectedBranchId) {
+      setTargetBranchId(selectedBranchId);
+    }
+  }, [selectedBranchId]);
 
   if (!isOpen) return null;
 
@@ -184,34 +206,41 @@ export const ImportExcelModal: React.FC<ImportExcelModalProps> = ({ isOpen, onCl
           return headers.findIndex((h) => keywords.some((k) => h.includes(k.toLowerCase())));
         };
 
-        const nameIdx = findIndex(['tên sản phẩm', 'ten san pham', 'name', 'tên hàng']);
-        const skuIdx = findIndex(['mã sku', 'sku', 'ma hang']);
-        const barcodeIdx = findIndex(['barcode', 'mã vạch', 'ma vach']);
-        const catIdx = findIndex(['nhóm hàng', 'danh mục', 'category', 'nhom hang']);
-        const brandIdx = findIndex(['thương hiệu', 'brand', 'nhan hieu']);
-        const locIdx = findIndex(['vị trí', 'location', 'kho']);
-        const unitIdx = findIndex(['đơn vị cơ bản', 'đơn vị nhỏ nhất', 'đơn vị tính', 'unit', 'dvt']);
-        const costIdx = findIndex(['giá nhập', 'giá vốn', 'cost']);
-        const sellIdx = findIndex(['giá bán lẻ', 'giá bán', 'selling', 'gia ban']);
-        const stockIdx = findIndex(['tồn kho', 'stock', 'so luong']);
-        const minStockIdx = findIndex(['ngưỡng', 'cảnh báo', 'min stock']);
-        const convUnitIdx = findIndex(['đơn vị quy đổi', 'đơn vị lớn', 'conversion unit']);
-        const convFactorIdx = findIndex(['hệ số', 'conversion factor', 'he so']);
-        const convPriceIdx = findIndex(['giá bán đơn vị lớn', 'giá quy đổi', 'conversion price']);
+        const nameIdx = findIndex(['tên sản phẩm', 'ten san pham', 'name', 'tên hàng', 'ten hang', 'tên sp', 'ten sp', 'sản phẩm', 'san pham', 'hàng hóa', 'hang hoa']);
+        const skuIdx = findIndex(['mã sku', 'sku', 'mã hàng', 'ma hang', 'mã sp', 'ma sp', 'mã sản phẩm']);
+        const barcodeIdx = findIndex(['barcode', 'mã vạch', 'ma vach', 'mã barcode']);
+        const catIdx = findIndex(['nhóm hàng', 'nhom hang', 'danh mục', 'danh muc', 'category', 'loại hàng', 'loai hang']);
+        const brandIdx = findIndex(['thương hiệu', 'thuong hieu', 'brand', 'nhãn hiệu', 'nhan hieu', 'hãng', 'hang']);
+        const locIdx = findIndex(['vị trí', 'vi tri', 'location', 'kho']);
+        const unitIdx = findIndex(['đơn vị cơ bản', 'đơn vị tính', 'don vi tinh', 'đvt', 'dvt', 'unit', 'đơn vị', 'don vi']);
+        const costIdx = findIndex(['giá nhập', 'gia nhap', 'giá vốn', 'gia von', 'cost', 'giá mua', 'gia mua']);
+        const sellIdx = findIndex(['giá bán lẻ', 'gia ban le', 'giá bán', 'gia ban', 'selling', 'giá lẻ', 'gia le', 'lẻ', 'le']);
+        const wholesaleIdx = findIndex(['giá sỉ', 'gia si', 'giá buôn', 'gia buon', 'sỉ', 'si']);
+        const stockIdx = findIndex(['tồn kho', 'ton kho', 'stock', 'số lượng', 'so luong', 'tồn', 'ton']);
+        const minStockIdx = findIndex(['ngưỡng', 'nguong', 'cảnh báo', 'canh bao', 'min stock']);
+        const convUnitIdx = findIndex(['đơn vị quy đổi', 'don vi quy doi', 'đơn vị lớn', 'don vi lon', 'conversion unit']);
+        const convFactorIdx = findIndex(['hệ số', 'he so', 'conversion factor']);
+        const convPriceIdx = findIndex(['giá chục', 'gia chuc', 'giá thùng', 'gia thung', 'giá bán đơn vị lớn', 'giá quy đổi', 'gia quy doi', 'conversion price']);
 
-        const cleanNumber = (val?: string, defaultVal = 0): number => {
-          if (!val) return defaultVal;
-          let str = String(val).trim().replace(/[^\d.,-]/g, '');
-          if (!str) return defaultVal;
-          if (/^\d{1,3}(\.\d{3})+$/.test(str)) {
-            str = str.replace(/\./g, '');
-          } else if (/^\d{1,3}(,\d{3})+$/.test(str)) {
-            str = str.replace(/,/g, '');
-          } else if (str.includes(',') && !str.includes('.')) {
-            str = str.replace(',', '.');
+        const cleanNumber = (val?: string | number, defaultVal = 0): number => {
+          if (val === undefined || val === null || val === '') return defaultVal;
+          let num = 0;
+          if (typeof val === 'number') {
+            num = isNaN(val) ? defaultVal : val;
+          } else {
+            let str = String(val).trim().replace(/[^\d.,-]/g, '');
+            if (!str) return defaultVal;
+            if (/^\d{1,3}(\.\d{3})+$/.test(str)) {
+              str = str.replace(/\./g, '');
+            } else if (/^\d{1,3}(,\d{3})+$/.test(str)) {
+              str = str.replace(/,/g, '');
+            } else if (str.includes(',') && !str.includes('.')) {
+              str = str.replace(',', '.');
+            }
+            num = Number(str);
+            if (isNaN(num)) return defaultVal;
           }
-          const num = Number(str);
-          return isNaN(num) ? defaultVal : num;
+          return num;
         };
 
         for (let i = 1; i < lines.length; i++) {
@@ -219,23 +248,31 @@ export const ImportExcelModal: React.FC<ImportExcelModalProps> = ({ isOpen, onCl
           if (parts.length === 0 || parts.every((p) => p === '')) continue;
 
           const name = (nameIdx >= 0 ? parts[nameIdx] : parts[0]) || '';
-          const sku = (skuIdx >= 0 ? parts[skuIdx] : parts[1]) || '';
-          const rawBarcode = (barcodeIdx >= 0 ? parts[barcodeIdx] : parts[2]) || '';
+          const sku = (skuIdx >= 0 ? parts[skuIdx] : '') || '';
+          const rawBarcode = (barcodeIdx >= 0 ? parts[barcodeIdx] : '') || '';
           const barcode = rawBarcode.trim().replace(/^\\t/, '').replace(/\s+/g, '');
 
-          const category = (catIdx >= 0 ? parts[catIdx] : parts[3]) || 'Đồ Dùng Gia Đình & Tạp Hóa';
-          const brand = (brandIdx >= 0 ? parts[brandIdx] : parts[4]) || 'Khác';
-          const location = (locIdx >= 0 ? parts[locIdx] : parts[5]) || 'Kho Tổng G05';
-          const unit = (unitIdx >= 0 ? parts[unitIdx] : parts[6]) || 'Cái';
+          const category = (catIdx >= 0 ? parts[catIdx] : '') || 'Đồ Dùng Gia Đình & Tạp Hóa';
+          const brand = (brandIdx >= 0 ? parts[brandIdx] : '') || 'Khác';
+          const location = (locIdx >= 0 ? parts[locIdx] : '') || 'Kho Tổng G05';
+          const unit = (unitIdx >= 0 ? parts[unitIdx] : '') || 'Cái';
 
-          const costPrice = cleanNumber(costIdx >= 0 ? parts[costIdx] : parts[7], 0);
-          const sellingPrice = cleanNumber(sellIdx >= 0 ? parts[sellIdx] : parts[8], 0);
-          const stockQuantity = cleanNumber(stockIdx >= 0 ? parts[stockIdx] : parts[9], 0);
-          const minStock = cleanNumber(minStockIdx >= 0 ? parts[minStockIdx] : parts[10], 10);
+          const costPrice = cleanNumber(costIdx >= 0 ? parts[costIdx] : undefined, 0);
+          const sellingPrice = cleanNumber(sellIdx >= 0 ? parts[sellIdx] : undefined, 0);
+          const stockQuantity = cleanNumber(stockIdx >= 0 ? parts[stockIdx] : undefined, 100);
+          const minStock = cleanNumber(minStockIdx >= 0 ? parts[minStockIdx] : undefined, 10);
 
-          const conversionUnit = convUnitIdx >= 0 ? parts[convUnitIdx] : parts[11];
-          const conversionFactor = cleanNumber(convFactorIdx >= 0 ? parts[convFactorIdx] : parts[12], 0);
-          const conversionSellingPrice = cleanNumber(convPriceIdx >= 0 ? parts[convPriceIdx] : parts[13], 0);
+          let conversionUnit = convUnitIdx >= 0 ? parts[convUnitIdx] : undefined;
+          let conversionFactor = cleanNumber(convFactorIdx >= 0 ? parts[convFactorIdx] : undefined, 0);
+          let conversionSellingPrice = cleanNumber(convPriceIdx >= 0 ? parts[convPriceIdx] : undefined, 0);
+
+          if (convPriceIdx >= 0 && conversionSellingPrice > 0 && !conversionUnit) {
+            const rawHeader = headers[convPriceIdx] || '';
+            if (rawHeader.includes('chục') || rawHeader.includes('chuc')) {
+              conversionUnit = 'Chục';
+              conversionFactor = 10;
+            }
+          }
 
           // Validation Rules
           const errorMessages: string[] = [];
@@ -268,6 +305,7 @@ export const ImportExcelModal: React.FC<ImportExcelModalProps> = ({ isOpen, onCl
         }
 
         setParsedRows(rows);
+        setStep('CONFIG'); // Move to Step 2: KiotViet Import Strategy Config
       } catch (err: any) {
         alert('Lỗi khi đọc file CSV / Excel: ' + err.message);
       } finally {
@@ -304,7 +342,13 @@ export const ImportExcelModal: React.FC<ImportExcelModalProps> = ({ isOpen, onCl
 
     setIsLoading(true);
     try {
-      const res: any = await api.post('/products/import-excel', { items: validItems });
+      const options = {
+        duplicateMode,
+        stockMode,
+        targetBranchId,
+      };
+
+      const res: any = await api.post('/products/import-excel', { items: validItems, options });
       alert(res.message || `Đã nhập thành công ${res.data?.count || validItems.length} sản phẩm vào hệ thống!`);
       onSuccess();
       onClose();
@@ -322,10 +366,12 @@ export const ImportExcelModal: React.FC<ImportExcelModalProps> = ({ isOpen, onCl
     return new Intl.NumberFormat('vi-VN').format(num) + ' đ';
   };
 
+  const activeBranchObj = branches.find((b) => b.id === targetBranchId) || branches[0];
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
       <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-        {/* 1. Modal Header */}
+        {/* 1. Modal Header & Step Navigation Indicator */}
         <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
@@ -335,9 +381,25 @@ export const ImportExcelModal: React.FC<ImportExcelModalProps> = ({ isOpen, onCl
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
                 Nhập Sản Phẩm Hàng Hóa Từ File Excel / CSV
               </h2>
-              <p className="text-xs text-slate-400">
-                Tải file mẫu chuẩn, kiểm tra dữ liệu xem trước và nhập tự động hàng loạt vào CSDL
-              </p>
+              {/* KiotViet 3-Step Indicator Header */}
+              <div className="flex items-center gap-2 mt-1 text-xs">
+                <span className={`flex items-center gap-1 font-semibold ${step === 'UPLOAD' ? 'text-blue-400 font-bold' : 'text-slate-400'}`}>
+                  <span className="w-4 h-4 rounded-full bg-blue-500/20 border border-blue-500/40 text-[10px] flex items-center justify-center">1</span>
+                  <span>Chọn File</span>
+                </span>
+                <ArrowRight className="w-3 h-3 text-slate-600" />
+
+                <span className={`flex items-center gap-1 font-semibold ${step === 'CONFIG' ? 'text-blue-400 font-bold' : 'text-slate-400'}`}>
+                  <span className="w-4 h-4 rounded-full bg-blue-500/20 border border-blue-500/40 text-[10px] flex items-center justify-center">2</span>
+                  <span>Phương Thức Nhập Khẩu</span>
+                </span>
+                <ArrowRight className="w-3 h-3 text-slate-600" />
+
+                <span className={`flex items-center gap-1 font-semibold ${step === 'PREVIEW' ? 'text-blue-400 font-bold' : 'text-slate-400'}`}>
+                  <span className="w-4 h-4 rounded-full bg-blue-500/20 border border-blue-500/40 text-[10px] flex items-center justify-center">3</span>
+                  <span>Xem Trước & Nhập Dữ Liệu</span>
+                </span>
+              </div>
             </div>
           </div>
 
@@ -351,70 +413,265 @@ export const ImportExcelModal: React.FC<ImportExcelModalProps> = ({ isOpen, onCl
 
         {/* 2. Modal Body */}
         <div className="p-6 overflow-y-auto space-y-5 flex-1 custom-scrollbar">
-          {/* Action Bar: Download Template & Help */}
-          <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <Info className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
-              <div className="text-xs text-slate-300 space-y-1">
-                <div className="font-semibold text-blue-300">Quy ước điền file mẫu Excel:</div>
-                <div className="text-slate-400">
-                  • Cột bắt buộc (<span className="text-red-400 font-bold">*</span>): <b className="text-slate-200">Tên sản phẩm</b>, <b className="text-slate-200">Đơn vị cơ bản</b>, <b className="text-slate-200">Giá bán lẻ</b>.
-                </div>
-                <div className="text-slate-400">
-                  • Các cột khác (Mã SKU, Barcode, Vị trí kho, Nhóm hàng, Giá nhập, Tồn kho, Đơn vị quy đổi...): Hệ thống sẽ tự động điền giá trị mặc định nếu để trống.
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={handleDownloadTemplate}
-              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-md shadow-blue-600/20 shrink-0"
-              title="Tải file mẫu Excel chuẩn"
-            >
-              <Download className="w-4 h-4" />
-              <span>Tải File Mẫu Chuẩn (.csv)</span>
-            </button>
-          </div>
-
-          {/* Upload Area */}
-          {parsedRows.length === 0 ? (
-            <div
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragOver(true);
-              }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 ${
-                dragOver
-                  ? 'border-blue-500 bg-blue-500/10'
-                  : 'border-slate-800 hover:border-slate-700 bg-slate-950/40 hover:bg-slate-950/60'
-              }`}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".csv, .txt, .xlsx, .xls"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-              <div className="w-14 h-14 rounded-2xl bg-slate-800 flex items-center justify-center text-blue-400 shadow-inner">
-                <Upload className="w-7 h-7 animate-bounce" />
-              </div>
-              <div>
-                <div className="text-sm font-bold text-white">Kéo & thả file Excel / CSV vào đây hoặc bấm để chọn file</div>
-                <div className="text-xs text-slate-400 mt-1">Hỗ trợ định dạng .CSV, .TXT chuẩn UTF-8</div>
-              </div>
-            </div>
-          ) : (
+          {/* STEP 1: UPLOAD FILE AREA */}
+          {step === 'UPLOAD' && (
             <div className="space-y-4">
-              {/* Preview Status & Controls */}
+              {/* Action Bar: Download Template & Help */}
+              <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <Info className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                  <div className="text-xs text-slate-300 space-y-1">
+                    <div className="font-semibold text-blue-300">Quy ước điền file mẫu Excel:</div>
+                    <div className="text-slate-400">
+                      • Cột bắt buộc (<span className="text-red-400 font-bold">*</span>): <b className="text-slate-200">Tên sản phẩm</b>, <b className="text-slate-200">Đơn vị cơ bản</b>, <b className="text-slate-200">Giá bán lẻ</b>.
+                    </div>
+                    <div className="text-slate-400">
+                      • Các cột khác (Mã SKU, Barcode, Vị trí kho, Nhóm hàng, Giá nhập, Tồn kho...): Hệ thống sẽ tự động bổ sung nếu để trống.
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleDownloadTemplate}
+                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-md shadow-blue-600/20 shrink-0"
+                  title="Tải file mẫu Excel chuẩn"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Tải File Mẫu Chuẩn (.csv)</span>
+                </button>
+              </div>
+
+              {/* Upload Drop Zone */}
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOver(true);
+                }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-3xl p-10 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 ${
+                  dragOver
+                    ? 'border-blue-500 bg-blue-500/10'
+                    : 'border-slate-800 hover:border-slate-700 bg-slate-950/40 hover:bg-slate-950/60'
+                }`}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv, .txt, .xlsx, .xls"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                <div className="w-16 h-16 rounded-2xl bg-slate-800 flex items-center justify-center text-blue-400 shadow-inner">
+                  <Upload className="w-8 h-8 animate-bounce" />
+                </div>
+                <div>
+                  <div className="text-base font-bold text-white">Kéo & thả file Excel / CSV vào đây hoặc bấm để chọn file</div>
+                  <div className="text-xs text-slate-400 mt-1">Hỗ trợ định dạng .CSV, .TXT chuẩn UTF-8</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2: KIOTVIET-STYLE IMPORT STRATEGY CONFIGURATION */}
+          {step === 'CONFIG' && (
+            <div className="space-y-6 animate-fadeIn">
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <FileText className="w-5 h-5 text-emerald-400" />
+                  <div>
+                    <div className="text-xs font-bold text-white">{file?.name}</div>
+                    <div className="text-[11px] text-slate-400">
+                      Tổng số: <b className="text-white">{parsedRows.length}</b> dòng | Hợp lệ:{' '}
+                      <b className="text-emerald-400">{validCount}</b> | Lỗi: <b className="text-red-400">{invalidCount}</b>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setParsedRows([]);
+                    setFile(null);
+                    setStep('UPLOAD');
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-all"
+                >
+                  Chọn file khác
+                </button>
+              </div>
+
+              {/* Configuration Section */}
+              <div className="space-y-5 bg-slate-950/60 p-5 rounded-2xl border border-slate-800">
+                <div className="flex items-center gap-2 pb-3 border-b border-slate-800 text-white font-bold text-sm">
+                  <Settings2 className="w-5 h-5 text-blue-400" />
+                  <span>Chọn Phương Thức Nhập Khẩu Dữ Liệu</span>
+                </div>
+
+                {/* 1. Handling Existing Products */}
+                <div className="space-y-3">
+                  <label className="block text-xs font-bold text-blue-300 uppercase tracking-wider">
+                    1. Xử lý khi sản phẩm đã tồn tại trong CSDL (Khớp Mã SKU / Barcode / Tên):
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* Option A: Update Existing */}
+                    <div
+                      onClick={() => setDuplicateMode('UPDATE_EXISTING')}
+                      className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-start gap-3 ${
+                        duplicateMode === 'UPDATE_EXISTING'
+                          ? 'bg-blue-600/15 border-blue-500 shadow-lg shadow-blue-600/20'
+                          : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="duplicateMode"
+                        checked={duplicateMode === 'UPDATE_EXISTING'}
+                        onChange={() => setDuplicateMode('UPDATE_EXISTING')}
+                        className="mt-1 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      />
+                      <div>
+                        <div className="font-bold text-white text-xs flex items-center gap-2">
+                          <span>Cập nhật thông tin hàng hóa đã có</span>
+                          <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">Mặc định</span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                          Tự động cập nhật Tên, Nhóm hàng, Thương hiệu, Giá bán lẻ, Giá vốn, Giá sỉ, Đơn vị quy đổi mới nhất từ file Excel vào các sản phẩm đã có.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Option B: Skip Existing */}
+                    <div
+                      onClick={() => setDuplicateMode('SKIP_EXISTING')}
+                      className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-start gap-3 ${
+                        duplicateMode === 'SKIP_EXISTING'
+                          ? 'bg-blue-600/15 border-blue-500 shadow-lg shadow-blue-600/20'
+                          : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="duplicateMode"
+                        checked={duplicateMode === 'SKIP_EXISTING'}
+                        onChange={() => setDuplicateMode('SKIP_EXISTING')}
+                        className="mt-1 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      />
+                      <div>
+                        <div className="font-bold text-white text-xs">Bỏ qua hàng hóa đã tồn tại</div>
+                        <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                          Bỏ qua không chỉnh sửa dữ liệu hàng hóa cũ trong CSDL, chỉ lọc ra và thêm mới các sản phẩm chưa từng xuất hiện.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Handling Stock */}
+                <div className="space-y-3 pt-2 border-t border-slate-800/80">
+                  <label className="block text-xs font-bold text-blue-300 uppercase tracking-wider">
+                    2. Xử lý số lượng Tồn Kho Chi Nhánh:
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {/* Overwrite */}
+                    <div
+                      onClick={() => setStockMode('OVERWRITE_STOCK')}
+                      className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex items-start gap-2.5 ${
+                        stockMode === 'OVERWRITE_STOCK'
+                          ? 'bg-blue-600/15 border-blue-500 shadow-md'
+                          : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="stockMode"
+                        checked={stockMode === 'OVERWRITE_STOCK'}
+                        onChange={() => setStockMode('OVERWRITE_STOCK')}
+                        className="mt-1 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      />
+                      <div>
+                        <div className="font-bold text-white text-xs">Ghi đè tồn kho</div>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Tồn kho chi nhánh = Số trong Excel</p>
+                      </div>
+                    </div>
+
+                    {/* Additive */}
+                    <div
+                      onClick={() => setStockMode('ADDITIVE_STOCK')}
+                      className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex items-start gap-2.5 ${
+                        stockMode === 'ADDITIVE_STOCK'
+                          ? 'bg-blue-600/15 border-blue-500 shadow-md'
+                          : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="stockMode"
+                        checked={stockMode === 'ADDITIVE_STOCK'}
+                        onChange={() => setStockMode('ADDITIVE_STOCK')}
+                        className="mt-1 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      />
+                      <div>
+                        <div className="font-bold text-white text-xs">Cộng dồn tồn kho</div>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Tồn kho mới = Tồn cũ + Số trong Excel</p>
+                      </div>
+                    </div>
+
+                    {/* Keep */}
+                    <div
+                      onClick={() => setStockMode('KEEP_STOCK')}
+                      className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex items-start gap-2.5 ${
+                        stockMode === 'KEEP_STOCK'
+                          ? 'bg-blue-600/15 border-blue-500 shadow-md'
+                          : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="stockMode"
+                        checked={stockMode === 'KEEP_STOCK'}
+                        onChange={() => setStockMode('KEEP_STOCK')}
+                        className="mt-1 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      />
+                      <div>
+                        <div className="font-bold text-white text-xs">Không đổi tồn kho</div>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Giữ nguyên số tồn kho hiện tại</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Target Branch */}
+                <div className="space-y-2 pt-2 border-t border-slate-800/80">
+                  <label className="block text-xs font-bold text-blue-300 uppercase tracking-wider">
+                    3. Chi nhánh nhận cập nhật tồn kho & trạng thái bán:
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <Building2 className="w-4 h-4 text-blue-400" />
+                    <select
+                      value={targetBranchId}
+                      onChange={(e) => setTargetBranchId(e.target.value)}
+                      className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold text-xs focus:outline-none focus:border-blue-500"
+                    >
+                      {branches.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name} ({b.code})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3: PREVIEW DATA TABLE */}
+          {step === 'PREVIEW' && (
+            <div className="space-y-4 animate-fadeIn">
+              {/* Summary Bar */}
               <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-950 p-4 rounded-2xl border border-slate-800">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-slate-800 text-slate-300">
-                    <FileText className="w-5 h-5" />
-                  </div>
+                  <FileText className="w-5 h-5 text-blue-400" />
                   <div>
                     <div className="text-xs font-bold text-white">{file?.name}</div>
                     <div className="text-[11px] text-slate-400">
@@ -425,16 +682,13 @@ export const ImportExcelModal: React.FC<ImportExcelModalProps> = ({ isOpen, onCl
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      setParsedRows([]);
-                      setFile(null);
-                    }}
-                    className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition-all"
-                  >
-                    Chọn file khác
-                  </button>
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="px-2.5 py-1 rounded-xl bg-blue-500/10 text-blue-300 border border-blue-500/20 font-medium">
+                    Chế độ: <b>{duplicateMode === 'UPDATE_EXISTING' ? 'Cập nhật hàng cũ' : 'Bỏ qua hàng cũ'}</b>
+                  </span>
+                  <span className="px-2.5 py-1 rounded-xl bg-purple-500/10 text-purple-300 border border-purple-500/20 font-medium">
+                    Tồn kho: <b>{stockMode === 'OVERWRITE_STOCK' ? 'Ghi đè' : stockMode === 'ADDITIVE_STOCK' ? 'Cộng dồn' : 'Giữ nguyên'}</b> ({activeBranchObj?.name})
+                  </span>
                 </div>
               </div>
 
@@ -520,30 +774,66 @@ export const ImportExcelModal: React.FC<ImportExcelModalProps> = ({ isOpen, onCl
           )}
         </div>
 
-        {/* 3. Modal Footer */}
+        {/* 3. Modal Footer & Dynamic Buttons for 3 Steps */}
         <div className="px-6 py-4 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0">
-          <button
-            onClick={onClose}
-            className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-all"
-          >
-            Đóng
-          </button>
-
-          {parsedRows.length > 0 && (
-            <div className="flex items-center gap-3">
-              <div className="text-xs text-slate-400">
-                Sẵn sàng nhập: <b className="text-emerald-400">{validCount}</b> sản phẩm hợp lệ
-              </div>
+          <div>
+            {step === 'CONFIG' && (
               <button
-                onClick={handleConfirmImport}
-                disabled={isLoading || validCount === 0}
-                className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => setStep('UPLOAD')}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-all"
               >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>{isLoading ? 'Đang lưu CSDL...' : `Xác Nhận Nhập (${validCount} Sản Phẩm)`}</span>
+                <ArrowLeft className="w-4 h-4" />
+                <span>Quay lại chọn file</span>
               </button>
-            </div>
-          )}
+            )}
+
+            {step === 'PREVIEW' && (
+              <button
+                onClick={() => setStep('CONFIG')}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-all"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Đổi phương thức nhập</span>
+              </button>
+            )}
+
+            {step === 'UPLOAD' && (
+              <button
+                onClick={onClose}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-all"
+              >
+                Đóng
+              </button>
+            )}
+          </div>
+
+          <div>
+            {step === 'CONFIG' && parsedRows.length > 0 && (
+              <button
+                onClick={() => setStep('PREVIEW')}
+                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-600/30 transition-all"
+              >
+                <span>Tiếp tục xem trước dữ liệu</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
+
+            {step === 'PREVIEW' && parsedRows.length > 0 && (
+              <div className="flex items-center gap-3">
+                <div className="text-xs text-slate-400">
+                  Sẵn sàng nhập: <b className="text-emerald-400">{validCount}</b> sản phẩm hợp lệ
+                </div>
+                <button
+                  onClick={handleConfirmImport}
+                  disabled={isLoading || validCount === 0}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{isLoading ? 'Đang lưu CSDL...' : `Xác Nhận Nhập (${validCount} Sản Phẩm)`}</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
