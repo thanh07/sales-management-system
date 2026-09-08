@@ -184,44 +184,34 @@ export const ImportExcelModal: React.FC<ImportExcelModalProps> = ({ isOpen, onCl
           return headers.findIndex((h) => keywords.some((k) => h.includes(k.toLowerCase())));
         };
 
-        const nameIdx = findIndex(['tên sản phẩm', 'ten san pham', 'name', 'tên hàng', 'ten hang', 'tên sp', 'ten sp', 'sản phẩm', 'san pham', 'hàng hóa', 'hang hoa']);
-        const skuIdx = findIndex(['mã sku', 'sku', 'mã hàng', 'ma hang', 'mã sp', 'ma sp', 'mã sản phẩm']);
-        const barcodeIdx = findIndex(['barcode', 'mã vạch', 'ma vach', 'mã barcode']);
-        const catIdx = findIndex(['nhóm hàng', 'nhom hang', 'danh mục', 'danh muc', 'category', 'loại hàng', 'loai hang']);
-        const brandIdx = findIndex(['thương hiệu', 'thuong hieu', 'brand', 'nhãn hiệu', 'nhan hieu', 'hãng', 'hang']);
-        const locIdx = findIndex(['vị trí', 'vi tri', 'location', 'kho']);
-        const unitIdx = findIndex(['đơn vị cơ bản', 'đơn vị tính', 'don vi tinh', 'đvt', 'dvt', 'unit', 'đơn vị', 'don vi']);
-        const costIdx = findIndex(['giá nhập', 'gia nhap', 'giá vốn', 'gia von', 'cost', 'giá mua', 'gia mua']);
-        const sellIdx = findIndex(['giá bán lẻ', 'gia ban le', 'giá bán', 'gia ban', 'selling', 'giá lẻ', 'gia le', 'lẻ', 'le']);
-        const wholesaleIdx = findIndex(['giá sỉ', 'gia si', 'giá buôn', 'gia buon', 'sỉ', 'si']);
-        const stockIdx = findIndex(['tồn kho', 'ton kho', 'stock', 'số lượng', 'so luong', 'tồn', 'ton']);
-        const minStockIdx = findIndex(['ngưỡng', 'nguong', 'cảnh báo', 'canh bao', 'min stock']);
-        const convUnitIdx = findIndex(['đơn vị quy đổi', 'don vi quy doi', 'đơn vị lớn', 'don vi lon', 'conversion unit']);
-        const convFactorIdx = findIndex(['hệ số', 'he so', 'conversion factor']);
-        const convPriceIdx = findIndex(['giá chục', 'gia chuc', 'giá thùng', 'gia thung', 'giá bán đơn vị lớn', 'giá quy đổi', 'gia quy doi', 'conversion price']);
+        const nameIdx = findIndex(['tên sản phẩm', 'ten san pham', 'name', 'tên hàng']);
+        const skuIdx = findIndex(['mã sku', 'sku', 'ma hang']);
+        const barcodeIdx = findIndex(['barcode', 'mã vạch', 'ma vach']);
+        const catIdx = findIndex(['nhóm hàng', 'danh mục', 'category', 'nhom hang']);
+        const brandIdx = findIndex(['thương hiệu', 'brand', 'nhan hieu']);
+        const locIdx = findIndex(['vị trí', 'location', 'kho']);
+        const unitIdx = findIndex(['đơn vị cơ bản', 'đơn vị nhỏ nhất', 'đơn vị tính', 'unit', 'dvt']);
+        const costIdx = findIndex(['giá nhập', 'giá vốn', 'cost']);
+        const sellIdx = findIndex(['giá bán lẻ', 'giá bán', 'selling', 'gia ban']);
+        const stockIdx = findIndex(['tồn kho', 'stock', 'so luong']);
+        const minStockIdx = findIndex(['ngưỡng', 'cảnh báo', 'min stock']);
+        const convUnitIdx = findIndex(['đơn vị quy đổi', 'đơn vị lớn', 'conversion unit']);
+        const convFactorIdx = findIndex(['hệ số', 'conversion factor', 'he so']);
+        const convPriceIdx = findIndex(['giá bán đơn vị lớn', 'giá quy đổi', 'conversion price']);
 
-        const cleanNumber = (val?: string | number, defaultVal = 0, isPrice = false): number => {
-          if (val === undefined || val === null || val === '') return defaultVal;
-          let num = 0;
-          if (typeof val === 'number') {
-            num = isNaN(val) ? defaultVal : val;
-          } else {
-            let str = String(val).trim().replace(/[^\d.,-]/g, '');
-            if (!str) return defaultVal;
-            if (/^\d{1,3}(\.\d{3})+$/.test(str)) {
-              str = str.replace(/\./g, '');
-            } else if (/^\d{1,3}(,\d{3})+$/.test(str)) {
-              str = str.replace(/,/g, '');
-            } else if (str.includes(',') && !str.includes('.')) {
-              str = str.replace(',', '.');
-            }
-            num = Number(str);
-            if (isNaN(num)) return defaultVal;
+        const cleanNumber = (val?: string, defaultVal = 0): number => {
+          if (!val) return defaultVal;
+          let str = String(val).trim().replace(/[^\d.,-]/g, '');
+          if (!str) return defaultVal;
+          if (/^\d{1,3}(\.\d{3})+$/.test(str)) {
+            str = str.replace(/\./g, '');
+          } else if (/^\d{1,3}(,\d{3})+$/.test(str)) {
+            str = str.replace(/,/g, '');
+          } else if (str.includes(',') && !str.includes('.')) {
+            str = str.replace(',', '.');
           }
-          if (isPrice && num > 0 && num < 1000) {
-            num = num * 1000;
-          }
-          return num;
+          const num = Number(str);
+          return isNaN(num) ? defaultVal : num;
         };
 
         for (let i = 1; i < lines.length; i++) {
@@ -229,33 +219,23 @@ export const ImportExcelModal: React.FC<ImportExcelModalProps> = ({ isOpen, onCl
           if (parts.length === 0 || parts.every((p) => p === '')) continue;
 
           const name = (nameIdx >= 0 ? parts[nameIdx] : parts[0]) || '';
-          const sku = (skuIdx >= 0 ? parts[skuIdx] : '') || '';
-          const rawBarcode = (barcodeIdx >= 0 ? parts[barcodeIdx] : '') || '';
+          const sku = (skuIdx >= 0 ? parts[skuIdx] : parts[1]) || '';
+          const rawBarcode = (barcodeIdx >= 0 ? parts[barcodeIdx] : parts[2]) || '';
           const barcode = rawBarcode.trim().replace(/^\\t/, '').replace(/\s+/g, '');
 
-          const category = (catIdx >= 0 ? parts[catIdx] : '') || 'Đồ Dùng Gia Đình & Tạp Hóa';
-          const brand = (brandIdx >= 0 ? parts[brandIdx] : '') || 'Á Đông';
-          const location = (locIdx >= 0 ? parts[locIdx] : '') || 'Kho Tổng G05';
-          const unit = (unitIdx >= 0 ? parts[unitIdx] : '') || 'Cái';
+          const category = (catIdx >= 0 ? parts[catIdx] : parts[3]) || 'Đồ Dùng Gia Đình & Tạp Hóa';
+          const brand = (brandIdx >= 0 ? parts[brandIdx] : parts[4]) || 'Khác';
+          const location = (locIdx >= 0 ? parts[locIdx] : parts[5]) || 'Kho Tổng G05';
+          const unit = (unitIdx >= 0 ? parts[unitIdx] : parts[6]) || 'Cái';
 
-          const costPrice = cleanNumber(costIdx >= 0 ? parts[costIdx] : undefined, 0, true);
-          const sellingPrice = cleanNumber(sellIdx >= 0 ? parts[sellIdx] : undefined, 0, true);
-          const wholesalePrice = cleanNumber(wholesaleIdx >= 0 ? parts[wholesaleIdx] : undefined, 0, true);
-          const stockQuantity = cleanNumber(stockIdx >= 0 ? parts[stockIdx] : undefined, 100, false);
-          const minStock = cleanNumber(minStockIdx >= 0 ? parts[minStockIdx] : undefined, 10, false);
+          const costPrice = cleanNumber(costIdx >= 0 ? parts[costIdx] : parts[7], 0);
+          const sellingPrice = cleanNumber(sellIdx >= 0 ? parts[sellIdx] : parts[8], 0);
+          const stockQuantity = cleanNumber(stockIdx >= 0 ? parts[stockIdx] : parts[9], 0);
+          const minStock = cleanNumber(minStockIdx >= 0 ? parts[minStockIdx] : parts[10], 10);
 
-          let conversionUnit = convUnitIdx >= 0 ? parts[convUnitIdx] : undefined;
-          let conversionFactor = cleanNumber(convFactorIdx >= 0 ? parts[convFactorIdx] : undefined, 0, false);
-          let conversionSellingPrice = cleanNumber(convPriceIdx >= 0 ? parts[convPriceIdx] : undefined, 0, true);
-
-          // Custom handling for "Giá chục" column if no unit specified
-          if (convPriceIdx >= 0 && conversionSellingPrice > 0 && !conversionUnit) {
-            const rawHeader = headers[convPriceIdx] || '';
-            if (rawHeader.includes('chục') || rawHeader.includes('chuc')) {
-              conversionUnit = 'Chục';
-              conversionFactor = 10;
-            }
-          }
+          const conversionUnit = convUnitIdx >= 0 ? parts[convUnitIdx] : parts[11];
+          const conversionFactor = cleanNumber(convFactorIdx >= 0 ? parts[convFactorIdx] : parts[12], 0);
+          const conversionSellingPrice = cleanNumber(convPriceIdx >= 0 ? parts[convPriceIdx] : parts[13], 0);
 
           // Validation Rules
           const errorMessages: string[] = [];
@@ -286,7 +266,6 @@ export const ImportExcelModal: React.FC<ImportExcelModalProps> = ({ isOpen, onCl
             errorMessages,
           });
         }
-
 
         setParsedRows(rows);
       } catch (err: any) {

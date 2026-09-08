@@ -575,33 +575,24 @@ export class ProductService {
 
   static importProductsFromExcel(items: any[]) {
     let count = 0;
-    const cleanNum = (val: any, defaultVal = 0, isPrice = false): number => {
-      let num = 0;
-      if (typeof val === 'number') {
-        num = isNaN(val) ? defaultVal : val;
-      } else if (!val) {
-        return defaultVal;
-      } else {
-        let str = String(val).trim().replace(/[^\d.,-]/g, '');
-        if (!str) return defaultVal;
-        if (/^\d{1,3}(\.\d{3})+$/.test(str)) {
-          str = str.replace(/\./g, '');
-        } else if (/^\d{1,3}(,\d{3})+$/.test(str)) {
-          str = str.replace(/,/g, '');
-        } else if (str.includes(',') && !str.includes('.')) {
-          str = str.replace(',', '.');
-        }
-        num = Number(str);
-        if (isNaN(num)) return defaultVal;
+    const cleanNum = (val: any, defaultVal = 0): number => {
+      if (typeof val === 'number') return isNaN(val) ? defaultVal : val;
+      if (!val) return defaultVal;
+      let str = String(val).trim().replace(/[^\d.,-]/g, '');
+      if (!str) return defaultVal;
+      if (/^\d{1,3}(\.\d{3})+$/.test(str)) {
+        str = str.replace(/\./g, '');
+      } else if (/^\d{1,3}(,\d{3})+$/.test(str)) {
+        str = str.replace(/,/g, '');
+      } else if (str.includes(',') && !str.includes('.')) {
+        str = str.replace(',', '.');
       }
-      if (isPrice && num > 0 && num < 1000) {
-        num = num * 1000;
-      }
-      return num;
+      const num = Number(str);
+      return isNaN(num) ? defaultVal : num;
     };
 
     items.forEach((item, idx) => {
-      const rawName = item.name || item['Tên sản phẩm (*)'] || item['Tên sản phẩm'] || item['Ten san pham'] || item['Tên Hàng'] || item['Ten Hang'];
+      const rawName = item.name || item['Tên sản phẩm (*)'] || item['Tên sản phẩm'] || item['Ten san pham'];
       if (rawName && String(rawName).trim()) {
         const rawBarcode = String(item.barcode || item['Mã Barcode / Mã vạch'] || item['Mã Barcode (Độc nhất)'] || item['Barcode'] || '').trim().replace(/^\\t/, '').replace(/\s+/g, '');
         const barcode = rawBarcode || ('893800' + Math.floor(100000 + Math.random() * 900000));
@@ -609,31 +600,25 @@ export class ProductService {
         const rawSku = String(item.sku || item['Mã SKU'] || item['SKU'] || '').trim();
         const sku = rawSku || ('SKU-' + Math.floor(1000 + Math.random() * 9000));
 
-        const category = String(item.category || item['Nhóm hàng / Danh mục'] || item['Danh mục (Category)'] || item['Nhóm hàng'] || 'Đồ Dùng Gia Đình & Tạp Hóa').trim();
-        const brand = String(item.brand || item['Thương hiệu'] || item['Thương hiệu (Brand)'] || item['Hãng'] || 'Á Đông').trim();
+        const category = String(item.category || item['Nhóm hàng / Danh mục'] || item['Danh mục (Category)'] || 'Đồ Dùng Gia Đình & Tạp Hóa').trim();
+        const brand = String(item.brand || item['Thương hiệu'] || item['Thương hiệu (Brand)'] || 'Khác').trim();
         const location = String(item.location || item['Vị trí lưu kho'] || item['Vị trí kho (Location)'] || 'Kho Tổng G05').trim();
-        const unit = String(item.unit || item['Đơn vị cơ bản (*)'] || item['Đơn vị nhỏ nhất'] || item['Đơn vị tính'] || item['ĐVT'] || 'Cái').trim();
+        const unit = String(item.unit || item['Đơn vị cơ bản (*)'] || item['Đơn vị nhỏ nhất'] || item['Đơn vị tính'] || 'Cái').trim();
 
-        const costPrice = cleanNum(item.costPrice || item['Giá nhập (Giá vốn)'] || item['Giá nhập'], 0, true);
-        const sellingPrice = cleanNum(item.sellingPrice || item['Giá bán lẻ (*)'] || item['Giá bán lẻ'] || item['Giá bán'] || item['GIÁ LẺ'] || item['Giá lẻ'] || item['GIÁ LẺ'] || item['Giá Lẻ'], 0, true);
-        const wholesalePrice = cleanNum(item.wholesalePrice || item['Giá sỉ'] || item['Giá buôn'], 0, true);
-        const stockQuantity = cleanNum(item.stockQuantity || item['Tồn kho ban đầu'] || item['Tồn kho'], 100, false);
-        const minStock = cleanNum(item.minStock || item['Ngưỡng báo sắp hết'] || item['Ngưỡng cảnh báo'], 10, false);
+        const costPrice = cleanNum(item.costPrice || item['Giá nhập (Giá vốn)'] || item['Giá nhập'], 0);
+        const sellingPrice = cleanNum(item.sellingPrice || item['Giá bán lẻ (*)'] || item['Giá bán lẻ'] || item['Giá bán'], 0);
+        const stockQuantity = cleanNum(item.stockQuantity || item['Tồn kho ban đầu'] || item['Tồn kho'], 0);
+        const minStock = cleanNum(item.minStock || item['Ngưỡng báo sắp hết'] || item['Ngưỡng cảnh báo'], 10);
 
-        let conversionUnit = String(item.conversionUnit || item['Đơn vị quy đổi lớn'] || item['Đơn vị quy đổi'] || '').trim();
-        let conversionSellingPriceVal = cleanNum(item.conversionSellingPrice || item['Giá bán đơn vị lớn'] || item['Giá chục'] || item['Giá quy đổi'], 0, true);
-        if (item['Giá chục'] && !conversionUnit) {
-          conversionUnit = 'Chục';
-        }
-
-        const conversionFactorVal = cleanNum(item.conversionFactor || item['Hệ số quy đổi'], 0, false);
-        const conversionFactor = conversionFactorVal > 1 ? conversionFactorVal : (conversionUnit === 'Chục' ? 10 : (conversionUnit ? 24 : undefined));
+        const conversionUnit = String(item.conversionUnit || item['Đơn vị quy đổi lớn'] || item['Đơn vị quy đổi'] || '').trim();
+        const conversionFactorVal = cleanNum(item.conversionFactor || item['Hệ số quy đổi'], 0);
+        const conversionFactor = conversionFactorVal > 1 ? conversionFactorVal : (conversionUnit ? 24 : undefined);
+        const conversionSellingPriceVal = cleanNum(item.conversionSellingPrice || item['Giá bán đơn vị lớn'], 0);
         const conversionSellingPrice = conversionSellingPriceVal > 0 ? conversionSellingPriceVal : (conversionUnit && conversionFactor ? sellingPrice * conversionFactor : undefined);
 
         const conversions = conversionUnit && conversionFactor
           ? [{ id: `c-${Date.now()}-${idx}`, unitName: conversionUnit, conversionFactor, sellingPrice: conversionSellingPrice || sellingPrice * conversionFactor }]
           : [];
-
 
         const existingIdx = MOCK_PRODUCTS.findIndex((p) => (barcode && p.barcode === barcode) || (sku && p.sku === sku));
         const oldProd = existingIdx > -1 ? MOCK_PRODUCTS[existingIdx] : null;
