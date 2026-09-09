@@ -289,6 +289,17 @@ export const ProductsPage: React.FC = () => {
 
   useEffect(() => {
     fetchProducts();
+
+    const handleStockUpdate = () => {
+      fetchProducts();
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('pos:stock-updated', handleStockUpdate);
+      return () => {
+        window.removeEventListener('pos:stock-updated', handleStockUpdate);
+      };
+    }
   }, [searchQuery, selectedCategory, selectedBrand, selectedLocation]);
 
   // MISA Filter Engine
@@ -340,8 +351,8 @@ export const ProductsPage: React.FC = () => {
       valB = Number(b.sellingPrice || 0);
       return sortDirection === 'asc' ? valA - valB : valB - valA;
     } else if (sortColumn === 'stock') {
-      valA = a.branchStocks && a.branchStocks[selectedBranchId] !== undefined ? a.branchStocks[selectedBranchId] : (a.stockQuantity || 0);
-      valB = b.branchStocks && b.branchStocks[selectedBranchId] !== undefined ? b.branchStocks[selectedBranchId] : (b.stockQuantity || 0);
+      valA = selectedBranchId === 'ALL' ? (a.stockQuantity || 0) : (a.branchStocks && a.branchStocks[selectedBranchId] !== undefined ? a.branchStocks[selectedBranchId] : 0);
+      valB = selectedBranchId === 'ALL' ? (b.stockQuantity || 0) : (b.branchStocks && b.branchStocks[selectedBranchId] !== undefined ? b.branchStocks[selectedBranchId] : 0);
       return sortDirection === 'asc' ? valA - valB : valB - valA;
     }
     return 0;
@@ -1011,9 +1022,7 @@ export const ProductsPage: React.FC = () => {
       ];
 
       const rows: string[][] = sortedAndFilteredProducts.map((p) => {
-        const stock = p.branchStocks && p.branchStocks[selectedBranchId] !== undefined
-          ? p.branchStocks[selectedBranchId]
-          : (p.stockQuantity || 0);
+        const stock = selectedBranchId === 'ALL' ? (p.stockQuantity || 0) : (p.branchStocks && p.branchStocks[selectedBranchId] !== undefined ? p.branchStocks[selectedBranchId] : 0);
 
         const minStock = p.branchMinStocks && p.branchMinStocks[selectedBranchId] !== undefined
           ? p.branchMinStocks[selectedBranchId]
@@ -1871,7 +1880,7 @@ export const ProductsPage: React.FC = () => {
             const isSelected = selectedProductIds.includes(p.id);
             const isExpanded = expandedProductIds.includes(p.id);
             const hasChildren = p.hasVariants && p.variants && p.variants.length > 0;
-            const currentBranchStock = p.branchStocks && p.branchStocks[selectedBranchId] !== undefined ? p.branchStocks[selectedBranchId] : p.stockQuantity;
+            const currentBranchStock = selectedBranchId === 'ALL' ? (p.stockQuantity || 0) : (p.branchStocks && p.branchStocks[selectedBranchId] !== undefined ? p.branchStocks[selectedBranchId] : 0);
             const branchMin = p.branchMinStocks && p.branchMinStocks[selectedBranchId] !== undefined ? p.branchMinStocks[selectedBranchId] : (p.minStock || 10);
             const isLowStock = currentBranchStock <= branchMin;
 
@@ -2362,7 +2371,23 @@ export const ProductsPage: React.FC = () => {
                           <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                             {(() => {
                               const activeBranchObj = branches.find((b) => b.id === selectedBranchId) || branches[0];
-                              const currentBranchStock = p.branchStocks && p.branchStocks[selectedBranchId] !== undefined ? p.branchStocks[selectedBranchId] : p.stockQuantity;
+
+                              const getBStock = (bId: string) => {
+                                if (!p.branchStocks) return 0;
+                                if (p.branchStocks[bId] !== undefined) return Number(p.branchStocks[bId]) || 0;
+                                const altKey = bId.replace('branch-0', 'b');
+                                if (p.branchStocks[altKey] !== undefined) return Number(p.branchStocks[altKey]) || 0;
+                                return 0;
+                              };
+
+                              const totalChainStock = p.branchStocks
+                                ? branches.reduce((sum, b) => sum + getBStock(b.id), 0)
+                                : (p.stockQuantity || 0);
+
+                              const currentBranchStock = selectedBranchId === 'ALL'
+                                ? totalChainStock
+                                : getBStock(selectedBranchId);
+
                               const branchMin = p.branchMinStocks && p.branchMinStocks[selectedBranchId] !== undefined ? p.branchMinStocks[selectedBranchId] : (p.minStock || 10);
                               const isLowStock = currentBranchStock <= branchMin;
 
@@ -2381,7 +2406,7 @@ export const ProductsPage: React.FC = () => {
                                       </span>
                                     )}
                                     <div className="text-[9px] text-slate-500 font-mono mt-0.5">
-                                      Chuỗi: {p.stockQuantity}
+                                      Chuỗi: {totalChainStock}
                                     </div>
                                   </div>
 
@@ -2393,16 +2418,16 @@ export const ProductsPage: React.FC = () => {
                                         <span>Tồn Kho Theo Chi Nhánh</span>
                                       </span>
                                       <span className="text-[10px] font-mono text-emerald-400 font-bold">
-                                        Tổng: {p.stockQuantity} {p.unit}
+                                        Tổng: {totalChainStock} {p.unit}
                                       </span>
                                     </div>
 
                                     <div className="space-y-1.5">
                                       {branches.map((b) => {
-                                        const bStock = p.branchStocks && p.branchStocks[b.id] !== undefined ? p.branchStocks[b.id] : 0;
+                                        const bStock = getBStock(b.id);
                                         const bMin = p.branchMinStocks && p.branchMinStocks[b.id] !== undefined ? p.branchMinStocks[b.id] : (p.minStock || 10);
                                         const bActive = p.branchActiveStatus && p.branchActiveStatus[b.id] !== undefined ? p.branchActiveStatus[b.id] : true;
-                                        const percent = p.stockQuantity > 0 ? Math.min(100, Math.round((bStock / p.stockQuantity) * 100)) : 0;
+                                        const percent = totalChainStock > 0 ? Math.min(100, Math.round((bStock / totalChainStock) * 100)) : 0;
                                         const isBSelected = b.id === selectedBranchId;
 
                                         return (

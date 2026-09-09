@@ -344,9 +344,11 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
                   const cartItem = cart.find((item) => item.product.id === p.id);
                   const { price: displayPrice } = calculateProductPrice(p, p.unit, activePriceList);
                   const currBranchStock =
-                    p.branchStocks && p.branchStocks[selectedBranchId] !== undefined
-                      ? p.branchStocks[selectedBranchId]
-                      : p.stockQuantity;
+                    selectedBranchId === 'ALL'
+                      ? (p.stockQuantity || 0)
+                      : (p.branchStocks && p.branchStocks[selectedBranchId] !== undefined
+                          ? p.branchStocks[selectedBranchId]
+                          : 0);
                   const branchMin =
                     p.branchMinStocks && p.branchMinStocks[selectedBranchId] !== undefined
                       ? p.branchMinStocks[selectedBranchId]
@@ -571,9 +573,11 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
                   <div className="absolute top-full left-0 right-0 mt-1.5 bg-slate-900/98 border border-slate-700/90 rounded-2xl shadow-2xl z-[999] overflow-hidden max-h-72 overflow-y-auto divide-y divide-slate-800/80 animate-in fade-in zoom-in-95 duration-100 backdrop-blur-md">
                     {matchingCartSearchResults.length > 0 ? (
                       matchingCartSearchResults.map((prod) => {
-                        const stock = prod.branchStocks && prod.branchStocks[selectedBranchId] !== undefined
-                          ? prod.branchStocks[selectedBranchId]
-                          : (prod.stockQuantity || 0);
+                        const stock = selectedBranchId === 'ALL'
+                          ? (prod.stockQuantity || 0)
+                          : (prod.branchStocks && prod.branchStocks[selectedBranchId] !== undefined
+                              ? prod.branchStocks[selectedBranchId]
+                              : 0);
 
                         return (
                           <div

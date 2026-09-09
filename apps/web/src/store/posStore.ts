@@ -89,6 +89,50 @@ export const calculateProductPrice = (product: any, unitName?: string, activePri
   return { price: targetPrice, factor: targetFactor, unit: targetUnit };
 };
 
+export const applyAutoChucRule = (item: CartItem, activePriceList: any, enableAutoChuc: boolean = true) => {
+  const isRetailPriceList = !activePriceList || activePriceList.code === 'BG-BASE' || (activePriceList.name && activePriceList.name.toLowerCase().includes('lẻ'));
+  if (!enableAutoChuc || !isRetailPriceList || !item?.product) return item;
+
+  const product = item.product;
+  const convList = product.conversions && product.conversions.length > 0
+    ? product.conversions
+    : (product.conversionUnit ? [{ id: 'c0', unitName: product.conversionUnit, conversionFactor: product.conversionFactor || product.conversionRate || 10, sellingPrice: product.conversionSellingPrice || (product.sellingPrice || 0) * 10 }] : []);
+
+  const chucConv = convList.find((c: any) => c.unitName && c.unitName.toLowerCase().includes('chục'));
+  if (!chucConv) return item;
+
+  const chucFactor = Number(chucConv.conversionFactor || chucConv.conversionRate || 10);
+  const currentFactor = Number(item.selectedConversionFactor || 1);
+  const totalBaseQty = item.quantity * currentFactor;
+
+  // Case 1: Total base units >= 10 and currently in base unit -> auto convert to Chục
+  if (totalBaseQty >= 10 && item.selectedUnit === product.unit) {
+    const chucQty = Math.max(1, Math.floor(totalBaseQty / chucFactor));
+    const { price, factor } = calculateProductPrice(product, chucConv.unitName, activePriceList);
+    return {
+      ...item,
+      quantity: chucQty,
+      selectedUnit: chucConv.unitName,
+      selectedConversionFactor: factor,
+      selectedPrice: price,
+    };
+  }
+
+  // Case 2: Total base units < 10 and currently in Chục (via auto switch) -> revert to base unit
+  if (totalBaseQty < 10 && item.selectedUnit !== product.unit && item.selectedUnit.toLowerCase().includes('chục')) {
+    const { price, factor } = calculateProductPrice(product, product.unit, activePriceList);
+    return {
+      ...item,
+      quantity: totalBaseQty,
+      selectedUnit: product.unit,
+      selectedConversionFactor: factor,
+      selectedPrice: price,
+    };
+  }
+
+  return item;
+};
+
 const createInitialTab = (index: number = 1): OrderTab => ({
   id: `tab-${Date.now()}-${index}`,
   name: `Hóa đơn ${index}`,
@@ -111,6 +155,8 @@ interface PosState {
   customer: any | null;
   selectedCustomer: any | null;
   activePriceList: any | null;
+  enableAutoChucPriceInRetail: boolean;
+  fetchStoreSettings: () => Promise<void>;
 
   parkedOrders: ParkedOrder[];
   searchQuery: string;
@@ -185,6 +231,16 @@ export const usePosStore = create<PosState>((set, get) => ({
   customer: null,
   selectedCustomer: null,
   activePriceList: null,
+  enableAutoChucPriceInRetail: true,
+
+  fetchStoreSettings: async () => {
+    try {
+      const res: any = await api.get('/settings');
+      if (res.data && res.data.enableAutoChucPriceInRetail !== undefined) {
+        set({ enableAutoChucPriceInRetail: res.data.enableAutoChucPriceInRetail });
+      }
+    } catch (_) {}
+  },
 
   parkedOrders: [],
   searchQuery: '',
@@ -324,7 +380,7 @@ export const usePosStore = create<PosState>((set, get) => ({
   setLastOrder: (lastOrder) => set({ lastOrder }),
 
   addToCart: (product, unitName) => {
-    const { tabs, activeTabId } = get();
+    const { tabs, activeTabId, enableAutoChucPriceInRetail } = get();
     const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
     const { price: targetPrice, factor: targetFactor, unit: targetUnit } = calculateProductPrice(product, unitName, activeTab.activePriceList);
 
@@ -346,6 +402,11 @@ export const usePosStore = create<PosState>((set, get) => ({
         selectedPrice: targetPrice,
       });
     }
+
+    // Apply auto Chục price rule if enabled
+    updatedCart = updatedCart.map((item) =>
+      item.product.id === product.id ? applyAutoChucRule(item, activeTab.activePriceList, enableAutoChucPriceInRetail) : item
+    );
 
     const newTabs = tabs.map((t) => (t.id === activeTabId ? { ...t, cart: updatedCart } : t));
     set({
@@ -372,9 +433,15 @@ export const usePosStore = create<PosState>((set, get) => ({
       get().removeFromCart(productId);
       return;
     }
-    const { tabs, activeTabId } = get();
+    const { tabs, activeTabId, enableAutoChucPriceInRetail } = get();
     const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
-    const updatedCart = activeTab.cart.map((item) => (item.product.id === productId ? { ...item, quantity } : item));
+    let updatedCart = activeTab.cart.map((item) => (item.product.id === productId ? { ...item, quantity } : item));
+
+    // Apply auto Chục price rule if enabled
+    updatedCart = updatedCart.map((item) =>
+      item.product.id === productId ? applyAutoChucRule(item, activeTab.activePriceList, enableAutoChucPriceInRetail) : item
+    );
+
     const newTabs = tabs.map((t) => (t.id === activeTabId ? { ...t, cart: updatedCart } : t));
     set({
       tabs: newTabs,

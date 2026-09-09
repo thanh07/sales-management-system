@@ -51,6 +51,7 @@ export interface StoreSettings {
   allowCashierChangePrice: boolean;
   autoPrintInvoice: boolean;
   roundCashAmount: boolean;
+  enableAutoChucPriceInRetail: boolean;
 }
 
 let STORE_SETTINGS: StoreSettings = {
@@ -105,6 +106,7 @@ let STORE_SETTINGS: StoreSettings = {
   allowCashierChangePrice: false,
   autoPrintInvoice: true,
   roundCashAmount: true,
+  enableAutoChucPriceInRetail: true,
 };
 
 import fs from 'fs';

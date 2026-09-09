@@ -393,6 +393,22 @@ function loadImportedProductsFromFile(): Product[] {
     // Main conversion unit should be real unit e.g. "Chục (10 cái)"
     const mainConv = conversions[0];
 
+    // Normalize branchStocks and calculate exact total stockQuantity
+    let branchStocks = prod.branchStocks ? { ...prod.branchStocks } : undefined;
+    let stockQuantity = prod.stockQuantity;
+
+    if (branchStocks) {
+      const b1 = Number(branchStocks['branch-01'] ?? branchStocks['b1'] ?? 0);
+      const b2 = Number(branchStocks['branch-02'] ?? branchStocks['b2'] ?? 0);
+      const b3 = Number(branchStocks['branch-03'] ?? branchStocks['b3'] ?? 0);
+      branchStocks = {
+        'branch-01': b1,
+        'branch-02': b2,
+        'branch-03': b3,
+      };
+      stockQuantity = b1 + b2 + b3;
+    }
+
     return {
       ...prod,
       wholesalePrice,
@@ -400,6 +416,8 @@ function loadImportedProductsFromFile(): Product[] {
       conversionUnit: mainConv?.unitName || (prod.conversionUnit === 'Giá Sỉ' ? undefined : prod.conversionUnit),
       conversionFactor: mainConv?.conversionFactor || prod.conversionFactor,
       conversionSellingPrice: mainConv?.sellingPrice || prod.conversionSellingPrice,
+      branchStocks,
+      stockQuantity,
     };
   });
 }
@@ -880,19 +898,25 @@ export class ProductService {
 
         const keysToUpdate = isB1 ? ['b1', 'branch-01', 'CN-01'] : isB2 ? ['b2', 'branch-02', 'CN-02'] : isB3 ? ['b3', 'branch-03', 'CN-03'] : [targetBranch];
 
-        const currentVal = p.branchStocks[keysToUpdate[0]] !== undefined ? p.branchStocks[keysToUpdate[0]] : (p.branchStocks[targetBranch] || 0);
+        let currentVal = 0;
+        for (const k of keysToUpdate) {
+          if (p.branchStocks[k] !== undefined) {
+            currentVal = Number(p.branchStocks[k]) || 0;
+            break;
+          }
+        }
         const newVal = Math.max(0, currentVal + quantityChange);
 
-        const branchMap = p.branchStocks || {};
+        const branchMap = { ...p.branchStocks };
         keysToUpdate.forEach((k) => {
           branchMap[k] = newVal;
         });
         p.branchStocks = branchMap;
 
-        // Recalculate total stock (using primary keys b1, b2, b3 or branch-01, branch-02, branch-03)
-        const primaryB1 = p.branchStocks['b1'] ?? p.branchStocks['branch-01'] ?? 0;
-        const primaryB2 = p.branchStocks['b2'] ?? p.branchStocks['branch-02'] ?? 0;
-        const primaryB3 = p.branchStocks['b3'] ?? p.branchStocks['branch-03'] ?? 0;
+        // Recalculate total stock across primary branch keys
+        const primaryB1 = p.branchStocks['branch-01'] ?? p.branchStocks['b1'] ?? 0;
+        const primaryB2 = p.branchStocks['branch-02'] ?? p.branchStocks['b2'] ?? 0;
+        const primaryB3 = p.branchStocks['branch-03'] ?? p.branchStocks['b3'] ?? 0;
         p.stockQuantity = primaryB1 + primaryB2 + primaryB3;
         return;
       }

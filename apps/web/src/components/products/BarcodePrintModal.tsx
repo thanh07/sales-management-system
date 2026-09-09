@@ -56,8 +56,7 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
             barcode: v.barcode || v.sku || p.barcode || '000000',
             unit: p.unit || 'Cái',
             category: p.category || '',
-            sellingPrice: v.sellingPrice ?? p.sellingPrice ?? 0,
-            stockQuantity: v.stockQuantity ?? (v.branchStocks?.[activeBranchId] ?? p.stockQuantity ?? 0),
+            stockQuantity: activeBranchId === 'ALL' ? (v.stockQuantity ?? 0) : (v.branchStocks?.[activeBranchId] ?? 0),
             branchStocks: v.branchStocks || p.branchStocks || {},
             isVariant: true,
             parentName: p.name,
@@ -74,7 +73,7 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
           unit: p.unit || 'Cái',
           category: p.category || '',
           sellingPrice: p.sellingPrice || 0,
-          stockQuantity: p.stockQuantity ?? (p.branchStocks?.[activeBranchId] ?? 0),
+          stockQuantity: activeBranchId === 'ALL' ? (p.stockQuantity ?? 0) : (p.branchStocks?.[activeBranchId] ?? 0),
           branchStocks: p.branchStocks || {},
           isVariant: false,
         });

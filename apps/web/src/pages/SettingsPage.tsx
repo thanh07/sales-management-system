@@ -195,6 +195,7 @@ export const SettingsPage: React.FC = () => {
     allowCashierChangePrice: false,
     autoPrintInvoice: true,
     roundCashAmount: true,
+    enableAutoChucPriceInRetail: true,
   });
 
   const [originalSettings, setOriginalSettings] = useState({ ...settings });
@@ -959,6 +960,28 @@ export const SettingsPage: React.FC = () => {
                   disabled={!isAdmin}
                   checked={settings.roundCashAmount}
                   onChange={(e) => setSettings({ ...settings, roundCashAmount: e.target.checked })}
+                  className="w-5 h-5 rounded text-blue-600 bg-slate-950 border-slate-700 cursor-pointer mt-1"
+                />
+              </div>
+
+              {/* Rule 7: Tự động đổi giá chục khi mua >= 10 cái (Bảng Giá Lẻ) */}
+              <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="font-bold text-white text-sm flex items-center gap-1.5">
+                    <span>Tự động chuyển sang Giá Chục khi bán từ 10 sản phẩm trở lên (Chỉ Bảng Giá Lẻ)</span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${settings.enableAutoChucPriceInRetail !== false ? 'bg-purple-500/20 text-purple-300' : 'bg-slate-800 text-slate-400'}`}>
+                      {settings.enableAutoChucPriceInRetail !== false ? 'Đã Bật' : 'Tắt'}
+                    </span>
+                  </div>
+                  <p className="text-slate-400 leading-relaxed">
+                    Khi bật, giỏ hàng POS sẽ tự động chuyển đơn vị sang Chục và áp dụng giá chục khi chọn Bảng Giá Lẻ và tổng số lượng mua từ 10 cái trở lên.
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  disabled={!isAdmin}
+                  checked={settings.enableAutoChucPriceInRetail !== false}
+                  onChange={(e) => setSettings({ ...settings, enableAutoChucPriceInRetail: e.target.checked })}
                   className="w-5 h-5 rounded text-blue-600 bg-slate-950 border-slate-700 cursor-pointer mt-1"
                 />
               </div>

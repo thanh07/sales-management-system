@@ -164,7 +164,20 @@ export class PosService {
     // Deduct stock levels in ProductService in SMALLEST unit (quantity * conversionFactor) for the active branch
     const branchId = input.branchId || 'branch-01';
     input.items.forEach((item) => {
-      const factor = item.conversionFactor || 1;
+      let factor = item.conversionFactor || 1;
+      if (factor === 1 && item.selectedUnit) {
+        try {
+          const prod = ProductService.getProductById(item.productId);
+          if (prod) {
+            const conv = prod.conversions?.find((c: any) => c.unitName === item.selectedUnit || (c.unitName && item.selectedUnit && c.unitName.includes(item.selectedUnit)));
+            if (conv && conv.conversionFactor) {
+              factor = conv.conversionFactor;
+            } else if (item.selectedUnit.toLowerCase().includes('chục')) {
+              factor = 10;
+            }
+          }
+        } catch (_) {}
+      }
       const totalSmallestUnitsDeducted = item.quantity * factor;
       ProductService.updateStock(item.productId, -totalSmallestUnitsDeducted, branchId);
     });
