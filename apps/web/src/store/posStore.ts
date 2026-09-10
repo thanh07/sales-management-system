@@ -44,6 +44,13 @@ export const calculateProductPrice = (product: any, unitName?: string, activePri
   let targetFactor = 1;
   let targetPrice = product.sellingPrice || 0;
 
+  const isWholesale = activePriceList && (
+    activePriceList.code === 'BG-SI' ||
+    activePriceList.code?.includes('SI') ||
+    activePriceList.code?.includes('WHOLESALE') ||
+    activePriceList.name?.toLowerCase().includes('sỉ')
+  );
+
   if (targetUnit !== product.unit) {
     const conv = convList.find((c: any) =>
       c.unitName === targetUnit ||
@@ -63,6 +70,9 @@ export const calculateProductPrice = (product: any, unitName?: string, activePri
       targetFactor = 10;
       targetPrice = (product.sellingPrice || 0) * targetFactor;
     }
+  } else if (isWholesale && product.wholesalePrice && product.wholesalePrice > 0) {
+    // If active price list is Wholesale, base unit 'Cái' defaults to wholesalePrice!
+    targetPrice = product.wholesalePrice;
   }
 
   // Apply active price list rules
@@ -90,7 +100,14 @@ export const calculateProductPrice = (product: any, unitName?: string, activePri
 };
 
 export const applyAutoChucRule = (item: CartItem, activePriceList: any, enableAutoChuc: boolean = true) => {
-  const isRetailPriceList = !activePriceList || activePriceList.code === 'BG-BASE' || (activePriceList.name && activePriceList.name.toLowerCase().includes('lẻ'));
+  const isWholesale = activePriceList && (
+    activePriceList.code === 'BG-SI' ||
+    activePriceList.code?.includes('SI') ||
+    activePriceList.code?.includes('WHOLESALE') ||
+    activePriceList.name?.toLowerCase().includes('sỉ')
+  );
+
+  const isRetailPriceList = (!activePriceList || activePriceList.code === 'BG-BASE') && !isWholesale;
   if (!enableAutoChuc || !isRetailPriceList || !item?.product) return item;
 
   const product = item.product;
@@ -102,32 +119,24 @@ export const applyAutoChucRule = (item: CartItem, activePriceList: any, enableAu
   if (!chucConv) return item;
 
   const chucFactor = Number(chucConv.conversionFactor || chucConv.conversionRate || 10);
-  const currentFactor = Number(item.selectedConversionFactor || 1);
-  const totalBaseQty = item.quantity * currentFactor;
 
-  // Case 1: Total base units >= 10 and currently in base unit -> auto convert to Chục
-  if (totalBaseQty >= 10 && item.selectedUnit === product.unit) {
-    const chucQty = Math.max(1, Math.floor(totalBaseQty / chucFactor));
-    const { price, factor } = calculateProductPrice(product, chucConv.unitName, activePriceList);
-    return {
-      ...item,
-      quantity: chucQty,
-      selectedUnit: chucConv.unitName,
-      selectedConversionFactor: factor,
-      selectedPrice: price,
-    };
-  }
+  // Apply auto Chục price rule when item is in base unit (Cái)
+  if (item.selectedUnit === product.unit || !item.selectedUnit) {
+    const { price: basePrice } = calculateProductPrice(product, product.unit, activePriceList);
+    const { price: chucPrice } = calculateProductPrice(product, chucConv.unitName, activePriceList);
+    const unitChucPrice = chucFactor > 0 ? Math.round(chucPrice / chucFactor) : basePrice;
 
-  // Case 2: Total base units < 10 and currently in Chục (via auto switch) -> revert to base unit
-  if (totalBaseQty < 10 && item.selectedUnit !== product.unit && item.selectedUnit.toLowerCase().includes('chục')) {
-    const { price, factor } = calculateProductPrice(product, product.unit, activePriceList);
-    return {
-      ...item,
-      quantity: totalBaseQty,
-      selectedUnit: product.unit,
-      selectedConversionFactor: factor,
-      selectedPrice: price,
-    };
+    if (item.quantity >= 10) {
+      return {
+        ...item,
+        selectedPrice: unitChucPrice,
+      };
+    } else {
+      return {
+        ...item,
+        selectedPrice: basePrice,
+      };
+    }
   }
 
   return item;
@@ -341,14 +350,33 @@ export const usePosStore = create<PosState>((set, get) => ({
   },
 
   setActivePriceList: (priceList) => {
-    const { tabs, activeTabId } = get();
+    const { tabs, activeTabId, enableAutoChucPriceInRetail } = get();
     let updatedActiveCart: CartItem[] = [];
+
+    const isWholesale = priceList && (
+      priceList.code === 'BG-SI' ||
+      priceList.code?.includes('SI') ||
+      priceList.code?.includes('WHOLESALE') ||
+      priceList.name?.toLowerCase().includes('sỉ')
+    );
 
     const newTabs = tabs.map((t) => {
       if (t.id !== activeTabId) return t;
       const updatedCart = t.cart.map((item) => {
-        const { price } = calculateProductPrice(item.product, item.selectedUnit, priceList);
-        return { ...item, selectedPrice: price };
+        if (isWholesale) {
+          const baseUnit = item.product.unit;
+          const { price, factor, unit } = calculateProductPrice(item.product, baseUnit, priceList);
+          return {
+            ...item,
+            selectedUnit: unit,
+            selectedConversionFactor: factor,
+            selectedPrice: price,
+          };
+        } else {
+          const { price } = calculateProductPrice(item.product, item.selectedUnit, priceList);
+          const updatedItem = { ...item, selectedPrice: price };
+          return applyAutoChucRule(updatedItem, priceList, enableAutoChucPriceInRetail);
+        }
       });
       updatedActiveCart = updatedCart;
       return { ...t, activePriceList: priceList, cart: updatedCart };
@@ -384,14 +412,15 @@ export const usePosStore = create<PosState>((set, get) => ({
     const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
     const { price: targetPrice, factor: targetFactor, unit: targetUnit } = calculateProductPrice(product, unitName, activeTab.activePriceList);
 
-    const existingIndex = activeTab.cart.findIndex((item) => item.product.id === product.id && item.selectedUnit === targetUnit);
+    // Strictly match existing item by product.id to maintain 1 SINGLE ROW PER PRODUCT in cart
+    const existingIndex = activeTab.cart.findIndex((item) => item.product.id === product.id);
 
     let updatedCart = [...activeTab.cart];
     if (existingIndex > -1) {
+      const existingItem = updatedCart[existingIndex];
       updatedCart[existingIndex] = {
-        ...updatedCart[existingIndex],
-        quantity: updatedCart[existingIndex].quantity + 1,
-        selectedPrice: targetPrice,
+        ...existingItem,
+        quantity: existingItem.quantity + 1,
       };
     } else {
       updatedCart.push({
