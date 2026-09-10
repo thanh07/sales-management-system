@@ -882,7 +882,48 @@ export class ProductService {
     return [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
   }
 
-  static updateStock(productId: string, quantityChange: number, branchId: string = 'branch-01') {
+  static getStockForBranch(productId: string, branchId: string = 'branch-01'): number {
+    const targetBranch = branchId || 'branch-01';
+    for (const p of MOCK_PRODUCTS) {
+      if (p.id === productId || p.sku === productId || p.barcode === productId) {
+        if (!p.branchStocks) {
+          return Number(p.stockQuantity) || 0;
+        }
+        const isB1 = targetBranch === 'b1' || targetBranch === 'branch-01' || targetBranch === 'CN-01';
+        const isB2 = targetBranch === 'b2' || targetBranch === 'branch-02' || targetBranch === 'CN-02';
+        const isB3 = targetBranch === 'b3' || targetBranch === 'branch-03' || targetBranch === 'CN-03';
+        const keysToCheck = isB1 ? ['b1', 'branch-01', 'CN-01'] : isB2 ? ['b2', 'branch-02', 'CN-02'] : isB3 ? ['b3', 'branch-03', 'CN-03'] : [targetBranch];
+
+        for (const k of keysToCheck) {
+          if (p.branchStocks[k] !== undefined) {
+            return Number(p.branchStocks[k]) || 0;
+          }
+        }
+        return Number(p.stockQuantity) || 0;
+      }
+
+      if (p.variants) {
+        const v = p.variants.find((vr) => vr.id === productId || vr.sku === productId || vr.barcode === productId);
+        if (v) {
+          if (!v.branchStocks) return Number(v.stockQuantity) || 0;
+          const isB1 = targetBranch === 'b1' || targetBranch === 'branch-01' || targetBranch === 'CN-01';
+          const isB2 = targetBranch === 'b2' || targetBranch === 'branch-02' || targetBranch === 'CN-02';
+          const isB3 = targetBranch === 'b3' || targetBranch === 'branch-03' || targetBranch === 'CN-03';
+          const keysToCheck = isB1 ? ['b1', 'branch-01', 'CN-01'] : isB2 ? ['b2', 'branch-02', 'CN-02'] : isB3 ? ['b3', 'branch-03', 'CN-03'] : [targetBranch];
+
+          for (const k of keysToCheck) {
+            if (v.branchStocks[k] !== undefined) {
+              return Number(v.branchStocks[k]) || 0;
+            }
+          }
+          return Number(v.stockQuantity) || 0;
+        }
+      }
+    }
+    return 0;
+  }
+
+  static updateStock(productId: string, quantityChange: number, branchId: string = 'branch-01', allowNegative: boolean = false) {
     const targetBranch = branchId || 'branch-01';
 
     for (const p of MOCK_PRODUCTS) {
@@ -905,7 +946,7 @@ export class ProductService {
             break;
           }
         }
-        const newVal = Math.max(0, currentVal + quantityChange);
+        const newVal = allowNegative ? (currentVal + quantityChange) : Math.max(0, currentVal + quantityChange);
 
         const branchMap = { ...p.branchStocks };
         keysToUpdate.forEach((k) => {

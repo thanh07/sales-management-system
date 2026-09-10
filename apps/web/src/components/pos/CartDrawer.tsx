@@ -187,13 +187,36 @@ export const CartDrawer: React.FC = () => {
                     <button
                       onClick={() => updateQuantity(prod.id, item.quantity - 1)}
                       className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-white"
+                      title="Giảm 1"
                     >
                       <Minus className="w-3 h-3" />
                     </button>
-                    <span className="w-8 text-center font-bold text-white text-xs">{item.quantity}</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={item.quantity}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!isNaN(val)) {
+                          updateQuantity(prod.id, val);
+                        } else if (e.target.value === '') {
+                          updateQuantity(prod.id, 0);
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (isNaN(val) || val <= 0) {
+                          updateQuantity(prod.id, 1);
+                        }
+                      }}
+                      className="w-12 py-0.5 text-center font-bold text-white text-xs bg-slate-950 border border-slate-700/80 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      title="Gõ số lượng trực tiếp"
+                    />
                     <button
                       onClick={() => updateQuantity(prod.id, item.quantity + 1)}
                       className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-white"
+                      title="Tăng 1"
                     >
                       <Plus className="w-3 h-3" />
                     </button>

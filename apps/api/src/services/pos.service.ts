@@ -1,4 +1,5 @@
 import { ProductService } from './product.service';
+import { SettingsService } from './settings.service';
 
 export interface OrderItemInput {
   productId: string;
@@ -161,8 +162,40 @@ export class PosService {
       throw new Error('Giỏ hàng trống, không thể thanh toán');
     }
 
-    // Deduct stock levels in ProductService in SMALLEST unit (quantity * conversionFactor) for the active branch
+    const settings = SettingsService.getSettings();
+    const allowNegativeStock = settings.allowNegativeStock;
     const branchId = input.branchId || 'branch-01';
+
+    // Validate stock levels if negative stock selling is DISABLED
+    if (!allowNegativeStock) {
+      for (const item of input.items) {
+        let factor = item.conversionFactor || 1;
+        if (factor === 1 && item.selectedUnit) {
+          const prod = ProductService.getProductById(item.productId);
+          if (prod) {
+            const conv = prod.conversions?.find((c: any) => c.unitName === item.selectedUnit || (c.unitName && item.selectedUnit && c.unitName.includes(item.selectedUnit)));
+            if (conv && conv.conversionFactor) {
+              factor = conv.conversionFactor;
+            } else if (item.selectedUnit.toLowerCase().includes('chục')) {
+              factor = 10;
+            }
+          }
+        }
+        const neededBaseQty = item.quantity * factor;
+        const availableStock = ProductService.getStockForBranch(item.productId, branchId);
+        const prod = ProductService.getProductById(item.productId);
+        const prodName = prod?.name || item.name || 'Sản phẩm';
+        const unitName = prod?.unit || 'Cái';
+
+        if (neededBaseQty > availableStock) {
+          throw new Error(
+            `Sản phẩm "${prodName}" hiện chỉ còn ${availableStock} ${unitName} trong kho, không đủ để bán ${neededBaseQty} ${unitName}. (Quy tắc "Cho phép Bán âm kho" đang TẮT)`
+          );
+        }
+      }
+    }
+
+    // Deduct stock levels in ProductService in SMALLEST unit (quantity * conversionFactor) for the active branch
     input.items.forEach((item) => {
       let factor = item.conversionFactor || 1;
       if (factor === 1 && item.selectedUnit) {
@@ -179,7 +212,7 @@ export class PosService {
         } catch (_) {}
       }
       const totalSmallestUnitsDeducted = item.quantity * factor;
-      ProductService.updateStock(item.productId, -totalSmallestUnitsDeducted, branchId);
+      ProductService.updateStock(item.productId, -totalSmallestUnitsDeducted, branchId, allowNegativeStock);
     });
 
     const now = new Date();

@@ -165,6 +165,7 @@ interface PosState {
   selectedCustomer: any | null;
   activePriceList: any | null;
   enableAutoChucPriceInRetail: boolean;
+  allowNegativeStock: boolean;
   fetchStoreSettings: () => Promise<void>;
 
   parkedOrders: ParkedOrder[];
@@ -241,12 +242,16 @@ export const usePosStore = create<PosState>((set, get) => ({
   selectedCustomer: null,
   activePriceList: null,
   enableAutoChucPriceInRetail: true,
+  allowNegativeStock: false,
 
   fetchStoreSettings: async () => {
     try {
       const res: any = await api.get('/settings');
-      if (res.data && res.data.enableAutoChucPriceInRetail !== undefined) {
-        set({ enableAutoChucPriceInRetail: res.data.enableAutoChucPriceInRetail });
+      if (res.data) {
+        set({
+          enableAutoChucPriceInRetail: res.data.enableAutoChucPriceInRetail ?? true,
+          allowNegativeStock: res.data.allowNegativeStock ?? false,
+        });
       }
     } catch (_) {}
   },
@@ -609,8 +614,10 @@ export const usePosStore = create<PosState>((set, get) => ({
     try {
       const res: any = await api.post('/pos/checkout', checkoutPayload);
       serverOrder = res.data;
-    } catch (err) {
-      console.warn('Fallback offline order creation:', err);
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || err.message || 'Lỗi không xác định khi thanh toán';
+      alert(`⚠️ Không thể thanh toán:\n${errorMsg}`);
+      throw new Error(errorMsg);
     }
 
     const orderData = serverOrder || {

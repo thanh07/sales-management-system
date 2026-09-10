@@ -398,22 +398,42 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
                 {cartItem ? (
                   <div
                     onClick={(e) => e.stopPropagation()}
-                    className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0"
+                    className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-xl border border-slate-800 shrink-0"
                   >
                     <button
                       onClick={() => updateQuantity(p.id, cartItem.quantity - 1)}
-                      className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center font-bold text-xs"
+                      className="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center font-bold text-xs"
                     >
-                      <Minus className="w-3.5 h-3.5" />
+                      <Minus className="w-3 h-3" />
                     </button>
 
-                    <span className="w-6 text-center font-bold text-white text-xs">{cartItem.quantity}</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={cartItem.quantity}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!isNaN(val)) {
+                          updateQuantity(p.id, val);
+                        } else if (e.target.value === '') {
+                          updateQuantity(p.id, 0);
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (isNaN(val) || val <= 0) {
+                          updateQuantity(p.id, 1);
+                        }
+                      }}
+                      className="w-10 py-0.5 text-center font-bold text-white text-xs bg-slate-900 border border-slate-700/80 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
 
                     <button
                       onClick={() => updateQuantity(p.id, cartItem.quantity + 1)}
-                      className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center font-bold text-xs"
+                      className="w-6 h-6 rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center font-bold text-xs"
                     >
-                      <Plus className="w-3.5 h-3.5" />
+                      <Plus className="w-3 h-3" />
                     </button>
                   </div>
                 ) : (
