@@ -1214,4 +1214,15 @@ export class ProductService {
       UNITS_DB = [...data.units];
     }
   }
+
+  static getAllRawProducts(): Product[] {
+    return MOCK_PRODUCTS;
+  }
+
+  static setAllRawProducts(products: Product[]) {
+    if (Array.isArray(products)) {
+      MOCK_PRODUCTS = [...products];
+    }
+  }
 }
+

@@ -496,43 +496,44 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
         </button>
       </div>
 
-      {/* Mobile Cart / Checkout Drawer */}
+      {/* Mobile Cart / Checkout Drawer (Full Screen Layout) */}
       {isMobileCartDrawerOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex flex-col justify-end">
-          <div className="bg-slate-900 border-t border-slate-800 rounded-t-3xl p-5 space-y-3 max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-200">
-            {/* Drawer Header Title */}
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-              <h3 className="font-bold text-base text-white">Giỏ hàng thanh toán ({totalCartCount} món)</h3>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    setIsMobileCartDrawerOpen(false);
-                    setParkedModalOpen(true);
-                  }}
-                  className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-semibold flex items-center gap-1 border border-slate-700"
-                  title="Danh sách đơn tạm lưu"
-                >
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>Đơn tạm ({parkedOrders.length})</span>
-                </button>
-                <button
-                  onClick={() => setIsMobileCartDrawerOpen(false)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-white"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+        <div className="fixed inset-0 z-50 bg-slate-900 flex flex-col h-full animate-in slide-in-from-bottom duration-200">
+          {/* Drawer Header Title (Fixed Top) */}
+          <div className="flex items-center justify-between border-b border-slate-800 p-4 bg-slate-900/95 backdrop-blur-md shrink-0 z-20">
+            <h3 className="font-bold text-base text-white">Giỏ hàng thanh toán ({totalCartCount} món)</h3>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setIsMobileCartDrawerOpen(false);
+                  setParkedModalOpen(true);
+                }}
+                className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-semibold flex items-center gap-1 border border-slate-700 active:scale-95"
+                title="Danh sách đơn tạm lưu"
+              >
+                <Clock className="w-4 h-4" />
+                <span>Đơn tạm ({parkedOrders.length})</span>
+              </button>
+              <button
+                onClick={() => setIsMobileCartDrawerOpen(false)}
+                className="p-1.5 rounded-xl bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
+          </div>
 
+          {/* Drawer Body Scrollable Content */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {/* Toast Notification when adding product from search */}
             {addedCartToast && (
-              <div className="mb-2 p-2 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 rounded-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-200">
+              <div className="mb-2 p-2.5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 rounded-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-200">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span className="truncate">Đã thêm "{addedCartToast}" vào giỏ hàng!</span>
               </div>
             )}
 
-            {/* Header Quick Controls Section (Circled area matching attached UI screenshot) */}
+            {/* Header Quick Controls Section */}
             <div className="space-y-2 bg-slate-950/60 p-3 rounded-2xl border border-slate-800/80 text-xs relative z-30">
               {/* 1. Search / Barcode Scan Bar with Full-Width Autocomplete Dropdown */}
               <div className="flex items-center gap-2 relative z-50">
@@ -690,7 +691,8 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
               </div>
             </div>
 
-            <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+            {/* Cart Items List */}
+            <div className="space-y-2.5">
               {cart.map((item) => {
                 const availableUnits = [
                   item.product.unit || 'Cái',
@@ -786,19 +788,20 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
                 );
               })}
             </div>
+          </div>
 
-            <div className="border-t border-slate-800 pt-3 space-y-2 text-xs">
-              <div className="flex justify-between text-slate-400">
-                <span>Tạm tính:</span>
-                <span className="font-semibold text-white">{formatVND(subtotal)}</span>
-              </div>
-              <div className="flex justify-between text-white font-bold text-base pt-1">
-                <span>TỔNG THÀNH TIỀN:</span>
-                <span className="text-emerald-400">{formatVND(total)}</span>
-              </div>
+          {/* Drawer Footer Total & Primary Action Buttons (Fixed Bottom) */}
+          <div className="border-t border-slate-800 p-4 bg-slate-900/95 backdrop-blur-md shrink-0 space-y-2.5 text-xs z-20 shadow-xl">
+            <div className="flex justify-between text-slate-400">
+              <span>Tạm tính:</span>
+              <span className="font-semibold text-white">{formatVND(subtotal)}</span>
+            </div>
+            <div className="flex justify-between text-white font-bold text-base">
+              <span>TỔNG THÀNH TIỀN:</span>
+              <span className="text-emerald-400 font-mono text-lg">{formatVND(total)}</span>
             </div>
 
-            <div className="flex gap-2 pt-2">
+            <div className="flex gap-2 pt-1">
               <button
                 onClick={async () => {
                   await parkCurrentOrder();
@@ -806,7 +809,7 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
                   alert('Đã lưu tạm đơn hàng thành công!');
                 }}
                 disabled={cart.length === 0}
-                className="w-1/3 py-3 bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 font-bold text-xs rounded-xl border border-amber-500/30 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center gap-1"
+                className="w-1/3 py-3.5 bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 font-bold text-xs rounded-xl border border-amber-500/30 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center gap-1"
               >
                 <Clock className="w-3.5 h-3.5" />
                 <span>Lưu tạm</span>
@@ -818,7 +821,7 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
                   setCheckoutModalOpen(true);
                 }}
                 disabled={cart.length === 0}
-                className="w-2/3 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-blue-600/30 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center gap-1.5"
+                className="w-2/3 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-blue-600/30 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center gap-1.5 active:scale-98"
               >
                 <span>Thanh toán ({formatVND(total)})</span>
               </button>

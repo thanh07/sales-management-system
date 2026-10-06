@@ -1,6 +1,7 @@
 import app from './app';
 import http from 'http';
 import { Server as SocketIOServer } from 'socket.io';
+import { BackupService } from './services/backup.service';
 
 const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
@@ -25,4 +26,7 @@ server.listen(PORT, () => {
   console.log(`🚀 Sales Management Server running on port ${PORT}`);
   console.log(`🔗 API Base: http://localhost:${PORT}/api/v1`);
   console.log(`=================================================`);
+
+  // Initialize background automated backup scheduler
+  BackupService.initScheduler();
 });

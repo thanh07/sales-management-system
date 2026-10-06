@@ -31,3 +31,5 @@ build/
 tmp/
 *.tmp
 *.tar.gz
+apps/api/backups/*.json
+
