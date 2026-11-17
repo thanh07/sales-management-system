@@ -33,7 +33,8 @@ import {
   FileSpreadsheet, 
   FolderTree, 
   Eye, 
-  Image as ImageIcon, 
+  Image as ImageIcon,
+  Camera,
   Building2,
   Copy,
   Printer,
@@ -2851,40 +2852,63 @@ export const ProductsPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Product Image & Thumbnail Section */}
-              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
-                <label className="block text-slate-300 font-semibold text-xs flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-blue-400">
-                    <ImageIcon className="w-4 h-4" />
+              {/* Product Image & Thumbnail Section (Mobile-First Touch Optimized) */}
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800/90 space-y-3 shadow-md">
+                <div className="flex items-center justify-between">
+                  <label className="text-slate-200 font-bold text-xs flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-blue-400" />
                     <span>Hình Ảnh Sản Phẩm</span>
-                  </div>
-                  <span className="text-slate-500 font-normal text-[11px]">(Link URL hoặc Tải ảnh từ máy)</span>
-                </label>
+                  </label>
+                  <span className="text-slate-400 text-[11px] font-medium hidden sm:inline">(Chụp ảnh / Tải file / Dán URL)</span>
+                </div>
 
-                <div className="flex items-center gap-3">
-                  <div className="relative group/img shrink-0">
+                {/* Main Touch-Friendly Image Upload Area */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  {/* Big Touch Preview Box */}
+                  <label
+                    className="relative group/img flex items-center justify-center w-full sm:w-28 h-32 sm:h-28 rounded-2xl bg-slate-900 border-2 border-dashed border-slate-700 hover:border-blue-500 cursor-pointer overflow-hidden transition-all shrink-0 shadow-inner"
+                    title="Bấm vào ảnh để chụp hình hoặc chọn file từ điện thoại"
+                  >
                     <img
                       src={image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80'}
                       alt="Preview"
-                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover bg-slate-900 border-2 border-slate-700 shadow-md"
+                      className="w-full h-full object-cover transition-transform group-hover/img:scale-105"
                       onError={(e) => {
                         (e.target as any).src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80';
                       }}
                     />
-                  </div>
+                    <div className="absolute inset-0 bg-slate-950/65 flex flex-col items-center justify-center text-white text-xs font-bold gap-1 transition-opacity opacity-90 sm:opacity-0 group-hover/img:opacity-100">
+                      <Camera className="w-6 h-6 text-blue-400" />
+                      <span>Chạm để đổi ảnh</span>
+                    </div>
+                    {image && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          setImage('');
+                        }}
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-red-600/90 hover:bg-red-500 text-white shadow-md transition-all z-10 active:scale-95"
+                        title="Xóa ảnh về mặc định"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageFileSelect}
+                    />
+                  </label>
 
+                  {/* Actions & URL Input Panel */}
                   <div className="flex-1 space-y-2">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={image}
-                        onChange={(e) => setImage(e.target.value)}
-                        placeholder="Dán đường dẫn link ảnh (https://...) hoặc chọn ảnh mẫu bên dưới"
-                        className="flex-1 px-3 py-2 rounded-xl glass-input text-xs"
-                      />
-                      <label className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1 cursor-pointer shrink-0 border border-slate-700">
-                        <Upload className="w-3.5 h-3.5 text-blue-400" />
-                        <span>Tải file</span>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <label className="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-blue-600/25 active:scale-98 transition-all">
+                        <Camera className="w-4 h-4" />
+                        <span>Chụp / Chọn Ảnh Từ Thiết Bị</span>
                         <input
                           type="file"
                           accept="image/*"
@@ -2892,21 +2916,49 @@ export const ProductsPage: React.FC = () => {
                           onChange={handleImageFileSelect}
                         />
                       </label>
+
+                      {image && (
+                        <button
+                          type="button"
+                          onClick={() => setImage('')}
+                          className="py-3 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-red-300 text-xs font-bold border border-slate-700 active:scale-98 transition-all flex items-center justify-center gap-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                          <span>Xóa</span>
+                        </button>
+                      )}
                     </div>
 
-                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-full">
-                      <span className="text-[10px] text-slate-400 font-medium shrink-0">Gợi ý mẫu:</span>
-                      {imagePresets.map((preset) => (
-                        <button
-                          key={preset.id || preset.label}
-                          type="button"
-                          onClick={() => setImage(preset.url)}
-                          className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-blue-600/20 text-slate-300 hover:text-blue-300 text-[11px] border border-slate-800 transition-all shrink-0 whitespace-nowrap"
-                        >
-                          {preset.label}
-                        </button>
-                      ))}
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={image}
+                        onChange={(e) => setImage(e.target.value)}
+                        placeholder="Hoặc dán đường dẫn link ảnh (https://...)"
+                        className="w-full px-3 py-2.5 rounded-xl glass-input text-xs"
+                      />
                     </div>
+                  </div>
+                </div>
+
+                {/* Preset Image Badges Grid */}
+                <div className="pt-2 border-t border-slate-800/80 space-y-1.5">
+                  <span className="text-[11px] text-slate-400 font-semibold block">Gợi ý ảnh mẫu nhanh:</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {imagePresets.map((preset) => (
+                      <button
+                        key={preset.id || preset.label}
+                        type="button"
+                        onClick={() => setImage(preset.url)}
+                        className={`px-2.5 py-1 rounded-xl text-[11px] font-semibold border transition-all active:scale-95 flex items-center gap-1 ${
+                          image === preset.url
+                            ? 'bg-blue-600/30 border-blue-500 text-blue-300 shadow'
+                            : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800 hover:text-white'
+                        }`}
+                      >
+                        <span>{preset.label}</span>
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -3822,40 +3874,63 @@ export const ProductsPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Product Image & Thumbnail Section */}
-              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
-                <label className="block text-slate-300 font-semibold text-xs flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-blue-400">
-                    <ImageIcon className="w-4 h-4" />
+              {/* Product Image & Thumbnail Section (Mobile-First Touch Optimized) */}
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800/90 space-y-3 shadow-md">
+                <div className="flex items-center justify-between">
+                  <label className="text-slate-200 font-bold text-xs flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-blue-400" />
                     <span>Hình Ảnh Sản Phẩm</span>
-                  </div>
-                  <span className="text-slate-500 font-normal text-[11px]">(Link URL hoặc Tải ảnh từ máy)</span>
-                </label>
+                  </label>
+                  <span className="text-slate-400 text-[11px] font-medium hidden sm:inline">(Chụp ảnh / Tải file / Dán URL)</span>
+                </div>
 
-                <div className="flex items-center gap-3">
-                  <div className="relative group/img shrink-0">
+                {/* Main Touch-Friendly Image Upload Area */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  {/* Big Touch Preview Box */}
+                  <label
+                    className="relative group/img flex items-center justify-center w-full sm:w-28 h-32 sm:h-28 rounded-2xl bg-slate-900 border-2 border-dashed border-slate-700 hover:border-blue-500 cursor-pointer overflow-hidden transition-all shrink-0 shadow-inner"
+                    title="Bấm vào ảnh để chụp hình hoặc chọn file từ điện thoại"
+                  >
                     <img
                       src={image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80'}
                       alt="Preview"
-                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover bg-slate-900 border-2 border-slate-700 shadow-md"
+                      className="w-full h-full object-cover transition-transform group-hover/img:scale-105"
                       onError={(e) => {
                         (e.target as any).src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80';
                       }}
                     />
-                  </div>
+                    <div className="absolute inset-0 bg-slate-950/65 flex flex-col items-center justify-center text-white text-xs font-bold gap-1 transition-opacity opacity-90 sm:opacity-0 group-hover/img:opacity-100">
+                      <Camera className="w-6 h-6 text-blue-400" />
+                      <span>Chạm để đổi ảnh</span>
+                    </div>
+                    {image && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          setImage('');
+                        }}
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-red-600/90 hover:bg-red-500 text-white shadow-md transition-all z-10 active:scale-95"
+                        title="Xóa ảnh về mặc định"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageFileSelect}
+                    />
+                  </label>
 
+                  {/* Actions & URL Input Panel */}
                   <div className="flex-1 space-y-2">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={image}
-                        onChange={(e) => setImage(e.target.value)}
-                        placeholder="Dán đường dẫn link ảnh (https://...) hoặc chọn ảnh mẫu bên dưới"
-                        className="flex-1 px-3 py-2 rounded-xl glass-input text-xs"
-                      />
-                      <label className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1 cursor-pointer shrink-0 border border-slate-700">
-                        <Upload className="w-3.5 h-3.5 text-blue-400" />
-                        <span>Tải file</span>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <label className="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-blue-600/25 active:scale-98 transition-all">
+                        <Camera className="w-4 h-4" />
+                        <span>Chụp / Chọn Ảnh Từ Thiết Bị</span>
                         <input
                           type="file"
                           accept="image/*"
@@ -3863,21 +3938,49 @@ export const ProductsPage: React.FC = () => {
                           onChange={handleImageFileSelect}
                         />
                       </label>
+
+                      {image && (
+                        <button
+                          type="button"
+                          onClick={() => setImage('')}
+                          className="py-3 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-red-300 text-xs font-bold border border-slate-700 active:scale-98 transition-all flex items-center justify-center gap-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                          <span>Xóa</span>
+                        </button>
+                      )}
                     </div>
 
-                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-full">
-                      <span className="text-[10px] text-slate-400 font-medium shrink-0">Gợi ý mẫu:</span>
-                      {imagePresets.map((preset) => (
-                        <button
-                          key={preset.id || preset.label}
-                          type="button"
-                          onClick={() => setImage(preset.url)}
-                          className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-blue-600/20 text-slate-300 hover:text-blue-300 text-[11px] border border-slate-800 transition-all shrink-0 whitespace-nowrap"
-                        >
-                          {preset.label}
-                        </button>
-                      ))}
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={image}
+                        onChange={(e) => setImage(e.target.value)}
+                        placeholder="Hoặc dán đường dẫn link ảnh (https://...)"
+                        className="w-full px-3 py-2.5 rounded-xl glass-input text-xs"
+                      />
                     </div>
+                  </div>
+                </div>
+
+                {/* Preset Image Badges Grid */}
+                <div className="pt-2 border-t border-slate-800/80 space-y-1.5">
+                  <span className="text-[11px] text-slate-400 font-semibold block">Gợi ý ảnh mẫu nhanh:</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {imagePresets.map((preset) => (
+                      <button
+                        key={preset.id || preset.label}
+                        type="button"
+                        onClick={() => setImage(preset.url)}
+                        className={`px-2.5 py-1 rounded-xl text-[11px] font-semibold border transition-all active:scale-95 flex items-center gap-1 ${
+                          image === preset.url
+                            ? 'bg-blue-600/30 border-blue-500 text-blue-300 shadow'
+                            : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800 hover:text-white'
+                        }`}
+                      >
+                        <span>{preset.label}</span>
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>

@@ -25,14 +25,22 @@ import {
 import { VariantSelectModal } from './VariantSelectModal';
 import { OrderTabBar } from './OrderTabBar';
 import { getSmartProductIcon } from '../../utils/productIconHelper';
+import { matchSmartSearch } from '../../utils/vietnameseSearch';
 
 export const ProductGrid: React.FC = () => {
   const { selectedBranchId, branches } = useBranchStore();
   const [products, setProducts] = useState<any[]>([]);
+  const [allProductsCache, setAllProductsCache] = useState<any[]>([]);
   const [categories, setCategories] = useState<{ name: string; icon?: string; showOnPos?: boolean }[]>([]);
   const { addToCart, selectedCategory, setSelectedCategory, searchQuery, setSearchQuery, activePriceList, fetchStoreSettings } = usePosStore();
 
   const [activeVariantProduct, setActiveVariantProduct] = useState<any | null>(null);
+
+  // Smart Search Dropdown State
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Density & Scroll Controls State
   const [gridDensity, setGridDensity] = useState<'COMPACT' | 'STANDARD' | 'LIST'>('COMPACT');
@@ -44,7 +52,11 @@ export const ProductGrid: React.FC = () => {
       const res: any = await api.get('/products', {
         params: { query: searchQuery, category: selectedCategory },
       });
-      setProducts(res.data.products || []);
+      const prods = res.data.products || [];
+      setProducts(prods);
+      if (!searchQuery && (!selectedCategory || selectedCategory === 'Tất cả')) {
+        setAllProductsCache(prods);
+      }
       const rawCats = res.data.categories || [];
       const normalized = rawCats.map((c: any) =>
         typeof c === 'string'
@@ -106,6 +118,27 @@ export const ProductGrid: React.FC = () => {
     };
   }, [searchQuery, selectedCategory]);
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F1') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('keydown', handleGlobalKeyDown);
+    };
+  }, []);
+
   const handleProductClick = (product: any) => {
     if (product.hasVariants && product.variants && product.variants.length > 0) {
       setActiveVariantProduct(product);
@@ -132,6 +165,59 @@ export const ProductGrid: React.FC = () => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num);
   };
 
+  const sourcePool = allProductsCache.length > 0 ? allProductsCache : products;
+  const dropdownResults = searchQuery.trim()
+    ? sourcePool
+        .filter((p) => {
+          const isBranchActive = !p.branchActiveStatus || p.branchActiveStatus[selectedBranchId] !== false;
+          return isBranchActive && matchSmartSearch(p, searchQuery);
+        })
+        .slice(0, 8)
+    : [];
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown') {
+      if (dropdownResults.length > 0) {
+        e.preventDefault();
+        setIsDropdownOpen(true);
+        setSelectedIndex((prev) => (prev < dropdownResults.length - 1 ? prev + 1 : 0));
+      }
+    } else if (e.key === 'ArrowUp') {
+      if (dropdownResults.length > 0) {
+        e.preventDefault();
+        setIsDropdownOpen(true);
+        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : dropdownResults.length - 1));
+      }
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (dropdownResults.length > 0) {
+        const target = selectedIndex >= 0 && selectedIndex < dropdownResults.length
+          ? dropdownResults[selectedIndex]
+          : dropdownResults[0];
+        if (target) {
+          handleProductClick(target);
+          setSearchQuery('');
+          setIsDropdownOpen(false);
+          setSelectedIndex(0);
+        }
+      } else if (searchQuery.trim()) {
+        const exact = sourcePool.find(
+          (p) =>
+            p.barcode?.toLowerCase() === searchQuery.trim().toLowerCase() ||
+            p.sku?.toLowerCase() === searchQuery.trim().toLowerCase()
+        );
+        if (exact) {
+          handleProductClick(exact);
+          setSearchQuery('');
+          setIsDropdownOpen(false);
+          setSelectedIndex(0);
+        }
+      }
+    } else if (e.key === 'Escape') {
+      setIsDropdownOpen(false);
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-950 overflow-hidden">
       {/* Multi-Tab Order Bar */}
@@ -140,24 +226,125 @@ export const ProductGrid: React.FC = () => {
       <div className="flex-1 flex flex-col p-4 sm:p-5 overflow-hidden space-y-3 relative">
         {/* Search & Action Bar */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <div className="relative flex-1 min-w-[200px]">
+          <div ref={searchContainerRef} className="relative flex-1 min-w-[240px]">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
+              ref={searchInputRef}
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm tên, SKU, Barcode... (F1)"
-              className="w-full pl-10 pr-9 py-2.5 rounded-xl glass-input text-xs font-medium"
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setIsDropdownOpen(true);
+                setSelectedIndex(0);
+              }}
+              onFocus={() => {
+                if (searchQuery.trim()) setIsDropdownOpen(true);
+              }}
+              onKeyDown={handleSearchKeyDown}
+              placeholder="Tìm thông minh: tên, SKU, Barcode, viết tắt (vd: bbm)... (F1)"
+              className="w-full pl-10 pr-9 py-2.5 rounded-xl glass-input text-xs font-medium focus:ring-2 focus:ring-blue-500/50"
             />
             {searchQuery && (
               <button
                 type="button"
-                onClick={() => setSearchQuery('')}
+                onClick={() => {
+                  setSearchQuery('');
+                  setIsDropdownOpen(false);
+                }}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-400 hover:text-red-300 transition-all flex items-center justify-center border border-red-500/30 shadow-sm active:scale-95"
                 title="Xóa nhanh từ khóa tìm kiếm"
               >
                 <X className="w-3.5 h-3.5 text-red-400 stroke-[3]" />
               </button>
+            )}
+
+            {/* Smart Search Dropdown Autocomplete */}
+            {isDropdownOpen && searchQuery.trim().length > 0 && (
+              <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-slate-900 border border-slate-700/90 rounded-2xl shadow-2xl backdrop-blur-xl overflow-hidden divide-y divide-slate-800">
+                <div className="px-3 py-1.5 bg-slate-950/80 flex items-center justify-between text-[11px] text-slate-400 border-b border-slate-800">
+                  <span className="flex items-center gap-1.5 font-medium text-slate-300">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Gợi ý nhanh ({dropdownResults.length} mặt hàng)
+                  </span>
+                  <span className="text-[10px] text-slate-500 hidden sm:inline">
+                    [↑][↓] Chọn • [Enter] Thêm giỏ • [Esc] Đóng
+                  </span>
+                </div>
+
+                {dropdownResults.length === 0 ? (
+                  <div className="p-4 text-center text-xs text-slate-400">
+                    Không tìm thấy mặt hàng nào khớp với "{searchQuery}"
+                  </div>
+                ) : (
+                  <div className="max-h-[360px] overflow-y-auto divide-y divide-slate-800/60">
+                    {dropdownResults.map((item, idx) => {
+                      const isSelected = idx === selectedIndex;
+                      const currBranchStock =
+                        selectedBranchId === 'ALL'
+                          ? (item.stockQuantity || 0)
+                          : (item.branchStocks && item.branchStocks[selectedBranchId] !== undefined
+                              ? item.branchStocks[selectedBranchId]
+                              : 0);
+                      const { price: displayPrice } = calculateProductPrice(item, item.unit, activePriceList);
+
+                      return (
+                        <div
+                          key={item.id}
+                          onClick={() => {
+                            handleProductClick(item);
+                            setSearchQuery('');
+                            setIsDropdownOpen(false);
+                          }}
+                          onMouseEnter={() => setSelectedIndex(idx)}
+                          className={`p-2.5 flex items-center justify-between gap-3 cursor-pointer transition-all ${
+                            isSelected
+                              ? 'bg-blue-600/25 border-l-4 border-blue-500 pl-2'
+                              : 'hover:bg-slate-800/60'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-10 h-10 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center shrink-0 overflow-hidden">
+                              {item.image ? (
+                                <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-base">{getSmartProductIcon(item.name, item.category).icon}</span>
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold text-white truncate flex items-center gap-1.5">
+                                <span>{item.name}</span>
+                                {item.hasVariants && (
+                                  <span className="px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 text-[9px] font-mono">
+                                    {item.variants?.length} biến thể
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[10px] text-slate-400 flex items-center gap-2 font-mono">
+                                <span>SKU: {item.sku}</span>
+                                {item.barcode && <span>• Barcode: {item.barcode}</span>}
+                                {item.unit && <span>• ĐVT: {item.unit}</span>}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="text-right shrink-0">
+                            <div className="text-xs font-bold text-emerald-400 font-mono">
+                              {formatVND(displayPrice)}
+                            </div>
+                            <div className="text-[10px]">
+                              {currBranchStock > 0 ? (
+                                <span className="text-slate-400 font-medium">Tồn: <span className="text-blue-400 font-bold">{currBranchStock}</span></span>
+                              ) : (
+                                <span className="text-rose-400 font-semibold">Hết hàng</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             )}
           </div>
 

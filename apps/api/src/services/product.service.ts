@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { matchSmartSearch } from '../utils/vietnameseSearch';
 
 export interface ProductAttribute {
   name: string;
@@ -445,15 +446,7 @@ export class ProductService {
     }
 
     if (query) {
-      const q = query.toLowerCase().trim();
-      list = list.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.sku.toLowerCase().includes(q) ||
-          p.barcode.includes(q) ||
-          p.brand.toLowerCase().includes(q) ||
-          (p.location && p.location.toLowerCase().includes(q))
-      );
+      list = list.filter((p) => matchSmartSearch(p, query));
     }
 
     return list;

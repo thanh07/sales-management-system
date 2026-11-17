@@ -216,7 +216,28 @@ export const MobilePOSView: React.FC<MobilePOSViewProps> = ({ onOpenMobileMenu }
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tên, mã hàng, mã vạch, l..."
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && searchQuery.trim()) {
+                  const displayed = products.filter(
+                    (p) => !p.branchActiveStatus || p.branchActiveStatus[selectedBranchId] !== false
+                  );
+                  if (displayed.length === 1) {
+                    handleProductClick(displayed[0]);
+                    setSearchQuery('');
+                  } else {
+                    const exact = displayed.find(
+                      (p) =>
+                        p.barcode?.toLowerCase() === searchQuery.trim().toLowerCase() ||
+                        p.sku?.toLowerCase() === searchQuery.trim().toLowerCase()
+                    );
+                    if (exact) {
+                      handleProductClick(exact);
+                      setSearchQuery('');
+                    }
+                  }
+                }
+              }}
+              placeholder="Tên, mã, mã vạch, viết tắt (vd: bbm)..."
               className="w-full pl-10 pr-9 py-2.5 rounded-xl glass-input text-xs bg-slate-900 border-slate-800"
             />
             {searchQuery && (
